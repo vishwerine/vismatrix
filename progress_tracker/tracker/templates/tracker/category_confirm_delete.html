@@ -1,0 +1,33 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Delete Category - Progress Tracker{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>Confirm Delete</h1>
+    
+    <div style="background: #fee; border-left: 4px solid #e74c3c; padding: 1rem; margin: 1rem 0; border-radius: 4px;">
+        <p style="margin: 0;">
+            <strong>⚠️ Warning:</strong> Are you sure you want to delete the category 
+            <strong style="color: {{ category.color }};">{{ category.name }}</strong>?
+        </p>
+    </div>
+    
+    <div style="background: #f8f9fa; padding: 1rem; border-radius: 4px; margin: 1rem 0;">
+        <p><strong>This category is used in:</strong></p>
+        <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
+            <li>{{ category.task_set.count }} task(s)</li>
+            <li>{{ category.dailylog_set.count }} daily log(s)</li>
+        </ul>
+        <p style="margin-top: 0.5rem; color: #e74c3c;">
+            <strong>Note:</strong> Deleting this category will remove it from all associated tasks and logs.
+        </p>
+    </div>
+    
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Yes, Delete Category</button>
+        <a href="{% url 'category_list' %}" class="btn" style="background: #95a5a6;">Cancel</a>
+    </form>
+</div>
+{% endblock %}

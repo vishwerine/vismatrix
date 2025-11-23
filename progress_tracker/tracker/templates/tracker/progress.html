@@ -1,0 +1,152 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Progress - VisMatrix.Space{% endblock %}
+
+{% block content %}
+<h1>Your Progress Over Time</h1>
+
+<div class="card">
+    <h2>Last 7 Days Overview</h2>
+    
+    <table style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+        <thead>
+            <tr style="background: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                <th style="padding: 0.75rem; text-align: left;">Date</th>
+                <th style="padding: 0.75rem; text-align: center;">Tasks Completed</th>
+                <th style="padding: 0.75rem; text-align: center;">Time Spent (min)</th>
+                <th style="padding: 0.75rem; text-align: center;">Hours</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for stat in daily_stats %}
+            <tr style="border-bottom: 1px solid #dee2e6;">
+                <td style="padding: 0.75rem;">{{ stat.date|date:"l, M d" }}</td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    <span style="background: #27ae60; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: bold;">
+                        {{ stat.tasks_completed }}
+                    </span>
+                </td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    <span style="background: #3498db; color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-weight: bold;">
+                        {{ stat.time_spent }}
+                    </span>
+                </td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    {{ stat.time_spent|floatformat:0|add:"0"|divisibleby:60|yesno:"0.00," }}{% widthratio stat.time_spent 60 1 %}.{% widthratio stat.time_spent 1 100 %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr style="background: #f8f9fa; font-weight: bold; border-top: 2px solid #dee2e6;">
+                <td style="padding: 0.75rem;">Total</td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    {% with total_tasks=0 %}
+                        {% for stat in daily_stats %}
+                            {% with total_tasks=total_tasks|add:stat.tasks_completed %}{% endwith %}
+                        {% endfor %}
+                        {{ total_tasks }}
+                    {% endwith %}
+                </td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    {% with total_time=0 %}
+                        {% for stat in daily_stats %}
+                            {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+                        {% endfor %}
+                        {{ total_time }}
+                    {% endwith %}
+                </td>
+                <td style="padding: 0.75rem; text-align: center;">
+                    {% with total_time=0 %}
+                        {% for stat in daily_stats %}
+                            {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+                        {% endfor %}
+                        {% widthratio total_time 60 1 %}.{% widthratio total_time 1 100 %}
+                    {% endwith %}
+                </td>
+            </tr>
+        </tfoot>
+    </table>
+</div>
+
+<div class="card">
+    <h2>Visual Progress</h2>
+    <div style="margin-top: 1rem;">
+        {% for stat in daily_stats %}
+        <div style="margin-bottom: 1.5rem;">
+            <p><strong>{{ stat.date|date:"M d" }}</strong></p>
+            <div style="background: #ecf0f1; height: 30px; border-radius: 4px; overflow: hidden;">
+                <div style="background: linear-gradient(90deg, #3498db, #2ecc71); height: 100%; width: {% widthratio stat.time_spent 480 100 %}%; display: flex; align-items: center; padding-left: 10px; color: white; font-weight: bold; font-size: 0.9rem;">
+                    {% if stat.time_spent > 0 %}{{ stat.time_spent }} min{% endif %}
+                </div>
+            </div>
+            <small style="color: #7f8c8d;">Tasks: {{ stat.tasks_completed }} | Max target: 480 min (8 hours)</small>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card">
+    <h2>Weekly Summary</h2>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem;">
+        <div style="background: #e8f8f5; padding: 1.5rem; border-radius: 8px; text-align: center;">
+            <h3 style="color: #27ae60; margin-bottom: 0.5rem;">
+                {% with total_tasks=0 %}
+                    {% for stat in daily_stats %}
+                        {% with total_tasks=total_tasks|add:stat.tasks_completed %}{% endwith %}
+                    {% endfor %}
+                    {{ total_tasks }}
+                {% endwith %}
+            </h3>
+            <p style="color: #7f8c8d;">Total Tasks</p>
+        </div>
+        
+        <div style="background: #ebf5fb; padding: 1.5rem; border-radius: 8px; text-align: center;">
+            <h3 style="color: #3498db; margin-bottom: 0.5rem;">
+                {% with total_time=0 %}
+                    {% for stat in daily_stats %}
+                        {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+                    {% endfor %}
+                    {% widthratio total_time 60 1 %}h {% widthratio total_time 60 1 %}
+                {% endwith %}
+            </h3>
+            <p style="color: #7f8c8d;">Total Hours</p>
+        </div>
+        
+        <div style="background: #fef5e7; padding: 1.5rem; border-radius: 8px; text-align: center;">
+            <h3 style="color: #f39c12; margin-bottom: 0.5rem;">
+                {% with total_time=0 %}
+                    {% for stat in daily_stats %}
+                        {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+                    {% endfor %}
+                    {% widthratio total_time 7 1 %} min
+                {% endwith %}
+            </h3>
+            <p style="color: #7f8c8d;">Daily Average</p>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+    <h3>💡 Insights & Tips</h3>
+    <ul style="margin-left: 1.5rem; line-height: 1.8; margin-top: 0.5rem;">
+        {% with total_time=0 %}
+            {% for stat in daily_stats %}
+                {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+            {% endfor %}
+            
+            {% if total_time < 1400 %}
+                <li>You're averaging less than 3 hours per day. Consider setting small, achievable goals to build consistency.</li>
+            {% elif total_time < 2100 %}
+                <li>Good progress! You're studying around 3-5 hours per day. Keep up the momentum!</li>
+            {% else %}
+                <li>Excellent dedication! You're putting in over 5 hours per day. Remember to take breaks and rest.</li>
+            {% endif %}
+        {% endwith %}
+        
+        <li>Track your most productive times of day to optimize your study schedule.</li>
+        <li>Use categories to identify which areas need more focus.</li>
+        <li>Review your weekly progress every Sunday to plan the week ahead.</li>
+    </ul>
+</div>
+{% endblock %}

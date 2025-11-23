@@ -1,0 +1,25 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ title }} - VisMatrix.Space{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>{{ title }}</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn">Save Activity</button>
+        <a href="{% url 'log_list' %}" class="btn">Cancel</a>
+    </form>
+</div>
+
+<div class="card" style="background: #e8f4f8;">
+    <h3>Quick Tips for Logging Activities</h3>
+    <ul style="margin-left: 1.5rem; line-height: 1.8;">
+        <li>Be specific about what you did (e.g., "Read Chapter 3 of Machine Learning textbook")</li>
+        <li>Estimate duration as accurately as possible</li>
+        <li>Use categories to organize different types of activities</li>
+        <li>Add notes about key learnings or challenges faced</li>
+    </ul>
+</div>
+{% endblock %}

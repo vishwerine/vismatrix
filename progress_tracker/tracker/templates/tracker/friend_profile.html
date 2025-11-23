@@ -1,0 +1,30 @@
+{% extends 'tracker/base.html' %}
+{% block title %}{{ friend.username }}'s Profile - Progress Tracker{% endblock %}
+
+{% block content %}
+<h1>{{ friend.username }}'s Progress</h1>
+
+<h3>Completed Tasks</h3>
+{% if tasks %}
+<ul>
+  {% for task in tasks %}
+  <li>{{ task.title }} - completed on {{ task.completed_at|date:"M d, Y" }}</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No completed tasks.</p>
+{% endif %}
+
+<h3>Daily Logs</h3>
+{% if logs %}
+<ul>
+  {% for log in logs %}
+  <li>{{ log.date|date:"M d, Y" }}: {{ log.activity }} ({{ log.duration }} min)</li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>No daily logs.</p>
+{% endif %}
+
+<a href="{% url 'friends_list' %}" class="btn btn-primary">Back to Friends List</a>
+{% endblock %}

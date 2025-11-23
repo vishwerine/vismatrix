@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %} Tasks - VisMatrix.Space{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+        }
+        
+        body {
+            background: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .navbar {
+            background: var(--primary-gradient) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+        
+        .nav-link {
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .nav-link:hover {
+            transform: translateY(-2px);
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        
+        .btn-primary {
+            background: var(--primary-gradient);
+            border: none;
+            font-weight: 600;
+            padding: 0.5rem 1.5rem;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .badge {
+            font-weight: 600;
+            padding: 0.5rem 0.75rem;
+        }
+        
+        .priority-high {
+            border-left: 4px solid #dc3545;
+        }
+        
+        .priority-medium {
+            border-left: 4px solid #ffc107;
+        }
+        
+        .priority-low {
+            border-left: 4px solid #6c757d;
+        }
+        
+        .status-completed {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+    </style>
+    
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="{% url 'dashboard' %}">
+            <i class="bi bi-graph-up-arrow"></i> VisMatrix.Space
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'dashboard' %}">
+                        <i class="bi bi-speedometer2"></i> Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'task_list' %}">
+                        <i class="bi bi-list-check"></i> Tasks
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'log_list' %}">
+                        <i class="bi bi-journal-text"></i> Daily Logs
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'progress' %}">
+                        <i class="bi bi-bar-chart-line"></i> Progress
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'category_list' %}">
+                        <i class="bi bi-tags"></i> Categories
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="socialDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-people"></i> Social
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'friends_list' %}">
+                            <i class="bi bi-person-heart"></i> My Friends
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'user_list' %}">
+                            <i class="bi bi-search"></i> Find Users
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'friend_requests' %}">
+                            <i class="bi bi-bell"></i> Friend Requests
+                            {% if pending_friend_requests_count > 0 %}
+                                <span class="badge bg-danger">{{ pending_friend_requests_count }}</span>
+                            {% endif %}
+
+                        </a></li>
+                    </ul>
+                </li>
+            </ul>
+            <div class="d-flex align-items-center text-white">
+                <i class="bi bi-person-circle me-2"></i>
+                <span class="me-3">{{ request.user.username }}</span>
+                <a href="{% url 'account_logout' %}" class="btn btn-outline-light btn-sm">
+                    <i class="bi bi-box-arrow-right"></i> Logout
+                </a>
+            </div>
+        </div>
+    </div>
+</nav>
+
+    
+    <!-- Main Content -->
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+
+    <!-- Footer -->
+    <footer class="text-center py-3 mt-5 bg-light border-top">
+        <small>
+            Developed by VisMatrix Inc 
+        </small>
+    </footer>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

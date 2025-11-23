@@ -1,0 +1,20 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Users - Progress Tracker{% endblock %}
+
+{% block content %}
+<h1>All Users</h1>
+
+<div class="list-group">
+  {% for user in users %}
+    <div class="list-group-item d-flex justify-content-between align-items-center">
+      <span>{{ user.username }}</span>
+      {% if user.id in current_friends %}
+        <a href="{% url 'remove_friend' user.id %}" class="btn btn-outline-danger btn-sm">Remove Friend</a>
+      {% else %}
+        <a href="{% url 'add_friend' user.id %}" class="btn btn-outline-primary btn-sm">Add Friend</a>
+      {% endif %}
+    </div>
+  {% endfor %}
+</div>
+{% endblock %}

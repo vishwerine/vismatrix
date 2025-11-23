@@ -1,0 +1,82 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ title }} - Progress Tracker{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h1>{{ title }}</h1>
+    
+    <form method="post">
+        {% csrf_token %}
+        
+        <label for="id_name">Category Name</label>
+        {{ form.name }}
+        {% if form.name.errors %}
+            <ul class="errorlist">
+                {% for error in form.name.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        
+        <label for="id_color">Color</label>
+        {{ form.color }}
+        {% if form.color.errors %}
+            <ul class="errorlist">
+                {% for error in form.color.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        
+        <div style="margin-top: 1rem; padding: 1rem; background: #f8f9fa; border-radius: 4px;">
+            <p style="margin-bottom: 0.5rem;"><strong>Preview:</strong></p>
+            <div id="preview" style="display: inline-block; padding: 0.5rem 1rem; border-radius: 4px; color: white; font-weight: bold;">
+                Category Preview
+            </div>
+        </div>
+        
+        <button type="submit" class="btn">Save Category</button>
+        <a href="{% url 'category_list' %}" class="btn" style="background: #95a5a6;">Cancel</a>
+    </form>
+</div>
+
+<div class="card" style="background: #fff3cd; border-left: 4px solid #ffc107;">
+    <h3>💡 Tips for Categories</h3>
+    <ul style="margin-left: 1.5rem; line-height: 1.8; color: #555;">
+        <li>Choose descriptive names (e.g., "Deep Learning Study", "Morning Exercise")</li>
+        <li>Use distinct colors to easily identify different activity types</li>
+        <li>Keep the number of categories manageable (5-10 is ideal)</li>
+        <li>You can always edit or reorganize categories later</li>
+    </ul>
+</div>
+
+<script>
+    // Live preview of color selection
+    const colorInput = document.getElementById('id_color');
+    const preview = document.getElementById('preview');
+    const nameInput = document.getElementById('id_name');
+    
+    function updatePreview() {
+        const color = colorInput.value || '#3498db';
+        const name = nameInput.value || 'Category Preview';
+        preview.style.background = color;
+        preview.textContent = name;
+    }
+    
+    colorInput.addEventListener('input', updatePreview);
+    nameInput.addEventListener('input', updatePreview);
+    
+    // Initialize preview
+    updatePreview();
+</script>
+
+<style>
+    .errorlist {
+        color: #e74c3c;
+        list-style: none;
+        margin-top: 0.5rem;
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}

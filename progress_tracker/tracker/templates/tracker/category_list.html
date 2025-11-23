@@ -1,0 +1,79 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Categories - VisMatrix.Space{% endblock %}
+
+{% block content %}
+<h1>Categories</h1>
+
+<!-- Global Categories Section -->
+<div class="card">
+    <h2>🌐 Global Categories (Available to Everyone)</h2>
+    <p style="color: #666; margin-bottom: 1rem;">These categories are shared by all users and cannot be edited.</p>
+    
+    {% if global_categories %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;">
+            {% for category in global_categories %}
+            <div style="border: 2px solid {{ category.color }}; border-radius: 8px; padding: 1rem; background: {{ category.color }}15;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <div style="width: 30px; height: 30px; background: {{ category.color }}; border-radius: 50%;"></div>
+                    <h3 style="margin: 0; font-size: 1rem;">{{ category.name }}</h3>
+                </div>
+                <div style="font-size: 0.85rem; color: #666;">
+                    <p style="margin: 0.25rem 0;"><strong>Tasks:</strong> {{ category.task_set.filter.count }}</p>
+                    <p style="margin: 0.25rem 0;"><strong>Logs:</strong> {{ category.dailylog_set.filter.count }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="color: #999;">No global categories available. Contact admin to add some.</p>
+    {% endif %}
+</div>
+
+<!-- User's Custom Categories Section -->
+<div class="card" style="margin-top: 1.5rem;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <h2 style="margin: 0;">✏️ My Custom Categories</h2>
+        <a href="{% url 'category_create' %}" class="btn">Add Custom Category</a>
+    </div>
+    
+    <p style="color: #666; margin-bottom: 1rem;">Create your own personalized categories for specific needs.</p>
+    
+    {% if user_categories %}
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 1rem;">
+            {% for category in user_categories %}
+            <div style="border: 2px solid {{ category.color }}; border-radius: 8px; padding: 1.5rem; background: {{ category.color }}15;">
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;">
+                    <div style="width: 40px; height: 40px; background: {{ category.color }}; border-radius: 50%;"></div>
+                    <h3 style="margin: 0;">{{ category.name }}</h3>
+                </div>
+                
+                <div style="margin-top: 1rem; font-size: 0.9rem; color: #666;">
+                    <p><strong>Tasks:</strong> {{ category.task_set.count }}</p>
+                    <p><strong>Logs:</strong> {{ category.dailylog_set.count }}</p>
+                </div>
+                
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <a href="{% url 'category_edit' category.pk %}" class="btn" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; flex: 1;">Edit</a>
+                    <a href="{% url 'category_delete' category.pk %}" class="btn btn-danger" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; flex: 1;">Delete</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p style="background: #f8f9fa; padding: 1rem; border-radius: 4px; text-align: center; color: #666;">
+            You haven't created any custom categories yet. Start by clicking "Add Custom Category" above!
+        </p>
+    {% endif %}
+</div>
+
+<div class="card" style="background: #e8f4f8; margin-top: 1.5rem;">
+    <h3>💡 About Categories</h3>
+    <ul style="line-height: 1.8; color: #555; margin-left: 1.5rem;">
+        <li><strong>Global categories</strong> are provided by default and available to everyone</li>
+        <li><strong>Custom categories</strong> are your own personal categories for specific needs</li>
+        <li>Both types can be used when creating tasks or logging activities</li>
+        <li>You can only edit or delete your own custom categories</li>
+    </ul>
+</div>
+{% endblock %}

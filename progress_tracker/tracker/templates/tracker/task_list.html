@@ -1,0 +1,33 @@
+{% extends 'tracker/base.html' %}
+
+{% block content %}
+<h1>All Tasks</h1>
+
+<a href="{% url 'task_create' %}" class="btn">Add New Task</a>
+
+<div style="margin: 1rem 0;">
+    <a href="?status=all" class="btn">All</a>
+    <a href="?status=pending" class="btn">Pending</a>
+    <a href="?status=in_progress" class="btn">In Progress</a>
+    <a href="?status=completed" class="btn">Completed</a>
+</div>
+
+<div class="card">
+    {% for task in tasks %}
+    <div class="task-item priority-{{ task.priority }} {% if task.status == 'completed' %}status-completed{% endif %}">
+        <strong>{{ task.title }}</strong>
+        <span style="float: right;">
+            {% if task.status != 'completed' %}
+                <a href="{% url 'task_update' task.pk %}" class="btn">Edit</a>
+                <a href="{% url 'task_complete' task.pk %}" class="btn btn-success">Complete</a>
+            {% endif %}
+            <a href="{% url 'task_delete' task.pk %}" class="btn btn-danger">Delete</a>
+        </span>
+        <p>{{ task.description }}</p>
+        <small>Status: {{ task.get_status_display }} | Priority: {{ task.get_priority_display }} | Created: {{ task.created_at|date:"Y-m-d" }}</small>
+    </div>
+    {% empty %}
+    <p>No tasks found.</p>
+    {% endfor %}
+</div>
+{% endblock %}

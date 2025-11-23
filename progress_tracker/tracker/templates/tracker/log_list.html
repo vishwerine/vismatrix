@@ -1,0 +1,62 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Daily Logs - VisMatrix.Space{% endblock %}
+
+{% block content %}
+<h1>Daily Activity Logs</h1>
+
+<a href="{% url 'log_create' %}" class="btn">Log New Activity</a>
+
+<div style="margin: 1rem 0;">
+    <form method="get" style="display: inline-block;">
+        <input type="date" name="date" value="{{ date_filter }}" placeholder="Filter by date">
+        <button type="submit" class="btn">Filter</button>
+        <a href="{% url 'log_list' %}" class="btn">Clear</a>
+    </form>
+</div>
+
+{% if logs_by_date %}
+    {% for date, logs in logs_by_date.items %}
+    <div class="card">
+        <h2>{{ date|date:"l, F d, Y" }}</h2>
+        
+        {% with total_time=0 %}
+            {% for log in logs %}
+                {% with total_time=total_time|add:log.duration %}{% endwith %}
+            {% endfor %}
+        {% endwith %}
+        
+        <p><strong>Total time: </strong>
+            {% with total=0 %}
+                {% for log in logs %}
+                    {% with total=total|add:log.duration %}{% endwith %}
+                {% endfor %}
+                {{ total }} minutes ({{ total|floatformat:0|add:"0"|divisibleby:60|yesno:"0," }}{{ total|add:"0"|floatformat:0|add:"0"|stringformat:"d"|slice:"-2:" }} hours)
+            {% endwith %}
+        </p>
+        
+        {% for log in logs %}
+        <div class="task-item" style="{% if log.category %}border-left: 4px solid {{ log.category.color }};{% endif %}">
+            <strong>{{ log.activity }}</strong>
+            <span style="float: right;">
+                <span style="background: #3498db; color: white; padding: 0.25rem 0.5rem; border-radius: 4px;">
+                    {{ log.duration }} min
+                </span>
+            </span>
+            {% if log.category %}
+            <span style="background: {{ log.category.color }}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.85rem;">
+                {{ log.category.name }}
+            </span>
+            {% endif %}
+            <p>{{ log.description }}</p>
+            <small>Logged at: {{ log.created_at|date:"g:i A" }}</small>
+        </div>
+        {% endfor %}
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="card">
+        <p>No activity logs found. Start logging your daily activities!</p>
+    </div>
+{% endif %}
+{% endblock %}

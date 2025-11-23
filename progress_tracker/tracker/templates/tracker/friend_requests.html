@@ -1,0 +1,49 @@
+{% extends 'tracker/base.html' %}
+{% block title %}Friend Requests - Progress Tracker{% endblock %}
+
+{% block content %}
+<h1>Friend Requests</h1>
+
+<div class="row">
+    <div class="col-md-6">
+        <h3>Received Requests</h3>
+        {% if received_requests %}
+        <ul class="list-group">
+            {% for req in received_requests %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ req.from_user.username }}</span>
+                <div>
+                    <a href="{% url 'accept_friend_request' req.id %}" class="btn btn-success btn-sm me-2">
+                        <i class="bi bi-check-circle"></i> Accept
+                    </a>
+                    <a href="{% url 'reject_friend_request' req.id %}" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-x-circle"></i> Reject
+                    </a>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">No received friend requests.</p>
+        {% endif %}
+    </div>
+    
+    <div class="col-md-6">
+        <h3>Sent Requests</h3>
+        {% if sent_requests %}
+        <ul class="list-group">
+            {% for req in sent_requests %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{{ req.to_user.username }}</span>
+                <a href="{% url 'cancel_friend_request' req.to_user.id %}" class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">No sent friend requests.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

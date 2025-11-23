@@ -1,0 +1,31 @@
+{% extends 'tracker/base.html' %}
+{% block title %}My Friends - VisMatrix.Space{% endblock %}
+
+{% block content %}
+<h1>My Friends</h1>
+
+{% if friends_data %}
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Friend</th>
+            <th>Completed Tasks (Last 7 Days)</th>
+            <th>Total Time Spent (Min)</th>
+            <th>Profile</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for data in friends_data %}
+        <tr>
+            <td>{{ data.friend.username }}</td>
+            <td>{{ data.completed_tasks }}</td>
+            <td>{{ data.total_time }}</td>
+            <td><a href="{% url 'view_friend_profile' data.friend.id %}" class="btn btn-outline-primary btn-sm">View</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>You have no friends yet. <a href="{% url 'user_list' %}">Find and add users</a> to connect!</p>
+{% endif %}
+{% endblock %}
