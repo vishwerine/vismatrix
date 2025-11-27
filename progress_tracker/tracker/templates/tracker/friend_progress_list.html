@@ -1,0 +1,34 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Friends’ Progress - Progress Tracker{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-semibold mb-4">Friends' Recent Progress</h1>
+
+<table class="min-w-full divide-y divide-gray-200 border border-gray-300">
+  <thead class="bg-gray-100">
+    <tr>
+      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Friend</th>
+      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed Tasks (last 7 days)</th>
+      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Time Spent (min)</th>
+      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+    </tr>
+  </thead>
+  <tbody class="bg-white divide-y divide-gray-200">
+    {% for entry in progress_data %}
+    <tr>
+      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ entry.friend.username }}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ entry.completed_tasks }}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ entry.total_time }}</td>
+      <td class="px-6 py-4 whitespace-nowrap text-sm">
+        <a href="{% url 'view_friend_progress' entry.friend.id %}" class="inline-block px-3 py-1 text-sm font-semibold text-white bg-blue-600 rounded hover:bg-blue-700">View Detail</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="4" class="px-6 py-4 text-center text-sm text-gray-500">No friends to show progress for.</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

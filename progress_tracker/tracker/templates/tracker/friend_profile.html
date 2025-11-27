@@ -1,0 +1,41 @@
+{% extends 'tracker/base.html' %}
+{% block title %}{{ friend.username }}'s Profile - Progress Tracker{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-xl p-6">
+  <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-6">{{ friend.username }}'s Progress</h1>
+
+  <section class="mb-8">
+    <h3 class="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-50">Completed Tasks</h3>
+    {% if tasks %}
+    <ul class="list-disc list-inside text-slate-700 dark:text-slate-300 space-y-1">
+      {% for task in tasks %}
+      <li>{{ task.title }} - completed on {{ task.completed_at|date:"M d, Y" }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-500 dark:text-gray-400">No completed tasks.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h3 class="text-xl font-semibold mb-3 text-slate-900 dark:text-slate-50">Daily Logs</h3>
+    {% if logs %}
+    <ul class="list-disc list-inside text-slate-700 dark:text-slate-300 space-y-1">
+      {% for log in logs %}
+      <li>{{ log.date|date:"M d, Y" }}: {{ log.activity }} ({{ log.duration }} min)</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-500 dark:text-gray-400">No daily logs.</p>
+    {% endif %}
+  </section>
+
+  <div class="mt-8">
+    <a href="{% url 'friends_list' %}"
+       class="inline-block rounded-lg bg-indigo-600 px-6 py-2 text-white font-semibold hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+      Back to Friends List
+    </a>
+  </div>
+</div>
+{% endblock %}

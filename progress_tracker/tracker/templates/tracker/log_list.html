@@ -1,0 +1,82 @@
+{% extends 'tracker/base.html' %}
+   {% load math_filters %}
+
+{% block title %}Daily Logs - VisMatrix.Space{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-6">Daily Activity Logs</h1>
+
+<a href="{% url 'log_create' %}"
+   class="inline-block rounded-lg bg-indigo-600 px-5 py-2 text-white font-semibold hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 mb-6">
+  Log New Activity
+</a>
+
+<form method="get" class="inline-flex items-center gap-2 mb-6">
+  <input type="date" name="date" value="{{ date_filter }}"
+         class="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-1" 
+         placeholder="Filter by date">
+  <button type="submit"
+          class="rounded-md bg-indigo-600 px-4 py-1 text-white font-semibold hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+    Filter
+  </button>
+  <a href="{% url 'log_list' %}"
+     class="rounded-md bg-gray-500 px-4 py-1 text-white font-semibold hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500">
+    Clear
+  </a>
+</form>
+
+{% if logs_by_date %}
+  {% for date, logs in logs_by_date.items %}
+  <section class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-xl p-6 mb-8">
+    <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-slate-50">{{ date|date:"l, F d, Y" }}</h2>
+
+    {% with total=0 %}
+      {% for log in logs %}
+        {% with total=total|add:log.duration %}{% endwith %}
+      {% endfor %}
+    {% endwith %}
+
+    <p class="mb-4 font-semibold text-slate-900 dark:text-slate-50">
+
+
+    {% with hours=total|divisibleby:60 %}
+    {% if hours %}
+        {{ total|div:60 }} hours
+    {% else %}
+        {{ total }} minutes
+    {% endif %}
+    {% endwith %}
+
+    </p>
+
+    <div class="space-y-4">
+      {% for log in logs %}
+      <article class="rounded-lg border-l-4 p-4 bg-gray-50 dark:bg-slate-800"
+        {% if log.category %}
+        style="border-color: {{ log.category.color }}"
+        {% else %}
+        style="border-color: #3498db"
+        {% endif %}
+>
+        <div class="flex justify-between items-center mb-2">
+          <strong class="text-lg text-slate-900 dark:text-slate-50">{{ log.activity }}</strong>
+          <span class="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded">{{ log.duration }} min</span>
+        </div>
+        {% if log.category %}
+        <span class="inline-block text-xs font-semibold px-2 py-0.5 rounded mb-2" style="background-color: {{ log.category.color }}; color: white;">
+          {{ log.category.name }}
+        </span>
+        {% endif %}
+        <p class="text-slate-700 dark:text-slate-300 mb-2">{{ log.description }}</p>
+        <small class="text-gray-500 dark:text-gray-400">Logged at: {{ log.created_at|date:"g:i A" }}</small>
+      </article>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+{% else %}
+  <section class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-xl p-6 text-center text-gray-600 dark:text-gray-400">
+    No activity logs found. Start logging your daily activities!
+  </section>
+{% endif %}
+{% endblock %}

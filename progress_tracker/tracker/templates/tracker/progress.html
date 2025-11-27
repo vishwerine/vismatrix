@@ -1,0 +1,165 @@
+{% extends 'tracker/base.html' %}
+{% load math_filters %}
+
+{% block title %}Progress - VisMatrix.Space{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-8">Your Progress Over Time</h1>
+
+<section class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-xl p-6 mb-8">
+  <h2 class="text-2xl font-semibold mb-4 text-slate-900 dark:text-slate-50">Last 7 Days Overview</h2>
+  <div class="overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+      <thead class="bg-gray-50 dark:bg-slate-800">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+          <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Tasks Completed</th>
+          <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Time Spent (min)</th>
+          <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Hours</th>
+        </tr>
+      </thead>
+      <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
+        {% for stat in daily_stats %}
+        <tr>
+          <td class="px-6 py-3 whitespace-nowrap text-sm text-slate-900 dark:text-slate-50">
+            {{ stat.date|date:"l, M d" }}
+          </td>
+          <td class="px-6 py-3 whitespace-nowrap text-center text-sm">
+            <span class="inline-block rounded-full bg-green-600 px-3 py-1 text-white font-semibold">
+              {{ stat.tasks_completed }}
+            </span>
+          </td>
+          <td class="px-6 py-3 whitespace-nowrap text-center text-sm">
+            <span class="inline-block rounded-full bg-blue-600 px-3 py-1 text-white font-semibold">
+              {{ stat.time_spent }}
+            </span>
+          </td>
+          <td class="px-6 py-3 whitespace-nowrap text-center text-sm text-slate-900 dark:text-slate-50">
+            {% with hours=stat.time_spent|divisibleby:60 %}
+              {% if hours %}{{ stat.time_spent|floatformat:"2"|div:60 }}{% else %}0.00{% endif %}
+            {% endwith %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot class="bg-gray-50 dark:bg-slate-800 font-semibold border-t border-gray-300 dark:border-gray-700">
+        <tr>
+          <td class="px-6 py-3 text-left text-sm text-slate-900 dark:text-slate-50">Total</td>
+          <td class="px-6 py-3 text-center text-sm text-slate-900 dark:text-slate-50">
+            {% with total_tasks=0 %}
+            {% for stat in daily_stats %}
+              {% with total_tasks=total_tasks|add:stat.tasks_completed %}{% endwith %}
+            {% endfor %}
+            {{ total_tasks }}
+            {% endwith %}
+          </td>
+          <td class="px-6 py-3 text-center text-sm text-slate-900 dark:text-slate-50">
+            {% with total_time=0 %}
+            {% for stat in daily_stats %}
+              {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+            {% endfor %}
+            {{ total_time }}
+            {% endwith %}
+          </td>
+          <td class="px-6 py-3 text-center text-sm text-slate-900 dark:text-slate-50">
+            {% with total_time=0 %}
+            {% for stat in daily_stats %}
+              {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+            {% endfor %}
+            {{ total_time|floatformat:"2"|div:60 }}
+            {% endwith %}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</section>
+
+<section class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-xl p-6 mb-8">
+  <h2 class="text-2xl font-semibold mb-6 text-slate-900 dark:text-slate-50">Visual Progress</h2>
+  <div class="space-y-6">
+    {% for stat in daily_stats %}
+    <div>
+      <p class="font-semibold text-slate-900 dark:text-slate-50 mb-1">{{ stat.date|date:"M d" }}</p>
+      <div class="w-full bg-gray-200 dark:bg-slate-700 rounded-md h-8 overflow-hidden relative">
+        <div class="h-full rounded-md text-white font-bold flex items-center px-3"
+             style="width: {% widthratio stat.time_spent 480 100 %}%;">
+          {% if stat.time_spent > 0 %}
+          <span class="bg-gradient-to-r from-blue-600 to-green-500 h-full flex items-center pl-2 rounded-md" 
+                style="width: {% widthratio stat.time_spent 480 100 %}%%;">
+            {{ stat.time_spent }} min
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      <small class="text-gray-600 dark:text-gray-400">Tasks: {{ stat.tasks_completed }} | Max target: 480 min (8 hours)</small>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-xl p-6">
+  <h2 class="text-2xl font-semibold mb-6 text-slate-900 dark:text-slate-50">Weekly Summary</h2>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+    <div class="bg-green-50 dark:bg-green-900 p-6 rounded-xl text-center">
+      <h3 class="text-green-700 dark:text-green-400 text-3xl font-bold mb-2">
+        {% with total_tasks=0 %}
+        {% for stat in daily_stats %}
+          {% with total_tasks=total_tasks|add:stat.tasks_completed %}{% endwith %}
+        {% endfor %}
+        {{ total_tasks }}
+        {% endwith %}
+      </h3>
+      <p class="text-gray-600 dark:text-gray-400">Total Tasks</p>
+    </div>
+    <div class="bg-blue-50 dark:bg-blue-900 p-6 rounded-xl text-center">
+      <h3 class="text-blue-700 dark:text-blue-400 text-3xl font-bold mb-2">
+        {% with total_time=0 %}
+        {% for stat in daily_stats %}
+          {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+        {% endfor %}
+        {% with hours=total_time|divisibleby:60 %}
+  {% with minutes=total_time|mod:60 %}
+    {{ hours }}h{% if minutes > 0 %} {{ minutes }}m{% endif %}
+  {% endwith %}
+{% endwith %}
+        {% endwith %}
+      </h3>
+      <p class="text-gray-600 dark:text-gray-400">Total Hours</p>
+    </div>
+    <div class="bg-yellow-50 dark:bg-yellow-900 p-6 rounded-xl text-center">
+      <h3 class="text-yellow-700 dark:text-yellow-400 text-3xl font-bold mb-2">
+        {% with total_time=0 %}
+        {% for stat in daily_stats %}
+          {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+        {% endfor %}
+        {% widthratio total_time 7 1 %} min
+        {% endwith %}
+      </h3>
+      <p class="text-gray-600 dark:text-gray-400">Daily Average</p>
+    </div>
+  </div>
+</section>
+
+<section class="bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-400 p-6 rounded-xl mt-8 text-yellow-800 dark:text-yellow-300">
+  <h3 class="font-semibold text-xl mb-4">💡 Insights & Tips</h3>
+  <ul class="list-disc list-inside space-y-3 text-sm leading-relaxed">
+    {% with total_time=0 %}
+      {% for stat in daily_stats %}
+        {% with total_time=total_time|add:stat.time_spent %}{% endwith %}
+      {% endfor %}
+
+      {% if total_time < 1400 %}
+      <li>You're averaging less than 3 hours per day. Consider setting small, achievable goals to build consistency.</li>
+      {% elif total_time < 2100 %}
+      <li>Good progress! You're studying around 3-5 hours per day. Keep up the momentum!</li>
+      {% else %}
+      <li>Excellent dedication! You're putting in over 5 hours per day. Remember to take breaks and rest.</li>
+      {% endif %}
+    {% endwith %}
+    <li>Track your most productive times of day to optimize your study schedule.</li>
+    <li>Use categories to identify which areas need more focus.</li>
+    <li>Review your weekly progress every Sunday to plan the week ahead.</li>
+  </ul>
+</section>
+{% endblock %}

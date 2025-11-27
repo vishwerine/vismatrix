@@ -1,0 +1,156 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign Up - VisMatrix.Space</title>
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Bootstrap Icons CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
+
+  <style>
+    /* Animated background circles */
+    body::before,
+    body::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      animation: float 20s infinite ease-in-out;
+      z-index: 0;
+    }
+    body::before {
+      width: 400px;
+      height: 400px;
+      top: -200px;
+      right: -200px;
+      animation-delay: 2s;
+    }
+    body::after {
+      width: 500px;
+      height: 500px;
+      bottom: -250px;
+      left: -250px;
+      animation-delay: 7s;
+    }
+    @keyframes float {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33% { transform: translate(50px, -50px) scale(1.1); }
+      66% { transform: translate(-50px, 50px) scale(0.9); }
+    }
+
+    /* Slide-up animation */
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Pulse animation for icon */
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+
+    /* Shake animation for errors */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-10px); }
+      75% { transform: translateX(10px); }
+    }
+  </style>
+</head>
+<body class="relative min-h-screen bg-gradient-to-tr from-indigo-600 via-purple-700 to-purple-800 font-sans antialiased flex items-center justify-center p-6 overflow-hidden">
+
+  <div class="relative z-10 w-full max-w-md rounded-3xl bg-white bg-opacity-95 backdrop-blur-xl shadow-2xl animate-slideUp">
+    <header class="relative bg-gradient-to-r from-indigo-700 to-purple-700 p-12 text-center overflow-hidden rounded-t-3xl text-white">
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-white bg-opacity-20 rounded-xl mb-6 backdrop-blur-sm">
+        <i class="bi bi-person-plus-fill text-5xl animate-pulse"></i>
+      </div>
+      <h1 class="text-3xl font-extrabold mb-2 tracking-tight">Join Progress Tracker</h1>
+      <p class="text-lg opacity-95">Start your journey to better productivity today!</p>
+
+      <div class="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-radial-gradient from-white/10 to-transparent animate-spin-slow rounded-full pointer-events-none"></div>
+    </header>
+
+    <main class="p-8">
+      <div class="mb-6 rounded-xl bg-indigo-50 border-l-4 border-indigo-600 px-5 py-4 text-indigo-700 flex items-center gap-3 text-sm font-semibold">
+        <i class="bi bi-info-circle-fill text-lg flex-shrink-0"></i>
+        <span>
+          Free Forever! Track unlimited tasks, logs, and monitor your progress with no limits.
+        </span>
+      </div>
+
+      {% if form.non_field_errors %}
+      <div class="mb-6 rounded-lg bg-red-100 border-l-4 border-red-600 px-4 py-3 text-red-700 animate-shake">
+        {% for error in form.non_field_errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <form method="post" class="space-y-6" novalidate>
+        {% csrf_token %}
+
+        {% for field in form %}
+        <div>
+          <label for="{{ field.id_for_label }}" class="block mb-1 font-semibold text-gray-700 dark:text-gray-900">{{ field.label }}</label>
+
+          {% if field.name == 'username' %}
+          <input type="text" name="{{ field.name }}" id="{{ field.id_for_label }}"
+                 placeholder="Choose a unique username"
+                 class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 placeholder-gray-400 transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200" value="{{ field.value|default_if_none:'' }}">
+          {% elif field.name == 'email' %}
+          <input type="email" name="{{ field.name }}" id="{{ field.id_for_label }}"
+                 placeholder="your.email@example.com"
+                 class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 placeholder-gray-400 transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200" value="{{ field.value|default_if_none:'' }}">
+          {% elif field.name == 'password1' %}
+          <input type="password" name="{{ field.name }}" id="{{ field.id_for_label }}"
+                 placeholder="Create a strong password"
+                 class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 placeholder-gray-400 transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200" required>
+          {% elif field.name == 'password2' %}
+          <input type="password" name="{{ field.name }}" id="{{ field.id_for_label }}"
+                 placeholder="Confirm your password"
+                 class="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 placeholder-gray-400 transition focus:border-indigo-600 focus:ring-4 focus:ring-indigo-200" required>
+          {% else %}
+          {{ field }}
+          {% endif %}
+
+          {% if field.help_text %}
+          <small class="text-gray-500 mt-1 block text-xs">{{ field.help_text|safe }}</small>
+          {% endif %}
+
+          {% if field.errors %}
+          <p class="mt-2 flex items-center gap-2 text-sm text-red-600">
+            <i class="bi bi-exclamation-circle text-lg"></i>
+            {{ field.errors|join:", " }}
+          </p>
+          {% endif %}
+        </div>
+        {% endfor %}
+
+        <button type="submit"
+                class="w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-700 py-4 text-white font-semibold shadow-lg transition hover:shadow-xl hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-4 focus:ring-indigo-300">
+          <span class="flex items-center justify-center gap-2">
+            <i class="bi bi-check-circle text-xl"></i>Create My Account
+          </span>
+        </button>
+      </form>
+
+      <p class="mt-8 text-center text-gray-700 dark:text-gray-900 text-sm">
+        Already have an account? <a href="{% url 'account_login' %}" class="text-indigo-600 font-semibold hover:text-indigo-800">Sign in here</a>
+      </p>
+    </main>
+  </div>
+
+</body>
+</html>

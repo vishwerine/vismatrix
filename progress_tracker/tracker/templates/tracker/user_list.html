@@ -1,0 +1,28 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Users - Progress Tracker{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-6">All Users</h1>
+
+  <div class="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+    {% for user in users %}
+    <div class="flex justify-between items-center px-4 py-3 bg-white dark:bg-slate-800">
+      <span class="text-slate-900 dark:text-slate-50 font-medium">{{ user.username }}</span>
+      {% if user.id in current_friends %}
+      <a href="{% url 'remove_friend' user.id %}" 
+         class="inline-flex items-center rounded-md border border-rose-600 px-3 py-1.5 text-sm font-semibold text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-900 dark:border-rose-500 dark:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
+        Remove Friend
+      </a>
+      {% else %}
+      <a href="{% url 'add_friend' user.id %}" 
+         class="inline-flex items-center rounded-md border border-indigo-600 px-3 py-1.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900 dark:border-indigo-500 dark:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+        Add Friend
+      </a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

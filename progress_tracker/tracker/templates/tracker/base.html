@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Tasks - VisMatrix.Space{% endblock %}</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Bootstrap Icons CDN (optional, for icon consistency) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
+
+    <style>
+      /* Custom CSS variables for gradients and colors */
+      :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --primary-color: #667eea;
+        --secondary-color: #764ba2;
+      }
+    </style>
+
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="bg-gray-50 font-sans text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+
+<!-- Navigation -->
+<nav class="bg-gradient-to-r from-indigo-600 via-purple-700 to-purple-900 shadow-md">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16 items-center">
+      <div class="flex items-center space-x-3">
+        <a href="{% url 'dashboard' %}" class="flex items-center space-x-2 text-white font-bold text-xl">
+          <i class="bi bi-graph-up-arrow text-2xl"></i>
+          <span>VisMatrix.Space</span>
+        </a>
+      </div>
+      <div class="hidden md:flex md:items-center md:space-x-6">
+        <a href="{% url 'dashboard' %}" class="hover:underline flex items-center gap-1 text-white">
+          <i class="bi bi-speedometer2"></i> Dashboard
+        </a>
+        <a href="{% url 'task_list' %}" class="hover:underline flex items-center gap-1 text-white">
+          <i class="bi bi-list-check"></i> Tasks
+        </a>
+        <a href="{% url 'log_list' %}" class="hover:underline flex items-center gap-1 text-white">
+          <i class="bi bi-journal-text"></i> Daily Logs
+        </a>
+        <a href="{% url 'progress' %}" class="hover:underline flex items-center gap-1 text-white">
+          <i class="bi bi-bar-chart-line"></i> Progress
+        </a>
+        <a href="{% url 'category_list' %}" class="hover:underline flex items-center gap-1 text-white">
+          <i class="bi bi-tags"></i> Categories
+        </a>
+        <!-- Social Dropdown -->
+        <div class="relative group">
+          <button class="flex items-center gap-1 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300">
+            <i class="bi bi-people"></i> Social <i class="bi bi-caret-down-fill"></i>
+          </button>
+          <div class="absolute right-0 hidden group-hover:block bg-white dark:bg-gray-800 rounded-md shadow-lg py-2 mt-1 min-w-[180px] z-30">
+            <a href="{% url 'friends_list' %}" class="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-indigo-600 hover:text-white">
+              <i class="bi bi-person-heart"></i> My Friends
+            </a>
+            <a href="{% url 'user_list' %}" class="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-indigo-600 hover:text-white">
+              <i class="bi bi-search"></i> Find Users
+            </a>
+            <a href="{% url 'friend_requests' %}" class="flex justify-between items-center px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-indigo-600 hover:text-white">
+              <span><i class="bi bi-bell"></i> Friend Requests</span>
+              {% if pending_friend_requests_count > 0 %}
+              <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold leading-none text-red-600 bg-red-200 rounded-full">
+                {{ pending_friend_requests_count }}
+              </span>
+              {% endif %}
+            </a>
+          </div>
+        </div>
+      </div>
+      <!-- User Info and Logout -->
+      <div class="hidden md:flex items-center space-x-4 text-white">
+        <i class="bi bi-person-circle text-2xl"></i>
+        <span class="whitespace-nowrap">{{ request.user.username }}</span>
+        <a href="{% url 'account_logout' %}" class="inline-flex items-center gap-1 border border-white/70 rounded px-3 py-1 text-sm hover:bg-white hover:text-indigo-800 transition">
+          <i class="bi bi-box-arrow-right"></i> Logout
+        </a>
+      </div>
+      <!-- Mobile Hamburger -->
+      <div class="md:hidden">
+        <button id="mobile-menu-button" class="text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300">
+          <i class="bi bi-list text-3xl"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Menu -->
+  <div id="mobile-menu" class="hidden md:hidden bg-indigo-700">
+    <a href="{% url 'dashboard' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
+      <i class="bi bi-speedometer2"></i> Dashboard
+    </a>
+    <a href="{% url 'task_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
+      <i class="bi bi-list-check"></i> Tasks
+    </a>
+    <a href="{% url 'log_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
+      <i class="bi bi-journal-text"></i> Daily Logs
+    </a>
+    <a href="{% url 'progress' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
+      <i class="bi bi-bar-chart-line"></i> Progress
+    </a>
+    <a href="{% url 'category_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
+      <i class="bi bi-tags"></i> Categories
+    </a>
+    <a href="{% url 'friends_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
+      <i class="bi bi-person-heart"></i> My Friends
+    </a>
+    <a href="{% url 'user_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
+      <i class="bi bi-search"></i> Find Users
+    </a>
+    <a href="{% url 'friend_requests' %}" class="flex justify-between items-center px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
+      <span><i class="bi bi-bell"></i> Friend Requests</span>
+      {% if pending_friend_requests_count > 0 %}
+      <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold leading-none text-red-600 bg-red-200 rounded-full">
+        {{ pending_friend_requests_count }}
+      </span>
+      {% endif %}
+    </a>
+    <div class="flex items-center space-x-3 px-4 py-3 text-white border-t border-indigo-600">
+      <i class="bi bi-person-circle text-2xl"></i>
+      <span class="whitespace-nowrap">{{ request.user.username }}</span>
+      <a href="{% url 'account_logout' %}" class="inline-flex items-center gap-1 border border-white/70 rounded px-3 py-1 text-sm hover:bg-white hover:text-indigo-800 transition">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- Main Content -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    {% block content %}{% endblock %}
+</main>
+
+<!-- Footer -->
+<footer class="text-center py-4 mt-12 border-t border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">
+  Developed by VisMatrix Inc
+</footer>
+
+<script>
+  // Mobile menu toggle script
+  const menuButton = document.getElementById('mobile-menu-button');
+  const mobileMenu = document.getElementById('mobile-menu');
+
+  menuButton.addEventListener('click', () => {
+    mobileMenu.classList.toggle('hidden');
+  });
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>

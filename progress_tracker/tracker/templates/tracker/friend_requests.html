@@ -1,0 +1,54 @@
+{% extends 'tracker/base.html' %}
+{% block title %}Friend Requests - Progress Tracker{% endblock %}
+
+{% block content %}
+<h1 class="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-8">Friend Requests</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+  <!-- Received Requests -->
+  <section>
+    <h3 class="text-xl font-semibold mb-4 text-slate-900 dark:text-slate-50">Received Requests</h3>
+    {% if received_requests %}
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      {% for req in received_requests %}
+      <li class="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800">
+        <span class="text-slate-900 dark:text-slate-50 font-medium">{{ req.from_user.username }}</span>
+        <div class="flex gap-2">
+          <a href="{% url 'accept_friend_request' req.id %}" 
+             class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+            <i class="bi bi-check-circle"></i> Accept
+          </a>
+          <a href="{% url 'reject_friend_request' req.id %}" 
+             class="inline-flex items-center gap-1 rounded-md border border-rose-500 text-rose-600 px-3 py-1.5 text-sm font-semibold hover:bg-rose-50 dark:hover:bg-rose-900 dark:border-rose-700 dark:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
+            <i class="bi bi-x-circle"></i> Reject
+          </a>
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-500 dark:text-gray-400">No received friend requests.</p>
+    {% endif %}
+  </section>
+
+  <!-- Sent Requests -->
+  <section>
+    <h3 class="text-xl font-semibold mb-4 text-slate-900 dark:text-slate-50">Sent Requests</h3>
+    {% if sent_requests %}
+    <ul class="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+      {% for req in sent_requests %}
+      <li class="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800">
+        <span class="text-slate-900 dark:text-slate-50 font-medium">{{ req.to_user.username }}</span>
+        <a href="{% url 'cancel_friend_request' req.to_user.id %}" 
+           class="inline-flex items-center gap-1 rounded-md border border-yellow-500 text-yellow-600 px-3 py-1.5 text-sm font-semibold hover:bg-yellow-50 dark:hover:bg-yellow-900 dark:border-yellow-700 dark:text-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500">
+          <i class="bi bi-x-circle"></i> Cancel
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-gray-500 dark:text-gray-400">No sent friend requests.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}
