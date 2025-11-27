@@ -24,9 +24,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-@gjlx9gwf=pj6464i*7anr!52nkot86n$4-^99xf1ip%awjr+0"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
+
 
 ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','16.16.9.54']
+
 
 
 # Application definition
@@ -167,6 +169,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
+
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
