@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-@gjlx9gwf=pj6464i*7anr!52nkot86n$4-^99xf1ip%awjr+0
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['vismatrix.space']
+ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','16.16.9.54']
 
 
 # Application definition
