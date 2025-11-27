@@ -170,6 +170,41 @@
                 {% endif %}
             </div>
         </div>
+
+
+	<!-- Other Users / Discover Widget -->
+	<div class="card mt-3">
+    	<div class="card-body">
+       	 <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="card-title mb-0">
+                <i class="bi bi-people"></i> Other Users
+            </h4>
+            <a href="{% url 'user_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-search"></i>
+            </a>
+        </div>
+
+        {% if suggested_users %}
+            {% for u in suggested_users %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <div>
+                    <i class="bi bi-person-circle me-1"></i>
+                    <strong>{{ u.username }}</strong>
+                </div>
+                <a href="{% url 'send_friend_request' u.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-person-plus"></i>
+                </a>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted small mb-0">
+                No more users to suggest. Try <a href="{% url 'user_list' %}">Find Users</a>.
+            </p>
+        	{% endif %}
+   	 </div>
+	</div>
+
+
     </div>
 </div>
 {% endblock %}

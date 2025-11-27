@@ -28,6 +28,37 @@ def dashboard(request):
     
     # Recent activities
     recent_logs = DailyLog.objects.filter(user=request.user)[:5]
+
+    # Friends list
+    friends_qs = Friendship.objects.filter(user=request.user).select_related('friend')
+    total_friends = friends_qs.count()
+
+    # Friends activity as you already have
+    friends_activity = []
+    for f in friends_qs[:5]:
+        friend = f.friend
+        completed = Task.objects.filter(
+            user=friend,
+            status='completed',
+            completed_at__date__gte=week_ago
+        ).count()
+        time_spent = DailyLog.objects.filter(
+            user=friend,
+            date__gte=week_ago
+        ).aggregate(total=Sum('duration'))['total'] or 0
+
+        friends_activity.append({
+            'friend': friend,
+            'completed_tasks': completed,
+            'time_spent': time_spent,
+        })
+
+    # Suggested users (non-friends)
+    friend_ids = [f.friend_id for f in friends_qs]
+    suggested_users = User.objects.exclude(
+        Q(id=request.user.id) | Q(id__in=friend_ids)
+    )[:5]  # limit to 5
+
     
     context = {
         'today': today,
@@ -35,6 +66,9 @@ def dashboard(request):
         'today_time': today_time,
         'pending_tasks': pending_tasks,
         'recent_logs': recent_logs,
+        'friends': friends_activity,
+        'total_friends': total_friends,
+        'suggested_users': suggested_users,
     }
     return render(request, 'tracker/dashboard.html', context)
 
