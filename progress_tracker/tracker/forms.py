@@ -30,32 +30,38 @@ class TaskForm(forms.ModelForm):
             return f"🌐 {obj.name}"
         return obj.name
 
+# forms.py - Complete working form
+
+from django.utils import timezone
+
+from django.db.models import Q
+
 class DailyLogForm(forms.ModelForm):
     class Meta:
         model = DailyLog
         fields = ['date', 'activity', 'description', 'category', 'duration']
         widgets = {
-            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'activity': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'category': forms.Select(attrs={'class': 'form-select'}),
-            'duration': forms.NumberInput(attrs={'class': 'form-control'}),
+            'date': forms.DateInput(attrs={
+                'type': 'date',
+                'class': 'w-full px-4 py-3 rounded-2xl border-2 border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-100/50',
+                'max': timezone.localdate().strftime('%Y-%m-%d'),  # ✅ FIXED
+            }),
+            # ... rest of widgets
         }
     
+    # forms.py - Default to today in form
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
-        super(DailyLogForm, self).__init__(*args, **kwargs)
-        if user:
-            from django.db.models import Q
-            self.fields['category'].queryset = Category.objects.filter(
-                Q(is_global=True) | Q(user=user)
-            )
-            self.fields['category'].label_from_instance = self.label_from_instance
+        super().__init__(*args, **kwargs)
     
-    def label_from_instance(self, obj):
-        if obj.is_global:
-            return f"🌐 {obj.name}"
-        return obj.name
+        # ✅ Default to TODAY in form (not model)
+        if not self.data:
+            self.initial['date'] = timezone.localdate()
+    
+        #... rest of init
+
+
+
 
 class CategoryForm(forms.ModelForm):
     class Meta:

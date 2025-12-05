@@ -69,3 +69,5 @@ htmlcov/
 
 # My local config files
 local_settings.py
+settings.py
+

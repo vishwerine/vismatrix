@@ -1,54 +1,161 @@
 {% extends 'tracker/base.html' %}
+
 {% block title %}Friend Requests - Progress Tracker{% endblock %}
 
 {% block content %}
-<h1 class="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-8">Friend Requests</h1>
+<div class="max-w-4xl mx-auto px-6 py-12">
+  <!-- Hero Header -->
+  <div class="text-center mb-20">
+    <div class="inline-flex items-center justify-center w-28 h-28 mx-auto mb-8 bg-gradient-to-br from-orange-500 to-amber-600 rounded-3xl shadow-2xl border-8 border-white/50">
+      <i class="bi bi-bell-heart-fill text-4xl text-white drop-shadow-lg"></i>
+    </div>
+    <h1 class="text-6xl font-black text-slate-900 mb-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+      Friend Requests
+    </h1>
+    <p class="text-2xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
+      Manage incoming and outgoing connection requests
+    </p>
+  </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-  <!-- Received Requests -->
-  <section>
-    <h3 class="text-xl font-semibold mb-4 text-slate-900 dark:text-slate-50">Received Requests</h3>
-    {% if received_requests %}
-    <ul class="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      {% for req in received_requests %}
-      <li class="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800">
-        <span class="text-slate-900 dark:text-slate-50 font-medium">{{ req.from_user.username }}</span>
-        <div class="flex gap-2">
-          <a href="{% url 'accept_friend_request' req.id %}" 
-             class="inline-flex items-center gap-1 rounded-md bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
-            <i class="bi bi-check-circle"></i> Accept
-          </a>
-          <a href="{% url 'reject_friend_request' req.id %}" 
-             class="inline-flex items-center gap-1 rounded-md border border-rose-500 text-rose-600 px-3 py-1.5 text-sm font-semibold hover:bg-rose-50 dark:hover:bg-rose-900 dark:border-rose-700 dark:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
-            <i class="bi bi-x-circle"></i> Reject
+  <div class="grid lg:grid-cols-2 gap-12 mb-16">
+    <!-- Received Requests Section -->
+    <section class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-12 hover:shadow-3xl transition-all duration-300 group">
+      <div class="flex items-center gap-6 mb-10">
+        <div class="w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-3xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform duration-300">
+          <i class="bi bi-arrow-down-circle-fill text-3xl"></i>
+        </div>
+        <div>
+          <h2 class="text-4xl font-black text-slate-900 mb-2">Received Requests</h2>
+          <div class="h-1 w-24 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full shadow-lg"></div>
+          <p class="text-lg text-slate-600">{{ received_requests|length }} pending invitation{{ received_requests|length|pluralize }}</p>
+        </div>
+      </div>
+
+      {% if received_requests %}
+      <div class="space-y-4 max-h-96 overflow-y-auto pr-4 -mr-4 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+        {% for req in received_requests %}
+        <div class="request-card group bg-gradient-to-r from-slate-50 to-white border-2 border-slate-200 hover:border-emerald-400 rounded-3xl p-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-400 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50">
+          <div class="flex items-start justify-between gap-6">
+            <div class="flex items-center gap-4 flex-1 min-w-0">
+              <div class="w-16 h-16 bg-gradient-to-br from-orange-400 to-amber-500 rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:scale-105 transition-all duration-300 flex-shrink-0">
+                <i class="bi bi-person-plus-fill text-2xl"></i>
+              </div>
+              <div>
+                <h4 class="text-2xl font-black text-slate-900 group-hover:text-emerald-900 transition-colors mb-1">{{ req.from_user.username }}</h4>
+                <p class="text-slate-600 text-lg">wants to connect</p>
+              </div>
+            </div>
+            
+            <div class="flex gap-3 flex-shrink-0">
+              <a href="{% url 'accept_friend_request' req.id %}"
+                 class="inline-flex items-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-8 py-4 rounded-2xl text-lg font-black shadow-xl hover:shadow-2xl hover:from-emerald-700 hover:to-teal-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 group-hover:scale-105 transition-all duration-300">
+                <i class="bi bi-check-circle-fill"></i>
+                <span>Accept</span>
+              </a>
+              <a href="{% url 'reject_friend_request' req.id %}"
+                 class="inline-flex items-center gap-2 bg-gradient-to-r from-slate-200 to-slate-300 text-slate-900 px-8 py-4 rounded-2xl text-lg font-black border-2 border-slate-300 hover:border-slate-400 hover:shadow-xl hover:from-slate-300 hover:to-slate-400 focus:outline-none focus:ring-4 focus:ring-slate-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 group-hover:scale-105 transition-all duration-300">
+                <i class="bi bi-x-circle"></i>
+                <span>Reject</span>
+              </a>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-24">
+        <div class="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-3xl flex items-center justify-center border-4 border-dashed border-emerald-300 shadow-xl">
+          <i class="bi bi-envelope-check text-6xl text-emerald-400"></i>
+        </div>
+        <h3 class="text-4xl font-black text-slate-700 mb-6">No incoming requests</h3>
+        <p class="text-2xl text-slate-600 max-w-lg mx-auto leading-relaxed">Share your progress with others to receive connection requests</p>
+      </div>
+      {% endif %}
+    </section>
+
+    <!-- Sent Requests Section -->
+    <section class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-12 hover:shadow-3xl transition-all duration-300 group">
+      <div class="flex items-center gap-6 mb-10">
+        <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform duration-300">
+          <i class="bi bi-arrow-up-circle-fill text-3xl"></i>
+        </div>
+        <div>
+          <h2 class="text-4xl font-black text-slate-900 mb-2">Sent Requests</h2>
+          <div class="h-1 w-24 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-lg"></div>
+          <p class="text-lg text-slate-600">{{ sent_requests|length }} pending outgoing{{ sent_requests|length|pluralize }}</p>
+        </div>
+      </div>
+
+      {% if sent_requests %}
+      <div class="space-y-4 max-h-96 overflow-y-auto pr-4 -mr-4 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+        {% for req in sent_requests %}
+        <div class="request-card group bg-gradient-to-r from-slate-50 to-white border-2 border-slate-200 hover:border-blue-400 rounded-3xl p-8 hover:shadow-2xl hover:-translate-y-2 transition-all duration-400 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50">
+          <div class="flex items-start justify-between gap-6">
+            <div class="flex items-center gap-4 flex-1 min-w-0">
+              <div class="w-16 h-16 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:scale-105 transition-all duration-300 flex-shrink-0">
+                <i class="bi bi-send-fill text-2xl"></i>
+              </div>
+              <div>
+                <h4 class="text-2xl font-black text-slate-900 group-hover:text-blue-900 transition-colors mb-1">{{ req.to_user.username }}</h4>
+                <p class="text-slate-600 text-lg">awaiting response</p>
+              </div>
+            </div>
+            
+            <a href="{% url 'cancel_friend_request' req.to_user.id %}"
+               class="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-600 text-white px-10 py-4 rounded-2xl text-lg font-black shadow-xl hover:shadow-2xl hover:from-orange-600 hover:to-amber-700 focus:outline-none focus:ring-4 focus:ring-orange-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 group-hover:scale-105 transition-all duration-300">
+              <i class="bi bi-x-circle-fill"></i>
+              <span>Cancel</span>
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-24">
+        <div class="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl flex items-center justify-center border-4 border-dashed border-blue-300 shadow-xl">
+          <i class="bi bi-send-check text-6xl text-blue-400"></i>
+        </div>
+        <h3 class="text-4xl font-black text-slate-700 mb-6">No outgoing requests</h3>
+        <p class="text-2xl text-slate-600 max-w-lg mx-auto leading-relaxed">Send connection requests to start building your network</p>
+        <div class="mt-8">
+          <a href="{% url 'user_list' %}" 
+             class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-12 py-6 rounded-3xl text-xl font-black shadow-2xl hover:shadow-3xl hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300">
+            <i class="bi bi-search-heart"></i>
+            Find Users
           </a>
         </div>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="text-gray-500 dark:text-gray-400">No received friend requests.</p>
-    {% endif %}
-  </section>
+      </div>
+      {% endif %}
+    </section>
+  </div>
 
-  <!-- Sent Requests -->
-  <section>
-    <h3 class="text-xl font-semibold mb-4 text-slate-900 dark:text-slate-50">Sent Requests</h3>
-    {% if sent_requests %}
-    <ul class="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-      {% for req in sent_requests %}
-      <li class="flex items-center justify-between px-4 py-3 bg-white dark:bg-slate-800">
-        <span class="text-slate-900 dark:text-slate-50 font-medium">{{ req.to_user.username }}</span>
-        <a href="{% url 'cancel_friend_request' req.to_user.id %}" 
-           class="inline-flex items-center gap-1 rounded-md border border-yellow-500 text-yellow-600 px-3 py-1.5 text-sm font-semibold hover:bg-yellow-50 dark:hover:bg-yellow-900 dark:border-yellow-700 dark:text-yellow-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500">
-          <i class="bi bi-x-circle"></i> Cancel
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
-    {% else %}
-    <p class="text-gray-500 dark:text-gray-400">No sent friend requests.</p>
-    {% endif %}
-  </section>
+  <!-- Quick Actions -->
+  <div class="text-center">
+    <div class="inline-flex items-center gap-4 bg-gradient-to-r from-slate-50 to-slate-100 text-slate-900 px-12 py-6 rounded-3xl text-xl font-black border-4 border-slate-300 hover:border-slate-400 hover:shadow-2xl hover:from-slate-100 hover:to-slate-200 focus:outline-none focus:ring-4 focus:ring-slate-500/50 focus:ring-offset-2 transition-all duration-300 shadow-xl">
+      <i class="bi bi-arrow-left text-2xl"></i>
+      <a href="{% url 'friends_list' %}">Back to Friends</a>
+    </div>
+  </div>
 </div>
+
+<style>
+  /* Custom accessible scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+</style>
 {% endblock %}

@@ -1,82 +1,218 @@
 {% extends 'tracker/base.html' %}
-   {% load math_filters %}
+{% load math_filters widget_tweaks %}
 
 {% block title %}Daily Logs - VisMatrix.Space{% endblock %}
 
 {% block content %}
-<h1 class="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-6">Daily Activity Logs</h1>
+<div class="max-w-7xl mx-auto px-6 py-12">
+  <!-- Hero Header -->
+  <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-16">
+    <div>
+      <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mb-4 shadow-xl">
+        <i class="bi bi-journal-text text-2xl text-white"></i>
+      </div>
+      <h1 class="text-5xl font-black text-slate-900 mb-2 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+        Daily Activity Logs
+      </h1>
+      <p class="text-2xl text-slate-600 max-w-2xl">Track your complete productivity history</p>
+    </div>
+    
+    <!-- CTA Button -->
+    <a href="{% url 'log_create' %}"
+       class="group inline-flex items-center gap-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-12 py-6 rounded-3xl text-xl font-black shadow-2xl hover:shadow-3xl hover:from-emerald-700 hover:to-teal-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 transition-all duration-300">
+      <i class="bi bi-plus-circle-fill text-2xl group-hover:scale-110 transition-transform"></i>
+      <span>Log New Activity</span>
+    </a>
+  </div>
 
-<a href="{% url 'log_create' %}"
-   class="inline-block rounded-lg bg-indigo-600 px-5 py-2 text-white font-semibold hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 mb-6">
-  Log New Activity
-</a>
+  <!-- Filter Bar -->
+  <div class="bg-white shadow-xl border border-slate-200 rounded-3xl p-8 mb-12 hover:shadow-2xl transition-all duration-300">
+    <form method="get" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+      <div class="flex-1 relative">
+        <label for="date-filter" class="absolute -top-3 left-4 bg-white px-2 text-sm font-bold text-slate-900">Filter by Date</label>
+        <input type="date" name="date" id="date-filter" value="{{ date_filter }}"
+               class="w-full px-6 py-6 text-xl border-2 border-slate-200 rounded-3xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100/50 focus:outline-none shadow-lg hover:border-slate-300 hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-slate-50 to-white font-mono tracking-wider">
+      </div>
+      <button type="submit"
+              class="px-12 py-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-3xl font-black text-xl shadow-xl hover:shadow-2xl hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 transition-all duration-300 transform hover:-translate-y-1 flex items-center gap-3">
+        <i class="bi bi-funnel-fill"></i>
+        <span>Filter</span>
+      </button>
+      <a href="{% url 'log_list' %}"
+         class="px-12 py-6 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 rounded-3xl font-black text-xl border-4 border-slate-300 hover:border-slate-400 hover:shadow-xl hover:from-slate-200 hover:to-slate-300 focus:outline-none focus:ring-4 focus:ring-slate-500/50 focus:ring-offset-2 transition-all duration-300 transform hover:-translate-y-1 flex items-center gap-3">
+        <i class="bi bi-x-circle"></i>
+        <span>Clear</span>
+      </a>
+    </form>
+  </div>
 
-<form method="get" class="inline-flex items-center gap-2 mb-6">
-  <input type="date" name="date" value="{{ date_filter }}"
-         class="rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 px-3 py-1" 
-         placeholder="Filter by date">
-  <button type="submit"
-          class="rounded-md bg-indigo-600 px-4 py-1 text-white font-semibold hover:bg-indigo-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-    Filter
-  </button>
-  <a href="{% url 'log_list' %}"
-     class="rounded-md bg-gray-500 px-4 py-1 text-white font-semibold hover:bg-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-500">
-    Clear
-  </a>
-</form>
-
-{% if logs_by_date %}
-  {% for date, logs in logs_by_date.items %}
-  <section class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-xl p-6 mb-8">
-    <h2 class="text-xl font-semibold mb-4 text-slate-900 dark:text-slate-50">{{ date|date:"l, F d, Y" }}</h2>
-
+  {% if logs_by_date %}
+  <div class="space-y-8">
+    {% for date, logs in logs_by_date.items %}
     {% with total=0 %}
       {% for log in logs %}
         {% with total=total|add:log.duration %}{% endwith %}
       {% endfor %}
     {% endwith %}
-
-    <p class="mb-4 font-semibold text-slate-900 dark:text-slate-50">
-
-
-    {% with hours=total|divisibleby:60 %}
-    {% if hours %}
-        {{ total|div:60 }} hours
-    {% else %}
-        {{ total }} minutes
-    {% endif %}
-    {% endwith %}
-
-    </p>
-
-    <div class="space-y-4">
-      {% for log in logs %}
-      <article class="rounded-lg border-l-4 p-4 bg-gray-50 dark:bg-slate-800"
-        {% if log.category %}
-        style="border-color: {{ log.category.color }}"
-        {% else %}
-        style="border-color: #3498db"
-        {% endif %}
->
-        <div class="flex justify-between items-center mb-2">
-          <strong class="text-lg text-slate-900 dark:text-slate-50">{{ log.activity }}</strong>
-          <span class="bg-indigo-600 text-white text-xs px-2 py-0.5 rounded">{{ log.duration }} min</span>
-        </div>
-        {% if log.category %}
-        <span class="inline-block text-xs font-semibold px-2 py-0.5 rounded mb-2" style="background-color: {{ log.category.color }}; color: white;">
-          {{ log.category.name }}
-        </span>
-        {% endif %}
-        <p class="text-slate-700 dark:text-slate-300 mb-2">{{ log.description }}</p>
-        <small class="text-gray-500 dark:text-gray-400">Logged at: {{ log.created_at|date:"g:i A" }}</small>
-      </article>
-      {% endfor %}
+    
+    <!-- Date Section -->
+    <section class="bg-white shadow-2xl border border-slate-200 rounded-3xl overflow-hidden hover:shadow-3xl transition-all duration-500 group">
+      <!-- Date Header -->
+      <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-12 py-10 border-b-2 border-slate-200 group-hover:bg-gradient-to-r group-hover:from-emerald-50 group-hover:to-teal-50 transition-all duration-500">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div class="flex items-center gap-6">
+            <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-all duration-300">
+              <i class="bi bi-calendar3-week-fill text-2xl"></i>
+            </div>
+            <div>
+              <h2 class="text-4xl font-black text-slate-900 group-hover:text-emerald-900 transition-colors">{{ date|date:"l, F d, Y" }}</h2>
+              
+              <!-- Total Time Display -->
+              <div class="inline-flex items-center gap-3 mt-2">
+                <!-- Safe time display -->
+{% with total_safe=total_time|default:"0"|add:0 %}
+  {% with hours=total_safe|div:60 minutes=total_safe|mul:60|sub:total_safe %}
+    <div class="text-3xl font-black">
+      {{ hours }}h {{ minutes }}m
     </div>
-  </section>
-  {% endfor %}
-{% else %}
-  <section class="bg-white dark:bg-slate-900 shadow-sm border border-slate-100 dark:border-slate-800 rounded-xl p-6 text-center text-gray-600 dark:text-gray-400">
-    No activity logs found. Start logging your daily activities!
-  </section>
-{% endif %}
+  {% endwith %}
+
+
+                {% if hours %}
+                  <div class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 rounded-2xl font-black text-2xl shadow-lg border-2 border-emerald-200">
+                    <i class="bi bi-clock-history text-2xl"></i>
+                    <span>{{ total|div:60 }}h</span>
+                  </div>
+                {% else %}
+                  <div class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-2xl font-black text-2xl shadow-lg border-2 border-blue-200">
+                    <i class="bi bi-stopwatch text-2xl"></i>
+                    <span>{{ total }}min</span>
+                  </div>
+                {% endif %}
+                {% endwith %}
+                <div class="text-xl text-slate-600 font-semibold">
+                  {{ logs|length }} activit{{ logs|length|pluralize }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Logs List -->
+      <div class="p-12 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
+        <div class="space-y-6">
+          {% for log in logs %}
+          <article class="group log-card bg-gradient-to-r from-slate-50 to-white border-4 border-slate-200 hover:border-emerald-400 rounded-3xl p-8 hover:shadow-2xl hover:-translate-y-3 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 transition-all duration-500 overflow-hidden relative">
+            <!-- Category Color Accent -->
+            {% if log.category %}
+            <div class="absolute inset-0 opacity-10" style="background-color: {{ log.category.color }}"></div>
+            {% endif %}
+            
+            <div class="relative">
+              <div class="flex items-start justify-between gap-6 mb-6">
+                <div class="flex items-center gap-4 flex-1 min-w-0">
+                  <!-- Category Badge -->
+                  {% if log.category %}
+                  <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold shadow-xl flex-shrink-0 ring-4 ring-white/50" style="background-color: {{ log.category.color }}">
+                    <i class="bi bi-tag-fill text-xl"></i>
+                  </div>
+                  <div>
+                    <h4 class="text-2xl font-black text-slate-900 group-hover:text-emerald-900 transition-colors mb-1 line-clamp-1">{{ log.activity }}</h4>
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 rounded-xl font-semibold text-lg shadow-sm border border-slate-200">
+                      <i class="bi bi-bookmark-check"></i>
+                      {{ log.category.name }}
+                    </div>
+                  </div>
+                  {% else %}
+                  <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl flex-shrink-0">
+                    <i class="bi bi-circle-fill text-2xl"></i>
+                  </div>
+                  <h4 class="text-2xl font-black text-slate-900 group-hover:text-emerald-900 transition-colors ml-4 flex-1 min-w-0">{{ log.activity }}</h4>
+                  {% endif %}
+                </div>
+                
+                <!-- Duration Badge -->
+                <div class="inline-flex items-center gap-2 px-6 py-4 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 rounded-3xl font-black text-2xl shadow-xl border-2 border-emerald-200 group-hover:shadow-2xl group-hover:scale-105 transition-all duration-300 flex-shrink-0">
+                  <i class="bi bi-stopwatch-fill"></i>
+                  {{ log.duration }}min
+                </div>
+              </div>
+
+              <!-- Description -->
+              {% if log.description %}
+              <p class="text-xl text-slate-700 leading-relaxed mb-6 px-2 line-clamp-3 group-hover:text-slate-900 transition-colors">{{ log.description }}</p>
+              {% endif %}
+
+              <!-- Meta Info -->
+              <div class="flex items-center justify-between pt-6 border-t-2 border-slate-200">
+                <div class="inline-flex items-center gap-2 text-slate-500 text-lg font-medium">
+                  <i class="bi bi-clock"></i>
+                  {{ log.created_at|date:"g:i A" }}
+                </div>
+                <a href="#" class="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 text-lg font-semibold transition-colors">
+                  <i class="bi bi-pencil-square"></i>
+                  <span>Edit</span>
+                </a>
+              </div>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+  {% else %}
+  <!-- Empty State -->
+  <div class="text-center py-32">
+    <div class="w-48 h-48 mx-auto mb-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-4xl flex items-center justify-center shadow-2xl border-4 border-dashed border-slate-300">
+      <i class="bi bi-journal-plus text-7xl text-slate-400"></i>
+    </div>
+    <h2 class="text-5xl font-black text-slate-900 mb-6">No activity logs yet</h2>
+    <p class="text-2xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+      Start tracking your daily progress to see your productivity journey unfold
+    </p>
+    <a href="{% url 'log_create' %}" 
+       class="inline-flex items-center gap-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-16 py-8 rounded-3xl text-2xl font-black shadow-3xl hover:shadow-4xl hover:from-emerald-700 hover:to-teal-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all duration-300 transform hover:-translate-y-2">
+      <i class="bi bi-plus-circle-fill text-3xl"></i>
+      <span>Log Your First Activity</span>
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+  /* Custom accessible scrollbar */
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 10px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 5px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+
+  /* Line clamp utilities */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>
 {% endblock %}

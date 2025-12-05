@@ -1,28 +1,136 @@
 {% extends 'tracker/base.html' %}
+{% load math_filters %}
 
 {% block title %}Users - Progress Tracker{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-  <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-6">All Users</h1>
+<div class="max-w-6xl mx-auto px-6 py-12">
+  <!-- Hero Header -->
+  <div class="text-center mb-20">
+    <div class="inline-flex items-center justify-center w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl shadow-2xl border-8 border-white/50">
+      <i class="bi bi-people-fill text-5xl text-white drop-shadow-lg"></i>
+    </div>
+    <h1 class="text-6xl font-black text-slate-900 mb-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
+      Discover Users
+    </h1>
+    <p class="text-2xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+      Find and connect with others to share progress and stay motivated
+    </p>
+  </div>
 
-  <div class="divide-y divide-gray-200 dark:divide-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+  <!-- Stats Overview -->
+  <div class="grid md:grid-cols-4 gap-8 mb-16">
+    <div class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-10 text-center hover:shadow-3xl transition-all duration-300 group">
+      <div class="text-5xl font-black text-purple-600 mb-4 group-hover:scale-110 transition-transform">{{ users|length }}</div>
+      <div class="text-2xl font-bold text-slate-900 mb-2">Total Users</div>
+      <div class="text-lg text-slate-600">Active on platform</div>
+    </div>
+    <div class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-10 text-center hover:shadow-3xl transition-all duration-300 group">
+      <div class="text-5xl font-black text-emerald-600 mb-4 group-hover:scale-110 transition-transform">{{ current_friends|length }}</div>
+      <div class="text-2xl font-bold text-slate-900 mb-2">Your Friends</div>
+      <div class="text-lg text-slate-600">Current connections</div>
+    </div>
+    <div class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-10 text-center hover:shadow-3xl transition-all duration-300 group">
+      <div class="text-5xl font-black text-blue-600 mb-4 group-hover:scale-110 transition-transform">
+        {{ users|length|add:current_friends|length|mul:-1|add:users|length }}
+      </div>
+      <div class="text-2xl font-bold text-slate-900 mb-2">Connect</div>
+      <div class="text-lg text-slate-600">Available users</div>
+    </div>
+  </div>
+
+  <!-- Users Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
     {% for user in users %}
-    <div class="flex justify-between items-center px-4 py-3 bg-white dark:bg-slate-800">
-      <span class="text-slate-900 dark:text-slate-50 font-medium">{{ user.username }}</span>
+    <div class="group user-card bg-white shadow-xl border border-slate-200 rounded-3xl p-8 hover:shadow-2xl hover:-translate-y-3 hover:border-purple-400 transition-all duration-500 overflow-hidden relative h-full">
+      <!-- Friend Status Badge -->
       {% if user.id in current_friends %}
-      <a href="{% url 'remove_friend' user.id %}" 
-         class="inline-flex items-center rounded-md border border-rose-600 px-3 py-1.5 text-sm font-semibold text-rose-600 hover:bg-rose-100 dark:hover:bg-rose-900 dark:border-rose-500 dark:text-rose-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
-        Remove Friend
-      </a>
-      {% else %}
-      <a href="{% url 'add_friend' user.id %}" 
-         class="inline-flex items-center rounded-md border border-indigo-600 px-3 py-1.5 text-sm font-semibold text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900 dark:border-indigo-500 dark:text-indigo-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
-        Add Friend
-      </a>
+      <div class="absolute top-6 right-6">
+        <span class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl font-bold text-sm shadow-lg ring-2 ring-white/50">
+          <i class="bi bi-heart-fill"></i>
+          Friend
+        </span>
+      </div>
       {% endif %}
+
+      <div class="text-center mb-6">
+        <!-- User Avatar -->
+        <div class="w-28 h-28 mx-auto mb-6 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center text-white shadow-2xl border-8 border-white/50 group-hover:scale-110 transition-all duration-500 mx-auto">
+          <i class="bi bi-person-fill text-4xl drop-shadow-lg"></i>
+        </div>
+        
+        <!-- Username -->
+        <h3 class="text-4xl font-black text-slate-900 mb-4 group-hover:text-purple-900 transition-colors line-clamp-1">
+          {{ user.username }}
+        </h3>
+        
+        <!-- Status Ring -->
+        <div class="inline-flex items-center gap-3 px-8 py-4 rounded-3xl font-bold text-xl mb-6 shadow-xl border-4 border-slate-200
+                    {% if user.id in current_friends %}bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 border-emerald-300{% else %}bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 border-slate-300{% endif %}">
+          <div class="w-4 h-4 rounded-full shadow-lg
+                      {% if user.id in current_friends %}bg-emerald-500{% else %}bg-slate-400{% endif %}"></div>
+          <span>{% if user.id in current_friends %}Connected Friend{% else %}Connect to View{% endif %}</span>
+        </div>
+      </div>
+
+      <!-- Action Button -->
+      <div class="pt-8 border-t-2 border-slate-200">
+        {% if user.id in current_friends %}
+        <a href="{% url 'remove_friend' user.id %}"
+           class="w-full inline-flex items-center justify-center gap-4 bg-gradient-to-r from-red-600 to-rose-700 text-white py-6 px-8 rounded-3xl text-xl font-black shadow-2xl hover:shadow-3xl hover:from-red-700 hover:to-rose-800 focus:outline-none focus:ring-4 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 group-hover:scale-105 transition-all duration-400">
+          <i class="bi bi-person-x-fill text-2xl"></i>
+          <span>Remove Friend</span>
+        </a>
+        {% else %}
+        <a href="{% url 'add_friend' user.id %}"
+           class="w-full inline-flex items-center justify-center gap-4 bg-gradient-to-r from-indigo-600 to-purple-700 text-white py-6 px-8 rounded-3xl text-xl font-black shadow-2xl hover:shadow-3xl hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 group-hover:scale-105 transition-all duration-400">
+          <i class="bi bi-person-plus-fill text-2xl"></i>
+          <span>Add Friend</span>
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full text-center py-32">
+      <div class="w-48 h-48 mx-auto mb-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-full flex items-center justify-center shadow-2xl border-4 border-dashed border-slate-300">
+        <i class="bi bi-people text-7xl text-slate-400"></i>
+      </div>
+      <h2 class="text-5xl font-black text-slate-900 mb-6">No users found</h2>
+      <p class="text-2xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed">
+        Start building your network by connecting with others
+      </p>
+      <a href="{% url 'friend_requests' %}" 
+         class="inline-flex items-center gap-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-16 py-8 rounded-3xl text-2xl font-black shadow-3xl hover:shadow-4xl hover:from-emerald-700 hover:to-teal-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all duration-300 transform hover:-translate-y-2">
+        <i class="bi bi-bell-heart text-3xl"></i>
+        <span>Check Friend Requests</span>
+      </a>
     </div>
     {% endfor %}
+  </div>
+
+  <!-- Quick Stats Footer -->
+  <div class="mt-20 grid md:grid-cols-3 gap-8 text-center">
+    <div class="p-8 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-3xl border-2 border-emerald-200 group hover:shadow-xl transition-all">
+      <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform">
+        <i class="bi bi-people-fill text-2xl"></i>
+      </div>
+      <div class="text-4xl font-black text-emerald-800 mb-2">{{ current_friends|length }}</div>
+      <p class="text-xl font-bold text-emerald-700">Friends</p>
+    </div>
+    <div class="p-8 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-3xl border-2 border-indigo-200 group hover:shadow-xl transition-all">
+      <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform">
+        <i class="bi bi-person-plus"></i>
+      </div>
+      <div class="text-4xl font-black text-indigo-800 mb-2">{{ users|length|add:-1|sub:current_friends|length }}</div>
+      <p class="text-xl font-bold text-indigo-700">Available</p>
+    </div>
+    <div class="p-8 bg-gradient-to-r from-slate-50 to-slate-100 rounded-3xl border-2 border-slate-200 group hover:shadow-xl transition-all">
+      <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-r from-slate-500 to-slate-600 rounded-2xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform">
+        <i class="bi bi-arrow-right-circle"></i>
+      </div>
+      <div class="text-4xl font-black text-slate-900 mb-2">1-Click</div>
+      <p class="text-xl font-bold text-slate-800">Connect</p>
+    </div>
   </div>
 </div>
 {% endblock %}

@@ -3,135 +3,147 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Logout - VisMatrix.Space</title>
+  <title>Sign Out Confirmation - VisMatrix.Space</title>
 
   <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-
   <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
 
   <style>
-    /* Animated background circles */
-    body::before,
-    body::after {
-      content: '';
-      position: absolute;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.1);
-      animation: float 20s infinite ease-in-out;
-      z-index: 0;
-    }
-    body::before {
-      width: 300px;
-      height: 300px;
-      top: -150px;
-      left: 50%;
-      transform: translateX(-50%);
-      animation-delay: 1s;
-    }
-    body::after {
-      width: 400px;
-      height: 400px;
-      bottom: -200px;
-      left: 50%;
-      transform: translateX(-50%);
-      animation-delay: 6s;
+    /* WCAG AA compliant animations */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     @keyframes float {
-      0%, 100% { transform: translate(-50%, 0) scale(1); }
-      33% { transform: translate(-50%, -30px) scale(1.1); }
-      66% { transform: translate(-50%, 30px) scale(0.9); }
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-10px) scale(1.02); }
     }
-
-    /* Ripple animation on icon container */
-    .ripple::before {
-      content: '';
-      position: absolute;
-      width: 120px;
-      height: 120px;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-      border-radius: 50%;
-      animation: ripple 3s infinite;
-      z-index: 0;
+    /* High contrast focus rings */
+    .focus-ring:focus-visible {
+      outline: 3px solid #2563eb;
+      outline-offset: 2px;
     }
-    @keyframes ripple {
-      0% {
-        transform: scale(1);
-        opacity: 1;
-      }
-      100% {
-        transform: scale(1.5);
-        opacity: 0;
-      }
-    }
-
-    /* Icon pulse animation */
-    .icon-pulse {
-      animation: pulse 2s ease-in-out infinite;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      position: relative;
-      z-index: 1;
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-    }
-
-    /* Slide up animation */
-    @keyframes slideUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
+    /* Reduced motion support */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
       }
     }
   </style>
 </head>
-<body class="relative min-h-screen bg-gradient-to-tr from-indigo-500 via-purple-700 to-purple-800 font-sans antialiased flex items-center justify-center p-6 overflow-hidden">
+<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-emerald-50/30 font-sans antialiased flex items-center justify-center p-4 lg:p-8 relative overflow-hidden">
+  
+  <!-- Subtle decorative elements -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute top-20 left-20 w-64 h-64 bg-gradient-to-r from-blue-200/20 to-emerald-200/20 rounded-full blur-xl animate-float-slow"></div>
+    <div class="absolute bottom-20 right-20 w-72 h-72 bg-gradient-to-r from-emerald-200/20 to-purple-200/20 rounded-full blur-xl animate-float-slow delay-1000"></div>
+  </div>
 
-  <div class="relative z-10 w-full max-w-md rounded-3xl bg-white bg-opacity-95 backdrop-blur-xl p-12 text-center shadow-2xl animate-slideUp">
-
-    <div class="relative ripple mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-300 to-purple-400">
-      <i class="bi bi-box-arrow-right icon-pulse text-6xl"></i>
-    </div>
-
-    <h1 class="mb-4 text-3xl font-bold text-slate-900">Sign Out</h1>
-    <p class="mb-10 text-gray-600">Are you sure you want to sign out of your account?</p>
-
-    <div class="mb-10 rounded-xl bg-gradient-to-tr from-indigo-100 to-purple-100 border border-indigo-300 px-6 py-4 text-left text-indigo-700 flex items-center gap-3">
-      <i class="bi bi-shield-check text-2xl flex-shrink-0"></i>
-      <p class="font-semibold">
-        Your progress is saved! All your data will be securely stored and ready when you return.
+  <div class="relative z-10 w-full max-w-sm lg:max-w-md bg-white/95 backdrop-blur-xl shadow-2xl border border-slate-200/50 rounded-2xl lg:rounded-3xl overflow-hidden animate-slideUp transition-all duration-300 hover:shadow-3xl" 
+       role="main" aria-labelledby="logout-title">
+    
+    <!-- Header - High contrast accessible -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white p-8 lg:p-10 text-center relative">
+      <div class="w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-6 bg-white/20 rounded-2xl flex items-center justify-center shadow-xl ring-2 ring-white/30">
+        <i class="bi bi-box-arrow-right text-4xl lg:text-5xl" aria-hidden="true"></i>
+      </div>
+      <h1 id="logout-title" class="text-3xl lg:text-4xl font-black tracking-tight mb-3" role="banner">
+        Sign Out?
+      </h1>
+      <p class="text-lg lg:text-xl font-semibold text-slate-200 leading-relaxed">
+        Confirm you want to sign out of VisMatrix.Space
       </p>
     </div>
 
-    <form method="post">
-      {% csrf_token %}
-      <button type="submit"
-              class="mb-6 w-full rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-700 py-4 font-semibold text-white shadow-lg transition hover:shadow-xl hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-4 focus:ring-indigo-300">
-        <span class="flex items-center justify-center gap-2">
-          <i class="bi bi-check-circle text-xl"></i>
-          Yes, Sign Me Out
-        </span>
-      </button>
-    </form>
+    <div class="p-8 lg:p-10 space-y-6">
+      <!-- Reassurance message -->
+      <div class="bg-gradient-to-r from-emerald-50 to-blue-50 border-l-6 border-emerald-500 border border-emerald-200 text-emerald-900 p-6 rounded-2xl" 
+           role="status" aria-label="Data safety confirmation">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg">
+            <i class="bi bi-shield-check text-white text-xl" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-lg leading-6">
+              Your progress is safe
+            </p>
+            <p class="text-base text-emerald-800 leading-relaxed">
+              All data automatically saved and ready when you return
+            </p>
+          </div>
+        </div>
+      </div>
 
-    <a href="{% url 'dashboard' %}"
-       class="inline-block w-full rounded-2xl bg-white border-2 border-gray-200 py-4 font-semibold text-gray-700 hover:border-indigo-600 hover:text-indigo-600 hover:bg-indigo-50 focus:outline-none focus:ring-4 focus:ring-indigo-300 transition">
-      <span class="flex items-center justify-center gap-2">
-        <i class="bi bi-arrow-left text-lg"></i>
-        No, Take Me Back
-      </span>
-    </a>
+      <!-- Action buttons - WCAG AA compliant -->
+      <form method="post" class="space-y-3" role="form">
+        {% csrf_token %}
+        
+        <button 
+          type="submit"
+          class="w-full bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200 text-lg flex items-center justify-center gap-3 focus-ring"
+          aria-describedby="logout-confirm">
+          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          <span>Yes, Sign Me Out</span>
+        </button>
+      </form>
 
+      <a 
+        href="{% url 'dashboard' %}"
+        class="w-full block bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-900 hover:text-slate-800 font-bold py-4 px-6 rounded-2xl shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200 text-lg flex items-center justify-center gap-3 focus-ring text-center"
+        role="button" 
+        aria-label="Cancel and return to dashboard">
+        <i class="bi bi-arrow-left" aria-hidden="true"></i>
+        <span>Stay Signed In</span>
+      </a>
+
+      <!-- Help text -->
+      <div class="pt-6 border-t border-slate-200 text-center">
+        <p class="text-sm text-slate-600">
+          You'll need to sign in again to access your progress
+        </p>
+      </div>
+    </div>
   </div>
 
+  <script>
+    // Enhanced accessibility and UX
+    document.addEventListener('DOMContentLoaded', function() {
+      // Focus management
+      const firstButton = document.querySelector('button[type="submit"]');
+      if (firstButton) {
+        firstButton.focus();
+      }
+
+      // Keyboard navigation enhancement
+      document.addEventListener('keydown', function(e) {
+        // Escape key cancels logout
+        if (e.key === 'Escape') {
+          window.location.href = "{% url 'dashboard' %}";
+        }
+        
+        // Enter on buttons
+        if (e.key === 'Enter' && e.target.tagName === 'BUTTON') {
+          e.target.click();
+        }
+      });
+
+      // Prevent accidental form submission
+      const form = document.querySelector('form');
+      let submitCount = 0;
+      if (form) {
+        form.addEventListener('submit', function(e) {
+          submitCount++;
+          if (submitCount > 1) {
+            e.preventDefault();
+            return false;
+          }
+        });
+      }
+    });
+  </script>
 </body>
 </html>

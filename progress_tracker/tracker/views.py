@@ -134,26 +134,33 @@ def task_delete(request, pk):
         return redirect('task_list')
     return render(request, 'tracker/task_confirm_delete.html', {'task': task})
 
+
 # Daily log views
+import pytz
+from django.utils import timezone
+
 @login_required
 def log_list(request):
     """List daily logs"""
     date_filter = request.GET.get('date')
     
-    logs = DailyLog.objects.filter(user=request.user)
+    logs = DailyLog.objects.filter(user=request.user).select_related('category')
+    
     if date_filter:
         logs = logs.filter(date=date_filter)
     
-    # Group by date
+    # Group by date for template
     logs_by_date = {}
     for log in logs:
-        if log.date not in logs_by_date:
-            logs_by_date[log.date] = []
-        logs_by_date[log.date].append(log)
+        date_str = log.date.strftime('%Y-%m-%d')
+        if date_str not in logs_by_date:
+            logs_by_date[date_str] = []
+        logs_by_date[date_str].append(log)
     
     context = {
         'logs_by_date': logs_by_date,
         'date_filter': date_filter,
+        'total_logs': logs.count(),
     }
     return render(request, 'tracker/log_list.html', context)
 
@@ -165,13 +172,26 @@ def log_create(request):
         if form.is_valid():
             log = form.save(commit=False)
             log.user = request.user
+            log.date = form.cleaned_data['date']  # Ensure date is set
             log.save()
+            messages.success(request, f"Activity '{log.activity[:50]}...' logged successfully! ({log.duration}min)")
             return redirect('log_list')
+        else:
+            messages.error(request, "Please fix the errors below.")
     else:
-        form = DailyLogForm(initial={'date': timezone.now().date()}, user=request.user)
+        # Default to today
+        today = timezone.now().date()
+        form = DailyLogForm(initial={'date': today}, user=request.user)
     
-    return render(request, 'tracker/log_form.html', {'form': form, 'title': 'Log Activity'})
-
+    categories = Category.objects.filter(
+        Q(is_global=True) | Q(user=request.user)
+    ).order_by('-is_global', 'name')
+    
+    return render(request, 'tracker/log_form.html', {
+        'form': form,
+        'title': 'Log New Activity',
+        'categories': categories,
+    })
 # Progress view
 @login_required
 def progress_view(request):
@@ -200,6 +220,7 @@ def progress_view(request):
         'daily_stats': daily_stats,
     }
     return render(request, 'tracker/progress.html', context)
+
 
 # Category views
 from django.db.models import Q

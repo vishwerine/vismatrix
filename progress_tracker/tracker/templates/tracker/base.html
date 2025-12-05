@@ -5,150 +5,272 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{% block title %}Tasks - VisMatrix.Space{% endblock %}</title>
 
-    <!-- Tailwind CSS CDN -->
+    <!-- DaisyUI + Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
-
-    <!-- Bootstrap Icons CDN (optional, for icon consistency) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet" />
+    
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
 
     <style>
-      /* Custom CSS variables for gradients and colors */
-      :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --primary-color: #667eea;
-        --secondary-color: #764ba2;
+      /* Custom scrollbar */
+      .scrollbar-thin::-webkit-scrollbar {
+        width: 6px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-track {
+        background: hsl(var(--bc) / 0.2);
+        border-radius: 9999px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb {
+        background: hsl(var(--bc) / 0.5);
+        border-radius: 9999px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--bc));
       }
     </style>
 
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-gray-50 font-sans text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+<body data-theme="light" class="min-h-screen">
 
-<!-- Navigation -->
-<nav class="bg-gradient-to-r from-indigo-600 via-purple-700 to-purple-900 shadow-md">
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="flex justify-between h-16 items-center">
-      <div class="flex items-center space-x-3">
-        <a href="{% url 'dashboard' %}" class="flex items-center space-x-2 text-white font-bold text-xl">
-          <i class="bi bi-graph-up-arrow text-2xl"></i>
-          <span>VisMatrix.Space</span>
+<!-- Drawer for mobile -->
+<input id="main-drawer" type="checkbox" class="drawer-toggle" />
+<div class="drawer lg:drawer-open">
+  <!-- Mobile drawer content -->
+  <div class="drawer-side">
+    <label for="main-drawer" aria-label="close menu" class="drawer-overlay"></label>
+    <ul class="menu p-6 w-80 h-full bg-base-100 text-base-content gap-2 scrollbar-thin overflow-y-auto">
+      <!-- Logo -->
+      <li class="menu-title p-6 mb-6">
+        <a href="{% url 'dashboard' %}" class="flex items-center gap-3 text-2xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <i class="bi bi-graph-up-arrow text-3xl"></i>
+          VisMatrix.Space
+        </a>
+      </li>
+
+      <!-- Main Navigation -->
+      <li class="menu-title font-bold text-lg text-base-content/80">Main</li>
+      <li><a href="{% url 'dashboard' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
+        <i class="bi bi-speedometer2 text-xl text-primary"></i><span>Dashboard</span>
+      </a></li>
+      <li><a href="{% url 'task_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
+        <i class="bi bi-list-check text-xl text-primary"></i><span>Tasks</span>
+      </a></li>
+      <li><a href="{% url 'log_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
+        <i class="bi bi-journal-text text-xl text-primary"></i><span>Daily Logs</span>
+      </a></li>
+      <li><a href="{% url 'progress' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
+        <i class="bi bi-bar-chart-line text-xl text-primary"></i><span>Progress</span>
+      </a></li>
+      <li><a href="{% url 'category_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
+        <i class="bi bi-tags text-xl text-primary"></i><span>Categories</span>
+      </a></li>
+
+      <!-- Social Navigation -->
+      <li class="menu-title font-bold text-lg text-base-content/80 mt-6">Social</li>
+      <li><a href="{% url 'friends_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
+        <i class="bi bi-person-heart text-xl text-secondary"></i><span>My Friends</span>
+      </a></li>
+      <li><a href="{% url 'user_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
+        <i class="bi bi-search text-xl text-secondary"></i><span>Find Users</span>
+      </a></li>
+      <li class="relative">
+        <a href="{% url 'friend_requests' %}" class="flex items-center justify-between gap-3 py-3 px-6 rounded-2xl active:scale-105">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-bell text-xl text-warning"></i>
+            <span>Friend Requests</span>
+          </div>
+          {% if pending_friend_requests_count > 0 %}
+          <div class="badge badge-error badge-lg gap-1.5 shadow-lg border-2 border-white/50">
+            {{ pending_friend_requests_count }}
+            <i class="bi bi-lightning-fill text-xs"></i>
+          </div>
+          {% endif %}
+        </a>
+      </li>
+
+      <!-- Divider -->
+      <li class="divider mx-6 my-6"></li>
+
+      <!-- User Profile -->
+      <li class="px-6 py-4 mb-6">
+        <div class="flex items-center gap-4 p-4 bg-base-200 rounded-3xl">
+          <div class="w-16 h-16 bg-gradient-to-r from-primary to-secondary mask mask-circle flex items-center justify-center shadow-xl">
+            <i class="bi bi-person-circle text-2xl text-base-100"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="font-bold text-xl truncate">{{ request.user.username }}</div>
+            <div class="text-sm text-base-content/60">Active User</div>
+          </div>
+        </div>
+      </li>
+
+      <!-- Logout -->
+      <li class="px-6">
+        <a href="{% url 'account_logout' %}" class="flex items-center gap-3 btn btn-error w-full rounded-2xl gap-3 shadow-xl">
+          <i class="bi bi-box-arrow-right text-xl"></i>
+          <span>Logout</span>
+        </a>
+      </li>
+    </ul>
+  </div>
+
+  <!-- Page content -->
+  <div class="drawer-content flex flex-col">
+    <!-- Top Navbar -->
+    <div class="navbar bg-base-100/95 backdrop-blur-xl shadow-xl sticky top-0 z-40 border-b border-base-200 lg:border-b-0">
+      <div class="navbar-start">
+        <!-- Mobile hamburger -->
+        <label for="main-drawer" class="btn btn-square btn-ghost swap swap-rotate lg:hidden">
+          <i class="bi bi-list text-2xl"></i>
+          <i class="bi bi-x text-2xl"></i>
+        </label>
+        
+        <!-- Logo -->
+        <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-lg normal-case text-xl lg:ml-4 font-black">
+          <i class="bi bi-graph-up-arrow text-2xl text-primary mr-2"></i>
+          VisMatrix.Space
         </a>
       </div>
-      <div class="hidden md:flex md:items-center md:space-x-6">
-        <a href="{% url 'dashboard' %}" class="hover:underline flex items-center gap-1 text-white">
-          <i class="bi bi-speedometer2"></i> Dashboard
-        </a>
-        <a href="{% url 'task_list' %}" class="hover:underline flex items-center gap-1 text-white">
-          <i class="bi bi-list-check"></i> Tasks
-        </a>
-        <a href="{% url 'log_list' %}" class="hover:underline flex items-center gap-1 text-white">
-          <i class="bi bi-journal-text"></i> Daily Logs
-        </a>
-        <a href="{% url 'progress' %}" class="hover:underline flex items-center gap-1 text-white">
-          <i class="bi bi-bar-chart-line"></i> Progress
-        </a>
-        <a href="{% url 'category_list' %}" class="hover:underline flex items-center gap-1 text-white">
-          <i class="bi bi-tags"></i> Categories
-        </a>
+
+      <!-- Desktop Navigation -->
+      <div class="navbar-center hidden lg:flex">
+        <ul class="menu menu-horizontal rounded-box gap-2 bg-base-200/50 backdrop-blur-sm px-4 py-2">
+          <li><a href="{% url 'dashboard' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
+            <i class="bi bi-speedometer2 text-primary"></i> Dashboard
+          </a></li>
+          <li><a href="{% url 'task_list' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
+            <i class="bi bi-list-check text-primary"></i> Tasks
+          </a></li>
+          <li><a href="{% url 'log_list' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
+            <i class="bi bi-journal-text text-primary"></i> Logs
+          </a></li>
+          <li><a href="{% url 'progress' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
+            <i class="bi bi-bar-chart-line text-primary"></i> Progress
+          </a></li>
+          <li><a href="{% url 'category_list' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
+            <i class="bi bi-tags text-primary"></i> Categories
+          </a></li>
+        </ul>
+      </div>
+
+      <!-- Right side: Social + User -->
+      <div class="navbar-end items-center gap-2">
         <!-- Social Dropdown -->
-        <div class="relative group">
-          <button class="flex items-center gap-1 text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300">
-            <i class="bi bi-people"></i> Social <i class="bi bi-caret-down-fill"></i>
-          </button>
-          <div class="absolute right-0 hidden group-hover:block bg-white dark:bg-gray-800 rounded-md shadow-lg py-2 mt-1 min-w-[180px] z-30">
-            <a href="{% url 'friends_list' %}" class="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-indigo-600 hover:text-white">
-              <i class="bi bi-person-heart"></i> My Friends
-            </a>
-            <a href="{% url 'user_list' %}" class="block px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-indigo-600 hover:text-white">
-              <i class="bi bi-search"></i> Find Users
-            </a>
-            <a href="{% url 'friend_requests' %}" class="flex justify-between items-center px-4 py-2 text-gray-700 dark:text-gray-200 hover:bg-indigo-600 hover:text-white">
-              <span><i class="bi bi-bell"></i> Friend Requests</span>
+        <div class="dropdown dropdown-end z-50">
+          <label tabindex="0" class="btn btn-ghost gap-2 px-4 py-2 rounded-xl hover:bg-base-200 font-semibold">
+            <i class="bi bi-people text-primary text-xl"></i>
+            <span class="hidden sm:inline">Social</span>
+            <i class="bi bi-chevron-down transition-transform duration-200"></i>
+          </label>
+          <ul tabindex="0" class="dropdown-content z-[1] menu p-4 shadow-2xl bg-base-100 rounded-3xl border border-base-200 w-72 mt-2 animate-[slide-down_0.2s_ease-out]">
+            <li class="">
+              <a href="{% url 'friends_list' %}" class="gap-3 py-3 px-4 rounded-2xl hover:bg-primary hover:bg-opacity-10 active:scale-95">
+                <i class="bi bi-person-heart text-primary text-xl"></i>
+                <span>My Friends</span>
+              </a>
+            </li>
+            <li class="">
+              <a href="{% url 'user_list' %}" class="gap-3 py-3 px-4 rounded-2xl hover:bg-primary hover:bg-opacity-10 active:scale-95">
+                <i class="bi bi-search text-base-content text-xl"></i>
+                <span>Find Users</span>
+              </a>
+            </li>
+            <li class="menu-title gap-2">
+              <span class="flex items-center gap-2">
+                <i class="bi bi-bell text-warning text-xl"></i>
+                Friend Requests
+              </span>
               {% if pending_friend_requests_count > 0 %}
-              <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold leading-none text-red-600 bg-red-200 rounded-full">
+              <span class="badge badge-warning badge-lg gap-1.5 ml-auto shadow-lg">
                 {{ pending_friend_requests_count }}
               </span>
               {% endif %}
-            </a>
-          </div>
+            </li>
+            <li class="">
+              <a href="{% url 'friend_requests' %}" class="gap-3 py-3 px-4 rounded-2xl hover:bg-primary hover:bg-opacity-10 active:scale-95">
+                <i class="bi bi-inbox text-warning text-lg"></i>
+                <span>View All</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- User Avatar Dropdown -->
+        <div class="dropdown dropdown-end z-50">
+          <label tabindex="0" class="avatar btn btn-circle btn-ghost hover:bg-base-200">
+            <div class="w-14 h-14">
+              <span class="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                {{ request.user.username|first|upper }}
+              </span>
+            </div>
+          </label>
+          <ul tabindex="0" class="dropdown-content z-[1] menu p-4 shadow-2xl bg-base-100 rounded-2xl border border-base-200 w-56 mt-2 animate-[slide-down_0.2s_ease-out]">
+            <li class="menu-title px-4 py-2">
+              <span>{{ request.user.username }}</span>
+            </li>
+            <li><a href="{% url 'account_logout' %}" class="flex items-center gap-3 text-error hover:bg-error hover:bg-opacity-10">
+              <i class="bi bi-box-arrow-right text-xl"></i>
+              <span>Logout</span>
+            </a></li>
+          </ul>
         </div>
       </div>
-      <!-- User Info and Logout -->
-      <div class="hidden md:flex items-center space-x-4 text-white">
-        <i class="bi bi-person-circle text-2xl"></i>
-        <span class="whitespace-nowrap">{{ request.user.username }}</span>
-        <a href="{% url 'account_logout' %}" class="inline-flex items-center gap-1 border border-white/70 rounded px-3 py-1 text-sm hover:bg-white hover:text-indigo-800 transition">
-          <i class="bi bi-box-arrow-right"></i> Logout
-        </a>
-      </div>
-      <!-- Mobile Hamburger -->
-      <div class="md:hidden">
-        <button id="mobile-menu-button" class="text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-300">
-          <i class="bi bi-list text-3xl"></i>
-        </button>
-      </div>
     </div>
+
+    <!-- Main content -->
+    <main class="flex-1 p-6 lg:p-8">
+      {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-8 bg-base-100 text-base-content/70 border-t border-base-200 mt-auto">
+      <div>
+        <p class="text-sm">Developed by <span class="font-bold text-primary">VisMatrix Inc</span></p>
+      </div>
+    </footer>
   </div>
-
-  <!-- Mobile Menu -->
-  <div id="mobile-menu" class="hidden md:hidden bg-indigo-700">
-    <a href="{% url 'dashboard' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
-      <i class="bi bi-speedometer2"></i> Dashboard
-    </a>
-    <a href="{% url 'task_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
-      <i class="bi bi-list-check"></i> Tasks
-    </a>
-    <a href="{% url 'log_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
-      <i class="bi bi-journal-text"></i> Daily Logs
-    </a>
-    <a href="{% url 'progress' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
-      <i class="bi bi-bar-chart-line"></i> Progress
-    </a>
-    <a href="{% url 'category_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
-      <i class="bi bi-tags"></i> Categories
-    </a>
-    <a href="{% url 'friends_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
-      <i class="bi bi-person-heart"></i> My Friends
-    </a>
-    <a href="{% url 'user_list' %}" class="block px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
-      <i class="bi bi-search"></i> Find Users
-    </a>
-    <a href="{% url 'friend_requests' %}" class="flex justify-between items-center px-4 py-3 text-white border-b border-indigo-600 hover:bg-indigo-600">
-      <span><i class="bi bi-bell"></i> Friend Requests</span>
-      {% if pending_friend_requests_count > 0 %}
-      <span class="inline-flex items-center justify-center px-2 py-0.5 text-xs font-semibold leading-none text-red-600 bg-red-200 rounded-full">
-        {{ pending_friend_requests_count }}
-      </span>
-      {% endif %}
-    </a>
-    <div class="flex items-center space-x-3 px-4 py-3 text-white border-t border-indigo-600">
-      <i class="bi bi-person-circle text-2xl"></i>
-      <span class="whitespace-nowrap">{{ request.user.username }}</span>
-      <a href="{% url 'account_logout' %}" class="inline-flex items-center gap-1 border border-white/70 rounded px-3 py-1 text-sm hover:bg-white hover:text-indigo-800 transition">
-        <i class="bi bi-box-arrow-right"></i> Logout
-      </a>
-    </div>
-  </div>
-</nav>
-
-<!-- Main Content -->
-<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    {% block content %}{% endblock %}
-</main>
-
-<!-- Footer -->
-<footer class="text-center py-4 mt-12 border-t border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 text-sm">
-  Developed by VisMatrix Inc
-</footer>
+</div>
 
 <script>
-  // Mobile menu toggle script
-  const menuButton = document.getElementById('mobile-menu-button');
-  const mobileMenu = document.getElementById('mobile-menu');
-
-  menuButton.addEventListener('click', () => {
-    mobileMenu.classList.toggle('hidden');
+document.addEventListener('DOMContentLoaded', function() {
+  // Trap focus in dropdowns
+  const dropdowns = document.querySelectorAll('.dropdown');
+  dropdowns.forEach(dropdown => {
+    const trigger = dropdown.querySelector('label[tabindex="0"]');
+    const content = dropdown.querySelector('.dropdown-content');
+    
+    if (trigger && content) {
+      trigger.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          trigger.blur();
+        }
+      });
+      
+      content.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          trigger.focus();
+          trigger.click();
+        }
+      });
+    }
   });
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+      e.preventDefault();
+      const target = document.querySelector(this.getAttribute('href'));
+      if (target) {
+        target.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    });
+  });
+});
 </script>
 
 {% block extra_js %}{% endblock %}

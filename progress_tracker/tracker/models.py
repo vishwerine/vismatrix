@@ -61,21 +61,16 @@ class Task(models.Model):
         self.completed_at = timezone.now()
         self.save()
 
+# models.py - FIXED
 class DailyLog(models.Model):
-    """Log of daily activities and progress"""
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_logs')
-    date = models.DateField(default=timezone.now)
-    activity = models.CharField(max_length=255)
+    date = models.DateField()  # ✅ NO DEFAULT HERE
+    activity = models.TextField(max_length=500)
     description = models.TextField(blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
-    duration = models.IntegerField(help_text="Duration in minutes")
+    duration = models.PositiveIntegerField(help_text="Duration in minutes", default=0)
     created_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['-date', '-created_at']
-    
-    def __str__(self):
-        return f"{self.user.username} - {self.date} - {self.activity}"
+
 
 class DailySummary(models.Model):
     """Summary of each day's progress"""

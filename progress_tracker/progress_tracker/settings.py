@@ -21,13 +21,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # SECURITY WARNING: keep the secret key used in production secret!
-import environ
-env = environ.Env()
-environ.Env.read_env()
-SECRET_KEY = env('SECRET_KEY')
+#import environ
+#env = environ.Env()
+#environ.Env.read_env()
+SECRET_KEY = "django-insecure-@gjlx9gwf=pj6464i*7anr!52nkot86n$4-^99xf1ip%awjr+0"
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 
 ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','16.16.9.54','localhost']
@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     
     # Your app (use the config class)
     'tracker.apps.TrackerConfig',  # Changed from just 'tracker'
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
