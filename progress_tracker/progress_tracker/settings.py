@@ -30,7 +30,7 @@ SECRET_KEY = env('SECRET_KEY')
 DEBUG = False
 
 
-ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','16.16.9.54']
+ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','16.16.9.54','localhost']
 
 
 # Application definition
