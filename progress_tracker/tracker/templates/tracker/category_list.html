@@ -1,194 +1,109 @@
 {% extends 'tracker/base.html' %}
-{% load widget_tweaks math_filters %}
+{% load widget_tweaks %}
 
 {% block title %}Categories - VisMatrix.Space{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-6 py-12">
-  <!-- Hero Header -->
-  <div class="text-center mb-16">
-    <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-2xl">
-      <i class="bi bi-tags-fill text-4xl"></i>
-    </div>
-    <h1 class="text-5xl font-black text-slate-900 mb-4 bg-gradient-to-r from-slate-900 to-slate-800 bg-clip-text text-transparent">Categories</h1>
-    <p class="text-xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-      Organize your progress tracking with global and custom categories
-    </p>
-  </div>
-
-  <!-- Global Categories Section -->
-  <section class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-12 mb-12 hover:shadow-3xl transition-all duration-300">
-    <div class="flex items-center gap-4 mb-8">
-      <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-3xl flex items-center justify-center text-white shadow-xl">
-        <i class="bi bi-globe text-2xl"></i>
-      </div>
-      <div>
-        <h2 class="text-3xl font-black text-slate-900">🌐 Global Categories</h2>
-        <p class="text-lg text-slate-600 mt-1">Available to everyone • Cannot be edited</p>
-      </div>
-    </div>
-
-    {% if global_categories %}
-    <div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {% for category in global_categories %}
-      <div class="category-card group bg-gradient-to-br from-slate-50 to-slate-100 border-4 border-slate-200 hover:border-emerald-400 rounded-3xl p-8 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 hover:bg-gradient-to-br hover:from-emerald-50 hover:to-green-50">
-        <div class="flex items-center gap-4 mb-6">
-          <div class="w-20 h-20 rounded-3xl shadow-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 flex-shrink-0" 
-               style="background-color: {{ category.color }}; border: 3px solid rgba(255,255,255,0.8);">
-            <i class="bi bi-circle-fill text-3xl text-white drop-shadow-lg"></i>
-          </div>
-          <div>
-            <h3 class="text-2xl font-black text-slate-900 group-hover:text-emerald-900 transition-colors">{{ category.name }}</h3>
-          </div>
-        </div>
-        
-        <div class="grid grid-cols-2 gap-6 text-center p-6 bg-white/60 backdrop-blur-sm rounded-2xl border border-slate-100">
-          <div>
-            <div class="text-3xl font-black text-slate-800 mb-1">{{ category.task_set.count }}</div>
-            <div class="text-sm font-semibold text-slate-600 uppercase tracking-wide">Tasks</div>
-          </div>
-          <div>
-            <div class="text-3xl font-black text-slate-800 mb-1">{{ category.dailylog_set.count }}</div>
-            <div class="text-sm font-semibold text-slate-600 uppercase tracking-wide">Logs</div>
-          </div>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="text-center py-20">
-      <div class="w-24 h-24 mx-auto mb-6 bg-slate-100 rounded-3xl flex items-center justify-center">
-        <i class="bi bi-globe2 text-4xl text-slate-400"></i>
-      </div>
-      <p class="text-2xl font-semibold text-slate-500 mb-2">No global categories available</p>
-      <p class="text-slate-600">Contact admin to add some predefined categories</p>
-    </div>
-    {% endif %}
-  </section>
-
-  <!-- Custom Categories Section -->
-  <section class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-12 hover:shadow-3xl transition-all duration-300">
-    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-10">
-      <div class="flex items-center gap-4">
-        <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl flex items-center justify-center text-white shadow-xl">
-          <i class="bi bi-person-badge text-2xl"></i>
-        </div>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 class="text-3xl font-black text-slate-900">✏️ My Custom Categories</h2>
-          <p class="text-lg text-slate-600">Personalized tracking for your unique goals</p>
+            <h1 class="text-4xl font-bold">Categories</h1>
+            <p class="text-base-content opacity-75 mt-2">Organize your progress tracking with global and custom categories</p>
         </div>
-      </div>
-      <a href="{% url 'category_create' %}" 
-         class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-10 py-6 rounded-3xl text-xl font-black shadow-2xl hover:shadow-3xl hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 transition-all duration-300 group">
-        <i class="bi bi-plus-circle-fill text-2xl group-hover:scale-110 transition-transform"></i>
-        <span>Add Custom Category</span>
-      </a>
+        <a href="{% url 'category_create' %}" class="btn btn-primary">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            New Category
+        </a>
     </div>
 
-    {% if user_categories %}
-    <div class="grid gap-8 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-      {% for category in user_categories %}
-      <div class="category-card group bg-gradient-to-br from-slate-50 to-slate-100 border-4 border-slate-200 hover:border-blue-400 rounded-3xl p-8 shadow-xl hover:shadow-2xl hover:-translate-y-3 transition-all duration-500 hover:bg-gradient-to-br hover:from-blue-50 hover:to-indigo-50 relative overflow-hidden">
-        <!-- Category color accent -->
-        <div class="absolute inset-0 opacity-20" style="background-color: {{ category.color }}"></div>
-        
-        <div class="relative flex items-center gap-4 mb-6">
-          <div class="w-24 h-24 rounded-3xl shadow-2xl flex items-center justify-center group-hover:scale-110 transition-all duration-300 flex-shrink-0 ring-4 ring-white/50" 
-               style="background: linear-gradient(135deg, {{ category.color }}, {{ category.color }}dd); border: 3px solid rgba(255,255,255,0.9);">
-            <i class="bi bi-circle-fill text-4xl text-white drop-shadow-2xl"></i>
-          </div>
-          <div>
-            <h3 class="text-3xl font-black text-slate-900 group-hover:text-blue-900 transition-colors drop-shadow-sm">{{ category.name }}</h3>
-          </div>
+    <!-- Global Categories -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                </svg>
+                Global Categories
+            </h2>
+            <p class="text-sm opacity-75 mb-4">Available to everyone • Cannot be edited</p>
+            
+            {% if global_categories %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for category in global_categories %}
+                <div class="card bg-base-200 shadow">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg">{{ category.name }}</h3>
+                        {% if category.description %}
+                        <p class="text-sm opacity-75">{{ category.description }}</p>
+                        {% endif %}
+                        <div class="badge badge-primary">Global</div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <svg class="w-16 h-16 mx-auto opacity-25 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                </svg>
+                <p class="text-lg font-semibold">No global categories available</p>
+                <p class="opacity-75">Contact admin to add some predefined categories</p>
+            </div>
+            {% endif %}
         </div>
+    </div>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-2 gap-6 mb-8 text-center p-8 bg-white/70 backdrop-blur-md rounded-3xl border-2 border-slate-100 shadow-lg">
-          <div class="group-hover:text-blue-900 transition-colors">
-            <div class="text-4xl font-black text-slate-900 mb-2">{{ category.task_set.count }}</div>
-            <div class="text-lg font-semibold text-slate-600 uppercase tracking-wider">Tasks</div>
-          </div>
-          <div class="group-hover:text-blue-900 transition-colors">
-            <div class="text-4xl font-black text-slate-900 mb-2">{{ category.dailylog_set.count }}</div>
-            <div class="text-lg font-semibold text-slate-600 uppercase tracking-wider">Logs</div>
-          </div>
+    <!-- Custom Categories -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title text-2xl mb-4">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                </svg>
+                Your Categories
+            </h2>
+            <p class="text-sm opacity-75 mb-4">Personalized tracking for your unique goals</p>
+            
+            {% if custom_categories %}
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {% for category in custom_categories %}
+                <div class="card bg-base-200 shadow hover:shadow-lg transition">
+                    <div class="card-body">
+                        <h3 class="card-title text-lg">{{ category.name }}</h3>
+                        {% if category.description %}
+                        <p class="text-sm opacity-75">{{ category.description }}</p>
+                        {% endif %}
+                        <div class="flex gap-2 mt-4">
+                            <a href="{% url 'category_update' category.id %}" class="btn btn-sm btn-secondary flex-1">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                                Edit
+                            </a>
+                            <a href="{% url 'category_delete' category.id %}" class="btn btn-sm btn-error">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                </svg>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-12">
+                <svg class="w-16 h-16 mx-auto opacity-25 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                <p class="text-lg font-semibold">Create your first personalized category</p>
+                <p class="opacity-75 mb-4">to start organizing your progress</p>
+                <a href="{% url 'category_create' %}" class="btn btn-primary">Create First Category</a>
+            </div>
+            {% endif %}
         </div>
-
-        <!-- Action Buttons -->
-        <div class="flex gap-4 pt-6 border-t-2 border-slate-200">
-          <a href="{% url 'category_edit' category.pk %}" 
-             class="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-blue-600 text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-indigo-600 hover:to-blue-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 focus:ring-offset-2 transition-all duration-300 group-hover:scale-105">
-            <i class="bi bi-pencil-square"></i>
-            <span>Edit</span>
-          </a>
-          <a href="{% url 'category_delete' category.pk %}" 
-             class="flex-1 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-red-500 to-rose-600 text-white py-4 px-6 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-red-600 hover:to-rose-700 focus:outline-none focus:ring-4 focus:ring-red-500/50 focus:ring-offset-2 transition-all duration-300 group-hover:scale-105">
-            <i class="bi bi-trash3"></i>
-            <span>Delete</span>
-          </a>
-        </div>
-      </div>
-      {% endfor %}
     </div>
-    {% else %}
-    <div class="text-center py-20 bg-gradient-to-r from-slate-50 to-slate-100 rounded-3xl p-12 border-2 border-dashed border-slate-300">
-      <div class="w-32 h-32 mx-auto mb-8 bg-slate-100 rounded-3xl flex items-center justify-center shadow-xl">
-        <i class="bi bi-tag text-6xl text-slate-400"></i>
-      </div>
-      <h3 class="text-3xl font-black text-slate-700 mb-4">No custom categories yet</h3>
-      <p class="text-xl text-slate-600 mb-8 max-w-md mx-auto">Create your first personalized category to start organizing your progress</p>
-      <a href="{% url 'category_create' %}" 
-         class="inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-12 py-6 rounded-3xl text-xl font-black shadow-2xl hover:shadow-3xl hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-4 focus:ring-blue-500/50 transition-all duration-300">
-        <i class="bi bi-plus-circle-fill"></i>
-        Create First Category
-      </a>
-    </div>
-    {% endif %}
-  </section>
-
-  <!-- Info Section -->
-  <section class="max-w-4xl mx-auto mt-16 p-12 bg-gradient-to-r from-emerald-50 to-blue-50 border-2 border-emerald-200 rounded-3xl shadow-2xl">
-    <div class="flex items-start gap-6 mb-8">
-      <div class="w-16 h-16 bg-gradient-to-br from-emerald-500 to-green-600 rounded-3xl flex items-center justify-center text-white shadow-xl flex-shrink-0">
-        <i class="bi bi-lightbulb text-2xl"></i>
-      </div>
-      <div>
-        <h3 class="text-3xl font-black text-emerald-900 mb-2">💡 How Categories Work</h3>
-        <p class="text-xl text-emerald-800">Understand the difference between global and custom categories</p>
-      </div>
-    </div>
-    
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 text-lg">
-      <div class="space-y-4 p-8 bg-white/70 backdrop-blur-sm rounded-3xl border border-emerald-100 shadow-lg">
-        <div class="flex items-center gap-4 p-6 bg-emerald-100/50 rounded-2xl border-l-4 border-emerald-400">
-          <div class="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl">🌐</div>
-          <div>
-            <h4 class="text-2xl font-bold text-slate-900">Global Categories</h4>
-            <p class="text-slate-700">Predefined by admin, available to all users</p>
-          </div>
-        </div>
-        <ul class="space-y-2 text-slate-700 pl-6 list-disc">
-          <li>Shared across all users</li>
-          <li>Cannot be edited or deleted</li>
-          <li>Perfect for common activities</li>
-        </ul>
-      </div>
-      
-      <div class="space-y-4 p-8 bg-white/70 backdrop-blur-sm rounded-3xl border border-emerald-100 shadow-lg">
-        <div class="flex items-center gap-4 p-6 bg-blue-100/50 rounded-2xl border-l-4 border-blue-400">
-          <div class="w-12 h-12 bg-blue-500 rounded-2xl flex items-center justify-center text-white font-bold text-xl">✏️</div>
-          <div>
-            <h4 class="text-2xl font-bold text-slate-900">Custom Categories</h4>
-            <p class="text-slate-700">Your personal organization system</p>
-          </div>
-        </div>
-        <ul class="space-y-2 text-slate-700 pl-6 list-disc">
-          <li>Fully editable and customizable</li>
-          <li>Choose your own colors</li>
-          <li>Perfect for unique goals</li>
-        </ul>
-      </div>
-    </div>
-  </section>
 </div>
 {% endblock %}

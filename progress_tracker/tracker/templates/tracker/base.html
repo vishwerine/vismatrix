@@ -1,278 +1,120 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{% block title %}Tasks - VisMatrix.Space{% endblock %}</title>
-
-    <!-- DaisyUI + Tailwind CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="VisMatrix - Track your progress with friends">
+    <meta name="theme-color" content="#06b6d4">
     
-    <!-- Bootstrap Icons -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
-
-    <style>
-      /* Custom scrollbar */
-      .scrollbar-thin::-webkit-scrollbar {
-        width: 6px;
-      }
-      .scrollbar-thin::-webkit-scrollbar-track {
-        background: hsl(var(--bc) / 0.2);
-        border-radius: 9999px;
-      }
-      .scrollbar-thin::-webkit-scrollbar-thumb {
-        background: hsl(var(--bc) / 0.5);
-        border-radius: 9999px;
-      }
-      .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-        background: hsl(var(--bc));
-      }
-    </style>
-
+    <title>{% block title %}VisMatrix.Space{% endblock %}</title>
+    
+    <!-- DaisyUI + Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    
+    <!-- Static CSS -->
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    
     {% block extra_css %}{% endblock %}
 </head>
-<body data-theme="light" class="min-h-screen">
-
-<!-- Drawer for mobile -->
-<input id="main-drawer" type="checkbox" class="drawer-toggle" />
-<div class="drawer lg:drawer-open">
-  <!-- Mobile drawer content -->
-  <div class="drawer-side">
-    <label for="main-drawer" aria-label="close menu" class="drawer-overlay"></label>
-    <ul class="menu p-6 w-80 h-full bg-base-100 text-base-content gap-2 scrollbar-thin overflow-y-auto">
-      <!-- Logo -->
-      <li class="menu-title p-6 mb-6">
-        <a href="{% url 'dashboard' %}" class="flex items-center gap-3 text-2xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-          <i class="bi bi-graph-up-arrow text-3xl"></i>
-          VisMatrix.Space
-        </a>
-      </li>
-
-      <!-- Main Navigation -->
-      <li class="menu-title font-bold text-lg text-base-content/80">Main</li>
-      <li><a href="{% url 'dashboard' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
-        <i class="bi bi-speedometer2 text-xl text-primary"></i><span>Dashboard</span>
-      </a></li>
-      <li><a href="{% url 'task_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
-        <i class="bi bi-list-check text-xl text-primary"></i><span>Tasks</span>
-      </a></li>
-      <li><a href="{% url 'log_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
-        <i class="bi bi-journal-text text-xl text-primary"></i><span>Daily Logs</span>
-      </a></li>
-      <li><a href="{% url 'progress' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
-        <i class="bi bi-bar-chart-line text-xl text-primary"></i><span>Progress</span>
-      </a></li>
-      <li><a href="{% url 'category_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
-        <i class="bi bi-tags text-xl text-primary"></i><span>Categories</span>
-      </a></li>
-
-      <!-- Social Navigation -->
-      <li class="menu-title font-bold text-lg text-base-content/80 mt-6">Social</li>
-      <li><a href="{% url 'friends_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
-        <i class="bi bi-person-heart text-xl text-secondary"></i><span>My Friends</span>
-      </a></li>
-      <li><a href="{% url 'user_list' %}" class="flex items-center gap-3 py-3 px-6 rounded-2xl active:scale-105">
-        <i class="bi bi-search text-xl text-secondary"></i><span>Find Users</span>
-      </a></li>
-      <li class="relative">
-        <a href="{% url 'friend_requests' %}" class="flex items-center justify-between gap-3 py-3 px-6 rounded-2xl active:scale-105">
-          <div class="flex items-center gap-2">
-            <i class="bi bi-bell text-xl text-warning"></i>
-            <span>Friend Requests</span>
-          </div>
-          {% if pending_friend_requests_count > 0 %}
-          <div class="badge badge-error badge-lg gap-1.5 shadow-lg border-2 border-white/50">
-            {{ pending_friend_requests_count }}
-            <i class="bi bi-lightning-fill text-xs"></i>
-          </div>
-          {% endif %}
-        </a>
-      </li>
-
-      <!-- Divider -->
-      <li class="divider mx-6 my-6"></li>
-
-      <!-- User Profile -->
-      <li class="px-6 py-4 mb-6">
-        <div class="flex items-center gap-4 p-4 bg-base-200 rounded-3xl">
-          <div class="w-16 h-16 bg-gradient-to-r from-primary to-secondary mask mask-circle flex items-center justify-center shadow-xl">
-            <i class="bi bi-person-circle text-2xl text-base-100"></i>
-          </div>
-          <div class="min-w-0 flex-1">
-            <div class="font-bold text-xl truncate">{{ request.user.username }}</div>
-            <div class="text-sm text-base-content/60">Active User</div>
-          </div>
+<body class="bg-base-100">
+    <!-- Navigation -->
+    <nav class="navbar bg-base-200 shadow-md sticky top-0 z-50">
+        <div class="flex-1">
+            <a href="{% url 'dashboard' %}" class="btn btn-ghost normal-case text-xl">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                </svg>
+                VisMatrix
+            </a>
         </div>
-      </li>
-
-      <!-- Logout -->
-      <li class="px-6">
-        <a href="{% url 'account_logout' %}" class="flex items-center gap-3 btn btn-error w-full rounded-2xl gap-3 shadow-xl">
-          <i class="bi bi-box-arrow-right text-xl"></i>
-          <span>Logout</span>
-        </a>
-      </li>
-    </ul>
-  </div>
-
-  <!-- Page content -->
-  <div class="drawer-content flex flex-col">
-    <!-- Top Navbar -->
-    <div class="navbar bg-base-100/95 backdrop-blur-xl shadow-xl sticky top-0 z-40 border-b border-base-200 lg:border-b-0">
-      <div class="navbar-start">
-        <!-- Mobile hamburger -->
-        <label for="main-drawer" class="btn btn-square btn-ghost swap swap-rotate lg:hidden">
-          <i class="bi bi-list text-2xl"></i>
-          <i class="bi bi-x text-2xl"></i>
-        </label>
         
-        <!-- Logo -->
-        <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-lg normal-case text-xl lg:ml-4 font-black">
-          <i class="bi bi-graph-up-arrow text-2xl text-primary mr-2"></i>
-          VisMatrix.Space
-        </a>
-      </div>
-
-      <!-- Desktop Navigation -->
-      <div class="navbar-center hidden lg:flex">
-        <ul class="menu menu-horizontal rounded-box gap-2 bg-base-200/50 backdrop-blur-sm px-4 py-2">
-          <li><a href="{% url 'dashboard' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
-            <i class="bi bi-speedometer2 text-primary"></i> Dashboard
-          </a></li>
-          <li><a href="{% url 'task_list' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
-            <i class="bi bi-list-check text-primary"></i> Tasks
-          </a></li>
-          <li><a href="{% url 'log_list' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
-            <i class="bi bi-journal-text text-primary"></i> Logs
-          </a></li>
-          <li><a href="{% url 'progress' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
-            <i class="bi bi-bar-chart-line text-primary"></i> Progress
-          </a></li>
-          <li><a href="{% url 'category_list' %}" class="font-semibold flex items-center gap-2 py-3 px-4 rounded-xl active:scale-105 hover:bg-primary hover:bg-opacity-10">
-            <i class="bi bi-tags text-primary"></i> Categories
-          </a></li>
-        </ul>
-      </div>
-
-      <!-- Right side: Social + User -->
-      <div class="navbar-end items-center gap-2">
-        <!-- Social Dropdown -->
-        <div class="dropdown dropdown-end z-50">
-          <label tabindex="0" class="btn btn-ghost gap-2 px-4 py-2 rounded-xl hover:bg-base-200 font-semibold">
-            <i class="bi bi-people text-primary text-xl"></i>
-            <span class="hidden sm:inline">Social</span>
-            <i class="bi bi-chevron-down transition-transform duration-200"></i>
-          </label>
-          <ul tabindex="0" class="dropdown-content z-[1] menu p-4 shadow-2xl bg-base-100 rounded-3xl border border-base-200 w-72 mt-2 animate-[slide-down_0.2s_ease-out]">
-            <li class="">
-              <a href="{% url 'friends_list' %}" class="gap-3 py-3 px-4 rounded-2xl hover:bg-primary hover:bg-opacity-10 active:scale-95">
-                <i class="bi bi-person-heart text-primary text-xl"></i>
-                <span>My Friends</span>
-              </a>
-            </li>
-            <li class="">
-              <a href="{% url 'user_list' %}" class="gap-3 py-3 px-4 rounded-2xl hover:bg-primary hover:bg-opacity-10 active:scale-95">
-                <i class="bi bi-search text-base-content text-xl"></i>
-                <span>Find Users</span>
-              </a>
-            </li>
-            <li class="menu-title gap-2">
-              <span class="flex items-center gap-2">
-                <i class="bi bi-bell text-warning text-xl"></i>
-                Friend Requests
-              </span>
-              {% if pending_friend_requests_count > 0 %}
-              <span class="badge badge-warning badge-lg gap-1.5 ml-auto shadow-lg">
-                {{ pending_friend_requests_count }}
-              </span>
-              {% endif %}
-            </li>
-            <li class="">
-              <a href="{% url 'friend_requests' %}" class="gap-3 py-3 px-4 rounded-2xl hover:bg-primary hover:bg-opacity-10 active:scale-95">
-                <i class="bi bi-inbox text-warning text-lg"></i>
-                <span>View All</span>
-              </a>
-            </li>
-          </ul>
-        </div>
-
-        <!-- User Avatar Dropdown -->
-        <div class="dropdown dropdown-end z-50">
-          <label tabindex="0" class="avatar btn btn-circle btn-ghost hover:bg-base-200">
-            <div class="w-14 h-14">
-              <span class="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                {{ request.user.username|first|upper }}
-              </span>
+        <div class="flex-none gap-2">
+            <!-- Desktop Menu -->
+            <div class="hidden md:flex gap-2">
+                <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm">Dashboard</a>
+                <a href="{% url 'task_list' %}" class="btn btn-ghost btn-sm">Tasks</a>
+                <a href="{% url 'log_list' %}" class="btn btn-ghost btn-sm">Logs</a>
+                <a href="{% url 'category_list' %}" class="btn btn-ghost btn-sm">Categories</a>
+                <a href="{% url 'friends_list' %}" class="btn btn-ghost btn-sm">Friends</a>
             </div>
-          </label>
-          <ul tabindex="0" class="dropdown-content z-[1] menu p-4 shadow-2xl bg-base-100 rounded-2xl border border-base-200 w-56 mt-2 animate-[slide-down_0.2s_ease-out]">
-            <li class="menu-title px-4 py-2">
-              <span>{{ request.user.username }}</span>
-            </li>
-            <li><a href="{% url 'account_logout' %}" class="flex items-center gap-3 text-error hover:bg-error hover:bg-opacity-10">
-              <i class="bi bi-box-arrow-right text-xl"></i>
-              <span>Logout</span>
-            </a></li>
-          </ul>
+            
+            <!-- User Dropdown -->
+            {% if user.is_authenticated %}
+            <div class="dropdown dropdown-end">
+                <label tabindex="0" class="btn btn-ghost btn-circle avatar">
+                    <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center">
+                        {{ user.username|first|upper }}
+                    </div>
+                </label>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                    <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                    <li><a href="{% url 'user_list' %}">Browse Users</a></li>
+                    <li><hr class="my-2"></li>
+                    <li><a href="/accounts/logout/">Logout</a></li>
+                </ul>
+            </div>
+            {% else %}
+            <a href="/accounts/login/" class="btn btn-primary btn-sm">Login</a>
+            {% endif %}
+            
+            <!-- Mobile Menu -->
+            <div class="md:hidden">
+                <div class="dropdown dropdown-end">
+                    <label tabindex="0" class="btn btn-ghost btn-circle">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </label>
+                    <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-52">
+                        <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+                        <li><a href="{% url 'task_list' %}">Tasks</a></li>
+                        <li><a href="{% url 'log_list' %}">Logs</a></li>
+                        <li><a href="{% url 'category_list' %}">Categories</a></li>
+                        <li><a href="{% url 'friends_list' %}">Friends</a></li>
+                        <li><a href="{% url 'user_list' %}">Users</a></li>
+                    </ul>
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-
-    <!-- Main content -->
-    <main class="flex-1 p-6 lg:p-8">
-      {% block content %}{% endblock %}
-    </main>
-
-    <!-- Footer -->
-    <footer class="footer footer-center p-8 bg-base-100 text-base-content/70 border-t border-base-200 mt-auto">
-      <div>
-        <p class="text-sm">Developed by <span class="font-bold text-primary">VisMatrix Inc</span></p>
-      </div>
-    </footer>
-  </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Trap focus in dropdowns
-  const dropdowns = document.querySelectorAll('.dropdown');
-  dropdowns.forEach(dropdown => {
-    const trigger = dropdown.querySelector('label[tabindex="0"]');
-    const content = dropdown.querySelector('.dropdown-content');
+    </nav>
     
-    if (trigger && content) {
-      trigger.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          trigger.blur();
-        }
-      });
-      
-      content.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-          trigger.focus();
-          trigger.click();
-        }
-      });
-    }
-  });
-
-  // Smooth scroll for anchor links
-  document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function (e) {
-      e.preventDefault();
-      const target = document.querySelector(this.getAttribute('href'));
-      if (target) {
-        target.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start'
-        });
-      }
-    });
-  });
-});
-</script>
-
-{% block extra_js %}{% endblock %}
+    <!-- Main Content -->
+    <main class="min-h-[calc(100vh-64px)]">
+        <div class="container mx-auto px-4 py-6 max-w-7xl">
+            <!-- Messages/Alerts -->
+            {% if messages %}
+            <div class="mb-6 space-y-2">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }} shadow-lg">
+                    <div>
+                        {% if message.tags == 'error' %}
+                        <svg class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l-2-2m0 0l-2-2m2 2l2-2m-2 2l-2 2m2-2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% elif message.tags == 'success' %}
+                        <svg class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% else %}
+                        <svg class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        {% endif %}
+                        <span>{{ message }}</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Page Content -->
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="footer footer-center p-4 bg-base-200 text-base-content mt-12">
+        <div>
+            <p>&copy; 2025 VisMatrix. Built with <span class="text-error">♥</span> for progress tracking.</p>
+        </div>
+    </footer>
+    
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -3,306 +3,144 @@
 {% block title %}Dashboard - VisMatrix.Space{% endblock %}
 
 {% block content %}
-<div class="grid gap-8 lg:grid-cols-3">
-  <!-- Left Column: Today's Stats and Tasks -->
-  <div class="lg:col-span-2 space-y-6">
-    <!-- Today's Overview Card -->
-    <div class="bg-white shadow-lg rounded-2xl border border-slate-200 p-8 hover:shadow-xl transition-all duration-300">
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center shadow-md">
-            <i class="bi bi-calendar-check text-green-600 text-xl"></i>
-          </div>
-          <div>
-            <h2 class="text-2xl font-bold text-slate-900">Today's Overview ({{ today }})</h2>
-          </div>
+<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+    <!-- Quick Stats -->
+    <div class="stats shadow">
+        <div class="stat">
+            <div class="stat-title">Tasks Today</div>
+            <div class="stat-value text-primary">{{ today_tasks_count|default:0 }}</div>
+            <div class="stat-desc">{% if completed_today %}{{ completed_today }} completed{% else %}None completed{% endif %}</div>
         </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div class="stats-card bg-gradient-to-br from-green-50 to-emerald-50 text-green-800 border-2 border-green-200 rounded-2xl p-8 shadow-md hover:shadow-lg transition-all group">
-          <div class="stat place-items-center text-center">
-            <div class="stat-title text-lg font-semibold tracking-wide mb-2 group-hover:text-green-900 transition-colors">Tasks Completed</div>
-            <div class="stat-value text-4xl font-black">{{ today_completed }}</div>
-          </div>
-        </div>
-        <div class="stats-card bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-800 border-2 border-blue-200 rounded-2xl p-8 shadow-md hover:shadow-lg transition-all group">
-          <div class="stat place-items-center text-center">
-            <div class="stat-title text-lg font-semibold tracking-wide mb-2 group-hover:text-blue-900 transition-colors">Minutes Logged</div>
-            <div class="stat-value text-4xl font-black">{{ today_time }}</div>
-          </div>
-        </div>
-      </div>
     </div>
-
-    <!-- Pending Tasks Card -->
-    <div class="bg-white shadow-lg rounded-2xl border border-slate-200 p-8 hover:shadow-xl transition-all duration-300">
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center shadow-md">
-            <i class="bi bi-list-task text-blue-600 text-xl"></i>
-          </div>
-          <h3 class="text-2xl font-bold text-slate-900">Pending Tasks</h3>
+    
+    <div class="stats shadow">
+        <div class="stat">
+            <div class="stat-title">Active Streak</div>
+            <div class="stat-value text-secondary">{{ current_streak|default:0 }}</div>
+            <div class="stat-desc">days</div>
         </div>
-        <a href="{% url 'task_create' %}" 
-           class="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 focus:ring-offset-white shadow-lg hover:shadow-xl transition-all duration-200">
-          <i class="bi bi-plus-circle"></i>
-          New Task
-        </a>
-      </div>
+    </div>
+    
+    <div class="stats shadow">
+        <div class="stat">
+            <div class="stat-title">This Month</div>
+            <div class="stat-value text-accent">{{ logs_this_month|default:0 }}</div>
+            <div class="stat-desc">progress entries</div>
+        </div>
+    </div>
+</div>
 
-      {% if pending_tasks %}
-      <div class="space-y-4">
-        {% for task in pending_tasks %}
-        <div class="task-card bg-slate-50 hover:bg-white border-2 border-slate-200 hover:border-blue-300 rounded-2xl p-6 hover:shadow-lg transition-all duration-300 group">
-          <div class="flex items-start justify-between w-full gap-6">
-            <div class="flex-1 min-w-0">
-              <h5 class="font-bold text-xl text-slate-900 leading-tight mb-2 group-hover:text-blue-900 transition-colors">{{ task.title }}</h5>
-              <div class="flex flex-wrap items-center gap-3 text-sm">
-                {% if task.priority == 'high' %}
-                  <div class="inline-flex items-center gap-2 px-4 py-2 bg-red-100 text-red-800 rounded-full font-semibold shadow-sm border border-red-200">
-                    {{ task.get_priority_display }}
-                  </div>
-                {% elif task.priority == 'medium' %}
-                  <div class="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-800 rounded-full font-semibold shadow-sm border border-orange-200">
-                    {{ task.get_priority_display }}
-                  </div>
+<div class="grid grid-cols-1 gap-6 lg:grid-cols-3 mt-8">
+    <!-- Pending Tasks -->
+    <div class="lg:col-span-2">
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                    Today's Tasks
+                </h2>
+                
+                {% if pending_tasks %}
+                <div class="space-y-3 mt-4">
+                    {% for task in pending_tasks %}
+                    <div class="flex items-center justify-between p-3 bg-base-200 rounded-lg hover:bg-base-300 transition">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="font-semibold text-sm md:text-base truncate">{{ task.title }}</h3>
+                            <p class="text-xs md:text-sm opacity-75">{{ task.category.name }}</p>
+                        </div>
+                        <div class="flex gap-2 ml-2 flex-shrink-0">
+                            <a href="{% url 'log_create' %}?task={{ task.id }}" class="btn btn-primary btn-sm">Log</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
                 {% else %}
-                  <div class="inline-flex items-center gap-2 px-4 py-2 bg-green-100 text-green-800 rounded-full font-semibold shadow-sm border border-green-200">
-                    {{ task.get_priority_display }}
-                  </div>
-                {% endif %}
-                {% if task.due_date %}
-                <div class="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-full shadow-sm border border-slate-200">
-                  <i class="bi bi-clock"></i>
-                  Due {{ task.due_date|date:"M d, Y" }}
+                <div class="text-center py-8">
+                    <div class="text-4xl mb-2">🎉</div>
+                    <p class="text-lg font-semibold">No pending tasks</p>
+                    <p class="opacity-75 text-sm">You're all caught up for today!</p>
                 </div>
                 {% endif %}
-              </div>
             </div>
-            <a href="{% url 'task_complete' task.pk %}" 
-               class="w-12 h-12 bg-green-500 hover:bg-green-600 text-white rounded-2xl flex items-center justify-center text-2xl shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-500/50 focus:ring-offset-2 focus:ring-offset-white transition-all duration-200 group-hover:scale-110">
-              <i class="bi bi-check-lg"></i>
-            </a>
-          </div>
         </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="text-center py-16">
-        <div class="w-24 h-24 mx-auto mb-6 bg-green-100 rounded-3xl flex items-center justify-center shadow-lg">
-          <i class="bi bi-check-circle-fill text-green-600 text-4xl"></i>
-        </div>
-        <p class="text-2xl font-semibold text-slate-700 mb-2">No pending tasks. Great job! 🎉</p>
-        <p class="text-slate-600">You're all caught up for today.</p>
-      </div>
-      {% endif %}
     </div>
-
-    <!-- Recent Activity Card -->
-    <div class="bg-white shadow-lg rounded-2xl border border-slate-200 p-8 hover:shadow-xl transition-all duration-300">
-      <div class="flex items-center gap-4 mb-8">
-        <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center shadow-md">
-          <i class="bi bi-activity text-slate-600 text-xl"></i>
-        </div>
-        <h3 class="text-2xl font-bold text-slate-900">Recent Activity</h3>
-      </div>
-
-      {% if recent_logs %}
-      <ul class="divide-y divide-slate-200 space-y-4">
-        {% for log in recent_logs %}
-        <li class="py-6 first:pt-0 last:pb-0 hover:bg-slate-50 rounded-xl p-4 transition-colors">
-          <div class="flex items-start justify-between gap-6">
-            <div class="flex-1">
-              <p class="font-bold text-xl text-slate-900 mb-2">{{ log.activity }}</p>
-              <p class="text-lg text-slate-600 flex items-center gap-3">
-                <i class="bi bi-calendar text-slate-500"></i>
-                {{ log.date|date:"M d, Y" }} • {{ log.duration }} min
-              </p>
-            </div>
-          </div>
-        </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <div class="text-center py-16">
-        <i class="bi bi-inbox text-6xl text-slate-400 block mb-6"></i>
-        <p class="text-2xl font-semibold text-slate-700 mb-2">No recent activity logged</p>
-        <p class="text-slate-600">Start tracking your progress to see activity here.</p>
-      </div>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- Right Column: Social Widgets -->
-  <div class="space-y-6">
-    <!-- Friend Requests Widget -->
-    {% if pending_count > 0 %}
-    <div class="bg-white shadow-lg rounded-2xl border-2 border-orange-200 p-8 hover:shadow-xl transition-all duration-300">
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center shadow-md">
-            <i class="bi bi-bell-fill text-orange-600 text-xl"></i>
-          </div>
-          <h4 class="text-2xl font-bold text-slate-900">Friend Requests</h4>
-        </div>
-        <div class="inline-flex items-center gap-2 px-4 py-2 bg-orange-500 text-white text-lg font-bold rounded-2xl shadow-lg">
-          {{ pending_count }}
-        </div>
-      </div>
-
-      <div class="space-y-4 mb-8">
-        {% for req in pending_requests|slice:":3" %}
-        <div class="bg-blue-50 border-2 border-blue-200 rounded-2xl p-6 hover:shadow-md hover:border-blue-300 transition-all duration-200">
-          <div class="flex items-center justify-between w-full gap-4">
-            <div class="flex items-center gap-4 flex-1">
-              <div class="w-12 h-12 bg-slate-200 rounded-3xl flex items-center justify-center shadow-md">
-                <i class="bi bi-person-circle text-2xl text-slate-600"></i>
-              </div>
-              <div>
-                <p class="font-bold text-xl text-slate-900">{{ req.from_user.username }}</p>
-              </div>
-            </div>
-            <div class="flex gap-2">
-              <a href="{% url 'accept_friend_request' req.id %}" 
-                 class="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-green-500/50 focus:ring-offset-2 transition-all duration-200">
-                <i class="bi bi-check"></i> Accept
-              </a>
-              <a href="{% url 'reject_friend_request' req.id %}" 
-                 class="inline-flex items-center gap-2 bg-slate-300 hover:bg-slate-400 text-slate-800 px-5 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-slate-500/50 focus:ring-offset-2 transition-all duration-200">
-                <i class="bi bi-x"></i> Ignore
-              </a>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-
-      {% if pending_count > 3 %}
-      <div class="w-full h-px bg-gradient-to-r from-orange-300/50 to-transparent my-6"></div>
-      <a href="{% url 'friend_requests' %}" 
-         class="w-full inline-flex items-center justify-center gap-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white py-4 px-6 rounded-2xl font-bold shadow-xl hover:shadow-2xl hover:from-orange-600 hover:to-orange-700 focus:outline-none focus:ring-4 focus:ring-orange-500/50 focus:ring-offset-2 transition-all duration-200">
-        <i class="bi bi-arrow-right"></i>
-        View All ({{ pending_count }})
-      </a>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    <!-- Friends Widget -->
-    <div class="bg-white shadow-lg rounded-2xl border border-slate-200 p-8 hover:shadow-xl transition-all duration-300">
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center shadow-md">
-            <i class="bi bi-people-fill text-purple-600 text-xl"></i>
-          </div>
-          <h4 class="text-2xl font-bold text-slate-900">Friends ({{ total_friends }})</h4>
-        </div>
-        <a href="{% url 'user_list' %}" 
-           class="w-12 h-12 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-3xl flex items-center justify-center text-slate-600 hover:text-slate-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all duration-200"
-           aria-label="Find new friends">
-          <i class="bi bi-person-plus"></i>
-        </a>
-      </div>
-
-      {% if friends %}
-      <div class="space-y-4 mb-8">
-        {% for data in friends %}
-        <div class="bg-slate-50 hover:bg-white border-2 border-slate-200 hover:border-blue-300 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-300 group">
-          <div class="flex items-start justify-between gap-6">
-            <div class="flex items-center gap-4 flex-1">
-              <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:scale-105 transition-transform duration-200">
-                <i class="bi bi-person-fill text-2xl"></i>
-              </div>
-              <div>
-                <h6 class="font-bold text-xl text-slate-900 group-hover:text-blue-900 transition-colors">{{ data.friend.username }}</h6>
-                <div class="flex flex-wrap items-center gap-4 text-sm text-slate-600 mt-2">
-                  <span class="flex items-center gap-2">
-                    <i class="bi bi-check-circle-fill text-green-500 text-lg"></i>
-                    {{ data.completed_tasks }} tasks
-                  </span>
-                  <span class="flex items-center gap-2">
-                    <i class="bi bi-clock text-lg"></i>
-                    {{ data.time_spent }} min
-                  </span>
+    
+    <!-- Friends Sidebar -->
+    <div class="space-y-6">
+        <!-- Friend Requests -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title text-lg">Friend Requests</h2>
+                {% if pending_friend_requests %}
+                <div class="space-y-2">
+                    {% for request in pending_friend_requests|slice:":3" %}
+                    <div class="flex items-center justify-between p-2 bg-base-200 rounded">
+                        <span class="text-sm font-medium truncate">{{ request.from_user.username }}</span>
+                        <div class="flex gap-1 flex-shrink-0">
+                            <button class="btn btn-xs btn-primary">Accept</button>
+                            <button class="btn btn-xs btn-outline">Decline</button>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
-              </div>
+                <a href="{% url 'friend_requests' %}" class="link link-primary text-sm mt-2">View all</a>
+                {% else %}
+                <p class="text-sm opacity-75">No pending requests</p>
+                {% endif %}
             </div>
-            <a href="{% url 'view_friend_profile' data.friend.id %}" 
-               class="inline-flex items-center gap-2 bg-blue-100 hover:bg-blue-200 text-blue-800 px-6 py-3 rounded-xl font-semibold border-2 border-blue-300 hover:border-blue-400 shadow-sm hover:shadow-md focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 transition-all duration-200">
-              <i class="bi bi-eye"></i> View
-            </a>
-          </div>
         </div>
-        {% endfor %}
-      </div>
-
-      {% if total_friends > 5 %}
-      <div class="w-full h-px bg-slate-200 my-6"></div>
-      <a href="{% url 'friends_list' %}" 
-         class="w-full inline-flex items-center justify-center gap-3 bg-blue-600 hover:bg-blue-700 text-white py-4 px-6 rounded-2xl font-bold shadow-xl hover:shadow-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 transition-all duration-200">
-        View All Friends
-      </a>
-      {% endif %}
-      {% else %}
-      <div class="text-center py-12 space-y-6">
-        <div class="w-24 h-24 mx-auto bg-slate-100 rounded-3xl flex items-center justify-center shadow-lg">
-          <i class="bi bi-people text-3xl text-slate-500"></i>
-        </div>
-        <p class="text-xl font-semibold text-slate-700">No friends yet</p>
-        <p class="text-slate-600 mb-6">Connect with others to share progress</p>
-        <a href="{% url 'user_list' %}" 
-           class="inline-flex items-center gap-3 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-semibold shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 transition-all duration-200">
-          <i class="bi bi-search"></i> Find users
-        </a>
-      </div>
-      {% endif %}
-    </div>
-
-    <!-- Discover Users Widget -->
-    <div class="bg-white shadow-lg rounded-2xl border border-slate-200 p-8 hover:shadow-xl transition-all duration-300">
-      <div class="flex items-center justify-between mb-8">
-        <div class="flex items-center gap-4">
-          <div class="w-12 h-12 bg-emerald-100 rounded-2xl flex items-center justify-center shadow-md">
-            <i class="bi bi-people text-emerald-600 text-xl"></i>
-          </div>
-          <h4 class="text-2xl font-bold text-slate-900">Discover Users</h4>
-        </div>
-        <a href="{% url 'user_list' %}" 
-           class="w-12 h-12 bg-slate-100 hover:bg-slate-200 border-2 border-slate-300 rounded-3xl flex items-center justify-center text-slate-600 hover:text-slate-800 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-400 transition-all duration-200"
-           aria-label="Browse all users">
-          <i class="bi bi-search"></i>
-        </a>
-      </div>
-
-      {% if suggested_users %}
-      <div class="space-y-3">
-        {% for u in suggested_users %}
-        <div class="flex items-center justify-between p-5 rounded-2xl hover:bg-slate-50 transition-all duration-200 border border-slate-200 hover:border-blue-300 hover:shadow-md group">
-          <div class="flex items-center gap-4">
-            <div class="w-12 h-12 bg-slate-200 rounded-3xl flex items-center justify-center shadow-md group-hover:bg-blue-100 group-hover:text-blue-600 transition-all">
-              <i class="bi bi-person-circle text-xl"></i>
+        
+        <!-- Quick Actions -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title text-lg">Quick Actions</h2>
+                <div class="flex flex-col gap-2">
+                    <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm">+ New Task</a>
+                    <a href="{% url 'log_create' %}" class="btn btn-secondary btn-sm">+ Log Progress</a>
+                    <a href="{% url 'friends_list' %}" class="btn btn-outline btn-sm">Find Friends</a>
+                </div>
             </div>
-            <span class="font-bold text-lg text-slate-900 group-hover:text-blue-900 transition-colors">{{ u.username }}</span>
-          </div>
-          <a href="{% url 'send_friend_request' u.id %}" 
-             class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg hover:shadow-xl focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 transition-all duration-200">
-            <i class="bi bi-person-plus"></i> Add
-          </a>
         </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="text-center py-12 space-y-6">
-        <i class="bi bi-search-heart text-5xl text-slate-400 block mb-6"></i>
-        <p class="text-xl font-semibold text-slate-700">No more users to suggest</p>
-        <a href="{% url 'user_list' %}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold text-lg underline decoration-2 underline-offset-4 transition-colors">
-          <i class="bi bi-arrow-right"></i>
-          Browse all users
-        </a>
-      </div>
-      {% endif %}
     </div>
-  </div>
+</div>
+
+<!-- Recent Activity -->
+<div class="card bg-base-100 shadow-xl mt-8">
+    <div class="card-body">
+        <h2 class="card-title flex items-center gap-2">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Recent Activity
+        </h2>
+        
+        {% if recent_logs %}
+        <div class="overflow-x-auto mt-4">
+            <table class="table w-full text-sm">
+                <tbody>
+                    {% for log in recent_logs|slice:":5" %}
+                    <tr class="hover">
+                        <td>
+                            <div>
+                                <div class="font-semibold text-sm md:text-base">{{ log.activity }}</div>
+                                <div class="text-xs opacity-75">{{ log.category.name }}</div>
+                            </div>
+                        </td>
+                        <td class="text-right">
+                            <span class="badge">{{ log.duration }}m</span>
+                        </td>
+                        <td class="text-right text-xs opacity-75">{{ log.date|date:"M d" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <a href="{% url 'log_list' %}" class="link link-primary text-sm mt-4">View all activity</a>
+        {% else %}
+        <div class="text-center py-8">
+            <p class="text-lg font-semibold">No activity yet</p>
+            <p class="opacity-75 text-sm">Start tracking to see your progress</p>
+            <a href="{% url 'log_create' %}" class="btn btn-primary btn-sm mt-4">Log your first entry</a>
+        </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock %}

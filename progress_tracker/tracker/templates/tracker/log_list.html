@@ -1,218 +1,127 @@
-{% extends 'tracker/base.html' %}
-{% load math_filters widget_tweaks %}
 
-{% block title %}Daily Logs - VisMatrix.Space{% endblock %}
+{% extends 'tracker/base.html' %}
+
+{% block title %}Logs - VisMatrix.Space{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-6 py-12">
-  <!-- Hero Header -->
-  <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-16">
-    <div>
-      <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl mb-4 shadow-xl">
-        <i class="bi bi-journal-text text-2xl text-white"></i>
-      </div>
-      <h1 class="text-5xl font-black text-slate-900 mb-2 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
-        Daily Activity Logs
-      </h1>
-      <p class="text-2xl text-slate-600 max-w-2xl">Track your complete productivity history</p>
-    </div>
-    
-    <!-- CTA Button -->
-    <a href="{% url 'log_create' %}"
-       class="group inline-flex items-center gap-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-12 py-6 rounded-3xl text-xl font-black shadow-2xl hover:shadow-3xl hover:from-emerald-700 hover:to-teal-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 transition-all duration-300">
-      <i class="bi bi-plus-circle-fill text-2xl group-hover:scale-110 transition-transform"></i>
-      <span>Log New Activity</span>
-    </a>
-  </div>
-
-  <!-- Filter Bar -->
-  <div class="bg-white shadow-xl border border-slate-200 rounded-3xl p-8 mb-12 hover:shadow-2xl transition-all duration-300">
-    <form method="get" class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-      <div class="flex-1 relative">
-        <label for="date-filter" class="absolute -top-3 left-4 bg-white px-2 text-sm font-bold text-slate-900">Filter by Date</label>
-        <input type="date" name="date" id="date-filter" value="{{ date_filter }}"
-               class="w-full px-6 py-6 text-xl border-2 border-slate-200 rounded-3xl focus:border-blue-500 focus:ring-4 focus:ring-blue-100/50 focus:outline-none shadow-lg hover:border-slate-300 hover:shadow-xl transition-all duration-300 bg-gradient-to-r from-slate-50 to-white font-mono tracking-wider">
-      </div>
-      <button type="submit"
-              class="px-12 py-6 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-3xl font-black text-xl shadow-xl hover:shadow-2xl hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 transition-all duration-300 transform hover:-translate-y-1 flex items-center gap-3">
-        <i class="bi bi-funnel-fill"></i>
-        <span>Filter</span>
-      </button>
-      <a href="{% url 'log_list' %}"
-         class="px-12 py-6 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 rounded-3xl font-black text-xl border-4 border-slate-300 hover:border-slate-400 hover:shadow-xl hover:from-slate-200 hover:to-slate-300 focus:outline-none focus:ring-4 focus:ring-slate-500/50 focus:ring-offset-2 transition-all duration-300 transform hover:-translate-y-1 flex items-center gap-3">
-        <i class="bi bi-x-circle"></i>
-        <span>Clear</span>
-      </a>
-    </form>
-  </div>
-
-  {% if logs_by_date %}
-  <div class="space-y-8">
-    {% for date, logs in logs_by_date.items %}
-    {% with total=0 %}
-      {% for log in logs %}
-        {% with total=total|add:log.duration %}{% endwith %}
-      {% endfor %}
-    {% endwith %}
-    
-    <!-- Date Section -->
-    <section class="bg-white shadow-2xl border border-slate-200 rounded-3xl overflow-hidden hover:shadow-3xl transition-all duration-500 group">
-      <!-- Date Header -->
-      <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-12 py-10 border-b-2 border-slate-200 group-hover:bg-gradient-to-r group-hover:from-emerald-50 group-hover:to-teal-50 transition-all duration-500">
-        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-          <div class="flex items-center gap-6">
-            <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-all duration-300">
-              <i class="bi bi-calendar3-week-fill text-2xl"></i>
-            </div>
-            <div>
-              <h2 class="text-4xl font-black text-slate-900 group-hover:text-emerald-900 transition-colors">{{ date|date:"l, F d, Y" }}</h2>
-              
-              <!-- Total Time Display -->
-              <div class="inline-flex items-center gap-3 mt-2">
-                <!-- Safe time display -->
-{% with total_safe=total_time|default:"0"|add:0 %}
-  {% with hours=total_safe|div:60 minutes=total_safe|mul:60|sub:total_safe %}
-    <div class="text-3xl font-black">
-      {{ hours }}h {{ minutes }}m
-    </div>
-  {% endwith %}
-
-
-                {% if hours %}
-                  <div class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 rounded-2xl font-black text-2xl shadow-lg border-2 border-emerald-200">
-                    <i class="bi bi-clock-history text-2xl"></i>
-                    <span>{{ total|div:60 }}h</span>
-                  </div>
-                {% else %}
-                  <div class="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-2xl font-black text-2xl shadow-lg border-2 border-blue-200">
-                    <i class="bi bi-stopwatch text-2xl"></i>
-                    <span>{{ total }}min</span>
-                  </div>
-                {% endif %}
-                {% endwith %}
-                <div class="text-xl text-slate-600 font-semibold">
-                  {{ logs|length }} activit{{ logs|length|pluralize }}
-                </div>
-              </div>
-            </div>
-          </div>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h1 class="text-4xl font-bold">Progress Logs</h1>
+            <p class="text-base-content opacity-75 mt-2">Track your activity and progress over time</p>
         </div>
-      </div>
+        <a href="{% url 'log_create' %}" class="btn btn-primary">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Log Activity
+        </a>
+    </div>
 
-      <!-- Logs List -->
-      <div class="p-12 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
-        <div class="space-y-6">
-          {% for log in logs %}
-          <article class="group log-card bg-gradient-to-r from-slate-50 to-white border-4 border-slate-200 hover:border-emerald-400 rounded-3xl p-8 hover:shadow-2xl hover:-translate-y-3 hover:bg-gradient-to-r hover:from-emerald-50 hover:to-teal-50 transition-all duration-500 overflow-hidden relative">
-            <!-- Category Color Accent -->
-            {% if log.category %}
-            <div class="absolute inset-0 opacity-10" style="background-color: {{ log.category.color }}"></div>
-            {% endif %}
-            
-            <div class="relative">
-              <div class="flex items-start justify-between gap-6 mb-6">
-                <div class="flex items-center gap-4 flex-1 min-w-0">
-                  <!-- Category Badge -->
-                  {% if log.category %}
-                  <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white font-bold shadow-xl flex-shrink-0 ring-4 ring-white/50" style="background-color: {{ log.category.color }}">
-                    <i class="bi bi-tag-fill text-xl"></i>
-                  </div>
-                  <div>
-                    <h4 class="text-2xl font-black text-slate-900 group-hover:text-emerald-900 transition-colors mb-1 line-clamp-1">{{ log.activity }}</h4>
-                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 rounded-xl font-semibold text-lg shadow-sm border border-slate-200">
-                      <i class="bi bi-bookmark-check"></i>
-                      {{ log.category.name }}
+    <!-- Filter Options -->
+    {% if categories %}
+    <div class="flex gap-2 flex-wrap">
+        <a href="{% url 'log_list' %}" class="btn btn-sm {% if not request.GET.category %}btn-primary{% else %}btn-outline{% endif %}">All</a>
+        {% for category in categories %}
+        <a href="?category={{ category.id }}" class="btn btn-sm {% if request.GET.category|add:"0" == category.id %}btn-primary{% else %}btn-outline{% endif %}">
+            {{ category.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Stats Summary -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="stat bg-base-200 rounded-lg p-4">
+            <div class="stat-title text-sm">Total Logged</div>
+            <div class="stat-value text-2xl">{{ total_logs|default:0 }}</div>
+            <div class="stat-desc text-xs">entries</div>
+        </div>
+        <div class="stat bg-base-200 rounded-lg p-4">
+            <div class="stat-title text-sm">Total Time</div>
+            <div class="stat-value text-2xl">{{ total_minutes|default:0 }}</div>
+            <div class="stat-desc text-xs">minutes</div>
+        </div>
+        <div class="stat bg-base-200 rounded-lg p-4">
+            <div class="stat-title text-sm">This Week</div>
+            <div class="stat-value text-2xl">{{ week_logs|default:0 }}</div>
+            <div class="stat-desc text-xs">entries</div>
+        </div>
+    </div>
+
+    <!-- Logs List -->
+    {% if logs %}
+    <div class="space-y-4">
+        {% for log in logs %}
+        <div class="card bg-base-100 shadow hover:shadow-lg transition">
+            <div class="card-body p-4 md:p-6">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1 min-w-0">
+                        <h3 class="card-title text-lg md:text-xl">{{ log.activity }}</h3>
+                        <p class="text-sm opacity-75 mt-2">{{ log.notes|truncatewords:20 }}</p>
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            {% if log.category %}
+                            <div class="badge badge-primary">{{ log.category.name }}</div>
+                            {% endif %}
+                            <div class="badge badge-info">{{ log.duration }} min</div>
+                            <div class="badge badge-ghost">{{ log.date|date:"M d, Y" }}</div>
+                        </div>
                     </div>
-                  </div>
-                  {% else %}
-                  <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl flex-shrink-0">
-                    <i class="bi bi-circle-fill text-2xl"></i>
-                  </div>
-                  <h4 class="text-2xl font-black text-slate-900 group-hover:text-emerald-900 transition-colors ml-4 flex-1 min-w-0">{{ log.activity }}</h4>
-                  {% endif %}
+                    <div class="flex gap-2 flex-shrink-0">
+                        <a href="{% url 'log_update' log.id %}" class="btn btn-sm btn-secondary" title="Edit">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                            </svg>
+                        </a>
+                        <a href="{% url 'log_delete' log.id %}" class="btn btn-sm btn-error" title="Delete">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                            </svg>
+                        </a>
+                    </div>
                 </div>
-                
-                <!-- Duration Badge -->
-                <div class="inline-flex items-center gap-2 px-6 py-4 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 rounded-3xl font-black text-2xl shadow-xl border-2 border-emerald-200 group-hover:shadow-2xl group-hover:scale-105 transition-all duration-300 flex-shrink-0">
-                  <i class="bi bi-stopwatch-fill"></i>
-                  {{ log.duration }}min
-                </div>
-              </div>
-
-              <!-- Description -->
-              {% if log.description %}
-              <p class="text-xl text-slate-700 leading-relaxed mb-6 px-2 line-clamp-3 group-hover:text-slate-900 transition-colors">{{ log.description }}</p>
-              {% endif %}
-
-              <!-- Meta Info -->
-              <div class="flex items-center justify-between pt-6 border-t-2 border-slate-200">
-                <div class="inline-flex items-center gap-2 text-slate-500 text-lg font-medium">
-                  <i class="bi bi-clock"></i>
-                  {{ log.created_at|date:"g:i A" }}
-                </div>
-                <a href="#" class="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 text-lg font-semibold transition-colors">
-                  <i class="bi bi-pencil-square"></i>
-                  <span>Edit</span>
-                </a>
-              </div>
             </div>
-          </article>
-          {% endfor %}
         </div>
-      </div>
-    </section>
-    {% endfor %}
-  </div>
-  {% else %}
-  <!-- Empty State -->
-  <div class="text-center py-32">
-    <div class="w-48 h-48 mx-auto mb-12 bg-gradient-to-br from-slate-100 to-slate-200 rounded-4xl flex items-center justify-center shadow-2xl border-4 border-dashed border-slate-300">
-      <i class="bi bi-journal-plus text-7xl text-slate-400"></i>
+        {% endfor %}
     </div>
-    <h2 class="text-5xl font-black text-slate-900 mb-6">No activity logs yet</h2>
-    <p class="text-2xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-      Start tracking your daily progress to see your productivity journey unfold
-    </p>
-    <a href="{% url 'log_create' %}" 
-       class="inline-flex items-center gap-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-16 py-8 rounded-3xl text-2xl font-black shadow-3xl hover:shadow-4xl hover:from-emerald-700 hover:to-teal-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 transition-all duration-300 transform hover:-translate-y-2">
-      <i class="bi bi-plus-circle-fill text-3xl"></i>
-      <span>Log Your First Activity</span>
-    </a>
-  </div>
-  {% endif %}
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="join justify-center mt-8">
+        {% if page_obj.has_previous %}
+        <a href="?page=1" class="join-item btn">«</a>
+        <a href="?page={{ page_obj.previous_page_number }}" class="join-item btn">‹</a>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <button class="join-item btn btn-active">{{ num }}</button>
+        {% else %}
+        <a href="?page={{ num }}" class="join-item btn">{{ num }}</a>
+        {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="join-item btn">›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}" class="join-item btn">»</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-16">
+        <svg class="w-20 h-20 mx-auto opacity-25 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <h2 class="text-2xl font-bold">No logs yet</h2>
+        <p class="text-base-content opacity-75 mt-2 mb-6">Start tracking your activity</p>
+        <a href="{% url 'log_create' %}" class="btn btn-primary">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            Log First Activity
+        </a>
+    </div>
+    {% endif %}
 </div>
-
-<style>
-  /* Custom accessible scrollbar */
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 10px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: #f8fafc;
-    border-radius: 5px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 5px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
-  }
-
-  /* Line clamp utilities */
-  .line-clamp-1 {
-    display: -webkit-box;
-    -webkit-line-clamp: 1;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-  .line-clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-</style>
 {% endblock %}

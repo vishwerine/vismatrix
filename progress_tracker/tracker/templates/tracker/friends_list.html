@@ -1,183 +1,134 @@
 {% extends 'tracker/base.html' %}
-{% load friends_extras %}
-{% block title %}My Friends - VisMatrix.Space{% endblock %}
+
+{% block title %}Friends - VisMatrix.Space{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-6 py-12">
-  <!-- Hero Header -->
-  <div class="text-center mb-20">
-    <div class="inline-flex items-center justify-center w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl shadow-2xl border-8 border-white/50">
-      <i class="bi bi-people-fill text-5xl text-white drop-shadow-lg"></i>
-    </div>
-    <h1 class="text-6xl font-black text-slate-900 mb-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
-      My Friends
-    </h1>
-    <p class="text-2xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
-      Track your network's progress and stay motivated together
-    </p>
-  </div>
-
-  <!-- Stats Overview -->
-  {% if friends_data %}
-  <div class="grid md:grid-cols-3 gap-8 mb-16">
-    <div class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-10 text-center hover:shadow-3xl transition-all duration-300 group">
-      <div class="text-5xl font-black text-purple-600 mb-4 group-hover:scale-110 transition-transform">{{ friends_data|length }}</div>
-      <div class="text-2xl font-bold text-slate-900 mb-2">Connections</div>
-      <div class="text-lg text-slate-600">Active friends</div>
-    </div>
-    <div class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-10 text-center hover:shadow-3xl transition-all duration-300 group">
-      <div class="text-5xl font-black text-emerald-600 mb-4 group-hover:scale-110 transition-transform">{{ friends_data|sum_total_tasks }}</div>
-      <div class="text-2xl font-bold text-slate-900 mb-2">Tasks Completed</div>
-      <div class="text-lg text-slate-600">Collective productivity (7 days)</div>
-    </div>
-    <div class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-10 text-center hover:shadow-3xl transition-all duration-300 group">
-      <div class="text-5xl font-black text-blue-600 mb-4 group-hover:scale-110 transition-transform">{{ friends_data|sum_total_time }}</div>
-      <div class="text-2xl font-bold text-slate-900 mb-2">Hours Tracked</div>
-      <div class="text-lg text-slate-600">Total time invested</div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Friends Table -->
-  {% if friends_data %}
-  <div class="bg-white shadow-3xl border border-slate-200 rounded-3xl overflow-hidden hover:shadow-4xl transition-all duration-300">
-    <div class="bg-gradient-to-r from-slate-50 to-slate-100 px-12 py-10 border-b border-slate-200">
-      <div class="flex items-center gap-4 mb-4">
-        <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
-          <i class="bi bi-grid-3x3-gap-fill text-xl"></i>
-        </div>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 class="text-4xl font-black text-slate-900">Friends Network</h2>
-          <p class="text-xl text-slate-600">Recent activity (last 7 days)</p>
+            <h1 class="text-4xl font-bold">Friends</h1>
+            <p class="text-base-content opacity-75 mt-2">Connect with others and share your progress</p>
         </div>
-      </div>
+        <div class="flex gap-2 flex-wrap">
+            <a href="{% url 'friend_requests' %}" class="btn btn-secondary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                </svg>
+                Requests
+            </a>
+            <a href="{% url 'user_list' %}" class="btn btn-primary">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+                Find Users
+            </a>
+        </div>
     </div>
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full divide-y divide-slate-200">
-        <thead class="bg-gradient-to-r from-slate-50 to-slate-100 sticky top-0 z-10">
-          <tr>
-            <th scope="col" class="px-8 py-6 text-left text-sm font-black text-slate-900 uppercase tracking-widest border-r border-slate-200">
-              Friend
-            </th>
-            <th scope="col" class="px-8 py-6 text-left text-sm font-black text-slate-900 uppercase tracking-widest border-r border-slate-200">
-              Tasks Completed
-              <div class="text-xs text-slate-500 font-normal tracking-normal mt-1">(last 7 days)</div>
-            </th>
-            <th scope="col" class="px-8 py-6 text-left text-sm font-black text-slate-900 uppercase tracking-widest border-r border-slate-200">
-              Total Time
-              <div class="text-xs text-slate-500 font-normal tracking-normal mt-1">(minutes)</div>
-            </th>
-            <th scope="col" class="px-8 py-6 text-center text-sm font-black text-slate-900 uppercase tracking-widest">
-              Profile
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-200 bg-white">
-          {% for data in friends_data %}
-          <tr class="group hover:bg-gradient-to-r hover:from-purple-50 hover:to-pink-50 transition-all duration-300 hover:shadow-inner border-b border-slate-100 last:border-b-0">
-            <!-- Friend Column -->
-            <td class="px-8 py-8 whitespace-nowrap">
-              <div class="flex items-center gap-4">
-                <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-3xl flex items-center justify-center text-white shadow-xl group-hover:scale-110 transition-all duration-300">
-                  <i class="bi bi-person-heart-fill text-2xl"></i>
+    <!-- Search/Filter -->
+    <div class="card bg-base-100 shadow">
+        <div class="card-body p-4">
+            <form method="get" class="flex gap-2">
+                <input type="text" name="q" placeholder="Search friends..." 
+                       value="{{ request.GET.q|default:'' }}" class="input input-bordered flex-1">
+                <button type="submit" class="btn btn-primary">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Friends List -->
+    {% if friends %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for friend in friends %}
+        <div class="card bg-base-100 shadow hover:shadow-lg transition">
+            <div class="card-body">
+                <!-- Friend Avatar & Name -->
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="avatar placeholder">
+                        <div class="bg-primary text-primary-content rounded-full w-12">
+                            <span class="text-xl">{{ friend.username|first|upper }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="card-title text-lg">{{ friend.username }}</h3>
+                        <p class="text-sm opacity-75">@{{ friend.username }}</p>
+                    </div>
                 </div>
-                <div>
-                  <div class="text-2xl font-black text-slate-900 group-hover:text-purple-900 transition-colors">{{ data.friend.username }}</div>
-                  <div class="inline-flex items-center gap-2 text-sm text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
-                    <i class="bi bi-circle-fill text-emerald-500 text-xs"></i>
-                    <span>Friend</span>
-                  </div>
+
+                <!-- Stats -->
+                {% if friend.stats %}
+                <div class="stats stats-vertical lg:stats-horizontal w-full text-sm">
+                    <div class="stat">
+                        <div class="stat-title text-xs">Streak</div>
+                        <div class="stat-value">{{ friend.stats.streak|default:0 }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-title text-xs">Logs</div>
+                        <div class="stat-value">{{ friend.stats.logs|default:0 }}</div>
+                    </div>
                 </div>
-              </div>
-            </td>
-            
-            <!-- Tasks Column -->
-            <td class="px-8 py-8 whitespace-nowrap font-mono">
-              <div class="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-emerald-100 to-teal-100 text-emerald-800 rounded-2xl font-bold text-2xl shadow-lg border border-emerald-200 group-hover:shadow-xl group-hover:scale-105 transition-all duration-200">
-                <i class="bi bi-check-lg text-2xl"></i>
-                {{ data.completed_tasks }}
-              </div>
-            </td>
-            
-            <!-- Time Column -->
-            <td class="px-8 py-8 whitespace-nowrap font-mono">
-              <div class="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 rounded-2xl font-bold text-2xl shadow-lg border border-blue-200 group-hover:shadow-xl group-hover:scale-105 transition-all duration-200">
-                <i class="bi bi-stopwatch text-2xl"></i>
-                {{ data.total_time }}
-              </div>
-            </td>
-            
-            <!-- Profile Column -->
-            <td class="px-8 py-8 whitespace-nowrap text-center">
-              <a href="{% url 'view_friend_profile' data.friend.id %}"
-                 class="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-700 text-white px-12 py-5 rounded-3xl text-xl font-black shadow-2xl hover:shadow-3xl hover:from-indigo-700 hover:to-purple-800 focus:outline-none focus:ring-4 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-1 group-hover:scale-105 transition-all duration-300">
-                <i class="bi bi-eye-fill"></i>
-                <span>View Profile</span>
-              </a>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
+                {% endif %}
 
-  {% else %}
-  <!-- Empty State -->
-  <div class="text-center py-32">
-    <div class="w-48 h-48 mx-auto mb-12 bg-gradient-to-br from-purple-100 to-pink-100 rounded-3xl flex items-center justify-center shadow-2xl border-4 border-dashed border-purple-300">
-      <i class="bi bi-people text-7xl text-purple-400"></i>
+                <!-- Actions -->
+                <div class="card-actions justify-between pt-4">
+                    <a href="{% url 'view_friend_profile' friend.id %}" class="btn btn-outline btn-sm flex-1">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Profile
+                    </a>
+                    <button class="btn btn-sm btn-error">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
-    <h2 class="text-5xl font-black text-slate-900 mb-6 bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-      No friends yet
-    </h2>
-    <p class="text-2xl text-slate-600 mb-12 max-w-2xl mx-auto leading-relaxed">
-      Connect with others to share progress, stay motivated, and track collective achievements
-    </p>
-    <div class="space-y-4">
-      <a href="{% url 'user_list' %}" 
-         class="inline-flex items-center gap-4 bg-gradient-to-r from-emerald-600 to-teal-700 text-white px-16 py-8 rounded-3xl text-2xl font-black shadow-3xl hover:shadow-4xl hover:from-emerald-700 hover:to-teal-800 focus:outline-none focus:ring-4 focus:ring-emerald-500/50 focus:ring-offset-2 transition-all duration-300 transform hover:-translate-y-2">
-        <i class="bi bi-search-heart text-3xl"></i>
-        <span>Find Friends</span>
-      </a>
-      <a href="{% url 'friend_requests' %}" 
-         class="inline-flex items-center gap-3 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 px-12 py-6 rounded-3xl text-xl font-black border-4 border-slate-300 hover:border-slate-400 hover:shadow-2xl hover:from-slate-200 hover:to-slate-300 transition-all duration-300">
-        <i class="bi bi-bell"></i>
-        <span>Check Requests</span>
-      </a>
-    </div>
-  </div>
-  {% endif %}
 
-  <!-- Quick Actions -->
-  <div class="mt-20 text-center">
-    <a href="{% url 'user_list' %}"
-       class="inline-flex items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-16 py-8 rounded-3xl text-2xl font-black shadow-3xl hover:shadow-4xl hover:from-blue-700 hover:to-indigo-800 focus:outline-none focus:ring-4 focus:ring-blue-500/50 focus:ring-offset-2 transition-all duration-300 transform hover:-translate-y-2">
-      <i class="bi bi-people-fill text-3xl"></i>
-      <span>Discover More Users</span>
-    </a>
-  </div>
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="join justify-center mt-8">
+        {% if page_obj.has_previous %}
+        <a href="?page=1" class="join-item btn">«</a>
+        <a href="?page={{ page_obj.previous_page_number }}" class="join-item btn">‹</a>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+        {% if page_obj.number == num %}
+        <button class="join-item btn btn-active">{{ num }}</button>
+        {% else %}
+        <a href="?page={{ num }}" class="join-item btn">{{ num }}</a>
+        {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="join-item btn">›</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}" class="join-item btn">»</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="text-center py-16">
+        <svg class="w-20 h-20 mx-auto opacity-25 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 8.048M7 14H5m14 0h-2m-5-9.5A6.5 6.5 0 1023.5 12.5"/>
+        </svg>
+        <h2 class="text-2xl font-bold">No friends yet</h2>
+        <p class="text-base-content opacity-75 mt-2 mb-6">Start connecting with other users to share progress</p>
+        <a href="{% url 'user_list' %}" class="btn btn-primary">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            Browse Users
+        </a>
+    </div>
+    {% endif %}
 </div>
-
-<style>
-  /* Custom accessible scrollbar */
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: #f8fafc;
-    border-radius: 4px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
-  }
-</style>
 {% endblock %}
