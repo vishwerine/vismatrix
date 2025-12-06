@@ -1,4 +1,5 @@
 {% extends 'tracker/base.html' %}
+{% load progress_filters %}
 
 {% block title %}Friends' Progress - Progress Tracker{% endblock %}
 
@@ -30,7 +31,7 @@
       <div class="text-lg text-slate-600">Collectively by friends</div>
     </div>
     <div class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-10 text-center hover:shadow-3xl transition-all duration-300 group">
-      <div class="text-5xl font-black text-purple-600 mb-4 group-hover:scale-110 transition-transform">{{ progress_data|sum_total_time }}</div>
+      
       <div class="text-2xl font-bold text-slate-900 mb-2">Hours Tracked</div>
       <div class="text-lg text-slate-600">Total time invested</div>
     </div>

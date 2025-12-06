@@ -89,7 +89,7 @@
         {% get_providers as socialaccount_providers %}
         {% if socialaccount_providers %}
         <div class="space-y-3">
-          <a href="{% provider_login_url 'google' process='connect' %}"
+          <a href="{% provider_login_url 'google' %}"
              class="group relative flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-slate-300 bg-white py-4 px-6 font-semibold text-slate-900 shadow-sm hover:shadow-md hover:border-slate-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200 focus-ring"
              role="button" aria-label="Continue with Google account">
             <svg width="20" height="20" viewBox="0 0 24 24" class="flex-shrink-0 group-hover:scale-110 transition-transform" aria-hidden="true">

@@ -74,7 +74,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Allauth settings
-ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_EMAIL_REQUIRED = False
 ACCOUNT_USERNAME_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable email verification
@@ -83,6 +83,11 @@ ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable email verification
 LOGIN_URL = '/accounts/login/'  # allauth login URL
 LOGIN_REDIRECT_URL = '/'
 ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+ACCOUNT_AUTHENTICATED_LOGIN_REDIRECTS = True
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_STORE_TOKENS = True
+ACCOUNT_MERGE_ENABLED = False  # Prevents 3rdparty redirect
 
 
 # Social account settings
@@ -98,7 +103,6 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
-SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_VERIFICATION = 'optional'
 
 

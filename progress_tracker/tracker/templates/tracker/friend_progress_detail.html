@@ -1,159 +1,307 @@
 {% extends 'tracker/base.html' %}
 
-{% block title %}{{ friend.username }}'s Progress - Progress Tracker{% endblock %}
+{% block title %}{{ friend.username }}'s Progress - VisMatrix.Space{% endblock %}
 
 {% block content %}
-<div class="max-w-6xl mx-auto px-6 py-12">
-  <!-- Hero Header -->
-  <div class="text-center mb-20">
-    <div class="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full shadow-2xl mb-8 border-8 border-white/50">
-      <i class="bi bi-person-check-fill text-5xl text-white drop-shadow-lg"></i>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+    <!-- Hero Header -->
+    <div class="text-center mb-16">
+        <div class="inline-flex items-center justify-center w-24 h-24 lg:w-32 lg:h-32 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl shadow-2xl mb-6 border-4 border-white/50">
+            <i class="bi bi-person-check-fill text-4xl lg:text-5xl text-white"></i>
+        </div>
+        <h1 class="text-4xl lg:text-6xl font-black text-slate-900 mb-2 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
+            {{ friend.username }}'s Progress Dashboard
+        </h1>
+        <p class="text-lg lg:text-xl text-slate-600 max-w-2xl mx-auto">
+            Visualize weekly activity, tasks completed, and time investment
+        </p>
     </div>
-    <h1 class="text-6xl font-black text-slate-900 mb-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 bg-clip-text text-transparent">
-      {{ friend.username }}'s Progress
-    </h1>
-    <p class="text-2xl text-slate-600 max-w-2xl mx-auto leading-relaxed">
-      Detailed view of completed tasks and activity logs
-    </p>
-  </div>
 
-  <div class="grid lg:grid-cols-2 gap-12 mb-20">
-    <!-- Completed Tasks Section -->
-    <section class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-12 hover:shadow-3xl transition-all duration-300 group">
-      <div class="flex items-center gap-6 mb-10">
-        <div class="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-3xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform duration-300">
-          <i class="bi bi-check2-all text-3xl"></i>
-        </div>
-        <div>
-          <h2 class="text-4xl font-black text-slate-900 mb-2">Completed Tasks</h2>
-          <div class="h-1 w-24 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full shadow-lg"></div>
-        </div>
-      </div>
-
-      {% if tasks %}
-      <div class="space-y-4 max-h-96 overflow-y-auto pr-4 -mr-4 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
-        {% for task in tasks %}
-        <div class="task-item group/task bg-gradient-to-r from-slate-50 to-white border border-slate-200 hover:border-green-300 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 transition-all duration-300 hover:bg-gradient-to-r hover:from-green-50 hover:to-emerald-50">
-          <div class="flex items-start justify-between gap-6">
-            <div class="flex-1 min-w-0">
-              <h4 class="text-2xl font-bold text-slate-900 group-hover/task:text-green-900 transition-colors mb-4 line-clamp-2">{{ task.title }}</h4>
-              <div class="inline-flex items-center gap-3 px-6 py-3 bg-green-100 text-green-800 rounded-2xl font-semibold shadow-lg border border-green-200 text-lg">
-                <i class="bi bi-check-lg text-xl"></i>
-                <span>Completed</span>
-              </div>
+    <!-- Key Stats Row -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+        <div class="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-slate-200/50 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-600 text-sm font-semibold uppercase tracking-wider">Total Time Logged</p>
+                    <p class="text-3xl font-black text-blue-600 mt-2">{{ total_time|default:0 }}<span class="text-xl text-slate-600 font-semibold"> min</span></p>
+                </div>
+                <div class="w-14 h-14 bg-gradient-to-br from-blue-100 to-blue-200 rounded-2xl flex items-center justify-center text-2xl">
+                    <i class="bi bi-hourglass-split text-blue-600"></i>
+                </div>
             </div>
-            <div class="text-right flex-shrink-0">
-              <div class="text-4xl font-black text-green-600 mb-2">{{ task.completed_at|date:"MMM d" }}</div>
-              <div class="text-lg text-slate-500 font-semibold">{{ task.completed_at|date:"Y" }}</div>
+        </div>
+
+        <div class="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-slate-200/50 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-600 text-sm font-semibold uppercase tracking-wider">Tasks Completed</p>
+                    <p class="text-3xl font-black text-emerald-600 mt-2">{{ total_tasks|default:0 }}<span class="text-xl text-slate-600 font-semibold"> tasks</span></p>
+                </div>
+                <div class="w-14 h-14 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-2xl flex items-center justify-center text-2xl">
+                    <i class="bi bi-check-circle-fill text-emerald-600"></i>
+                </div>
             </div>
-          </div>
         </div>
-        {% endfor %}
-      </div>
-      <div class="mt-10 pt-10 border-t-2 border-slate-200 text-center">
-        <p class="text-2xl font-black text-slate-900 mb-2">{{ tasks|length }} task{{ tasks|length|pluralize }} completed</p>
-        <div class="inline-flex items-center gap-2 text-xl text-slate-600 font-semibold">
-          <i class="bi bi-arrow-clockwise"></i>
-          Showing recent activity
-        </div>
-      </div>
-      {% else %}
-      <div class="text-center py-24">
-        <div class="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-green-100 to-emerald-100 rounded-3xl flex items-center justify-center border-4 border-dashed border-green-300 shadow-xl">
-          <i class="bi bi-check-circle text-6xl text-green-400"></i>
-        </div>
-        <h3 class="text-4xl font-black text-slate-700 mb-6">No completed tasks</h3>
-        <p class="text-2xl text-slate-600 max-w-lg mx-auto leading-relaxed">This user hasn't completed any tasks recently</p>
-      </div>
-      {% endif %}
-    </section>
 
-    <!-- Daily Logs Section -->
-    <section class="bg-white shadow-2xl border border-slate-200 rounded-3xl p-12 hover:shadow-3xl transition-all duration-300 group">
-      <div class="flex items-center gap-6 mb-10">
-        <div class="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform duration-300">
-          <i class="bi bi-journal-check text-3xl"></i>
-        </div>
-        <div>
-          <h2 class="text-4xl font-black text-slate-900 mb-2">Daily Logs</h2>
-          <div class="h-1 w-24 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full shadow-lg"></div>
-        </div>
-      </div>
-
-      {% if logs %}
-      <div class="space-y-4 max-h-96 overflow-y-auto pr-4 -mr-4 scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100">
-        {% for log in logs %}
-        <div class="log-item group/log bg-gradient-to-r from-slate-50 to-white border border-slate-200 hover:border-blue-300 rounded-2xl p-8 hover:shadow-xl hover:-translate-y-2 transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50">
-          <div class="flex items-start justify-between gap-6">
-            <div class="flex-1 min-w-0">
-              <h4 class="text-2xl font-bold text-slate-900 group-hover/log:text-blue-900 transition-colors mb-4 line-clamp-2">{{ log.activity }}</h4>
-              <div class="inline-flex items-center gap-3 px-6 py-3 bg-blue-100 text-blue-800 rounded-2xl font-semibold shadow-lg border border-blue-200 text-lg">
-                <i class="bi bi-stopwatch text-xl"></i>
-                <span>{{ log.duration }} min</span>
-              </div>
+        <div class="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-slate-200/50 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-600 text-sm font-semibold uppercase tracking-wider">This Week</p>
+                    <p class="text-3xl font-black text-purple-600 mt-2">{{ week_time|default:0 }}<span class="text-xl text-slate-600 font-semibold"> min</span></p>
+                </div>
+                <div class="w-14 h-14 bg-gradient-to-br from-purple-100 to-purple-200 rounded-2xl flex items-center justify-center text-2xl">
+                    <i class="bi bi-calendar-week text-purple-600"></i>
+                </div>
             </div>
-            <div class="text-right flex-shrink-0">
-              <div class="text-4xl font-black text-blue-600 mb-2">{{ log.date|date:"MMM d" }}</div>
-              <div class="text-lg text-slate-500 font-semibold">{{ log.date|date:"Y" }}</div>
+        </div>
+
+        <div class="bg-white/80 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-slate-200/50 hover:shadow-xl transition-all">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-slate-600 text-sm font-semibold uppercase tracking-wider">Activity Streak</p>
+                    <p class="text-3xl font-black text-orange-600 mt-2">{{ activity_streak|default:0 }}<span class="text-xl text-slate-600 font-semibold"> days</span></p>
+                </div>
+                <div class="w-14 h-14 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl flex items-center justify-center text-2xl">
+                    <i class="bi bi-fire text-orange-600"></i>
+                </div>
             </div>
-          </div>
         </div>
-        {% endfor %}
-      </div>
-      <div class="mt-10 pt-10 border-t-2 border-slate-200 text-center">
-        <p class="text-2xl font-black text-slate-900 mb-2">{{ logs|length }} log{{ logs|length|pluralize }} recorded</p>
-        <div class="inline-flex items-center gap-2 text-xl text-slate-600 font-semibold">
-          <i class="bi bi-calendar3"></i>
-          Recent activity shown
+    </div>
+
+        <!-- Charts Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
+            <!-- Weekly Time Breakdown Chart -->
+            <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-slate-200/50 hover:shadow-2xl transition-all">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center text-white">
+                        <i class="bi bi-graph-up text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">Weekly Time Breakdown</h2>
+                        <p class="text-sm text-slate-600">Last 7 days activity</p>
+                    </div>
+                </div>
+                <div class="relative h-80">
+                    <canvas id="weeklyChart" data-weekly='{{ weekly_data|safe }}'></canvas>
+                </div>
+            </div>
+
+            <!-- Category Distribution Chart -->
+            <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-slate-200/50 hover:shadow-2xl transition-all">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white">
+                        <i class="bi bi-pie-chart-fill text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">Activity Categories</h2>
+                        <p class="text-sm text-slate-600">Time distribution</p>
+                    </div>
+                </div>
+                <div class="relative h-80">
+                    <canvas id="categoryChart" data-categories='{{ category_data|safe }}'></canvas>
+                </div>
+            </div>
+
+            <!-- Daily Activity Heatmap -->
+            <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-slate-200/50 hover:shadow-2xl transition-all lg:col-span-2">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center text-white">
+                        <i class="bi bi-calendar3 text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">Activity Heatmap</h2>
+                        <p class="text-sm text-slate-600">Daily engagement pattern</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-7 gap-2">
+                    <div class="text-center text-sm font-semibold text-slate-600 col-span-7 mb-4">
+                        <div class="flex justify-between text-xs">
+                            <span>Less</span>
+                            <span>More</span>
+                        </div>
+                    </div>
+                    {% for day in heatmap_data %}
+                    <div class="w-8 h-8 {{ day.color }} rounded-lg border {{ day.border }}" title="{{ day.label }}: {{ day.minutes }} min"></div>
+                    {% endfor %}
+
+                    {% for day in day_labels %}
+                    <div class="text-xs text-slate-500 font-semibold mt-2">{{ day }}</div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recent Tasks -->
+            <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-slate-200/50 hover:shadow-2xl transition-all">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white">
+                        <i class="bi bi-check-lg text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">Recent Tasks</h2>
+                        <p class="text-sm text-slate-600">Completed this week</p>
+                    </div>
+                </div>
+                <div class="space-y-3 max-h-80 overflow-y-auto">
+                    {% for task in recent_tasks %}
+                    <div class="flex items-start gap-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 hover:border-green-300 transition-all">
+                        <div class="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0 text-white mt-0.5">
+                            <i class="bi bi-check-lg text-lg"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-slate-900">{{ task.title }}</p>
+                            <p class="text-sm text-slate-600">{{ task.completed_at|date:"M d, Y" }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8">
+                        <p class="text-slate-600">No tasks completed this week</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Recent Activities -->
+            <div class="bg-white/95 backdrop-blur-xl rounded-3xl p-8 shadow-xl border border-slate-200/50 hover:shadow-2xl transition-all">
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center text-white">
+                        <i class="bi bi-journal-text text-xl"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-900">Recent Activities</h2>
+                        <p class="text-sm text-slate-600">Logged this week</p>
+                    </div>
+                </div>
+                <div class="space-y-3 max-h-80 overflow-y-auto">
+                    {% for log in recent_logs %}
+                    <div class="flex items-start gap-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 hover:border-blue-300 transition-all">
+                        <div class="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0 text-white mt-0.5">
+                            <i class="bi bi-stopwatch text-lg"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="font-bold text-slate-900">{{ log.activity }}</p>
+                            <p class="text-sm text-slate-600">{{ log.duration }} min • {{ log.date|date:"M d" }}</p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-8">
+                        <p class="text-slate-600">No activities logged this week</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
-      </div>
-      {% else %}
-      <div class="text-center py-24">
-        <div class="w-32 h-32 mx-auto mb-8 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl flex items-center justify-center border-4 border-dashed border-blue-300 shadow-xl">
-          <i class="bi bi-journal-plus text-6xl text-blue-400"></i>
+
+        <!-- Action Buttons -->
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{% url 'friend_progress_list' %}" class="inline-flex items-center gap-3 bg-gradient-to-r from-slate-700 to-slate-800 hover:from-slate-800 hover:to-slate-900 text-white font-bold py-5 px-10 rounded-2xl shadow-xl hover:shadow-2xl transition-all text-lg">
+                <i class="bi bi-arrow-left"></i>
+                Back to Friends
+            </a>
+            <button onclick="window.print()" class="inline-flex items-center gap-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-5 px-10 rounded-2xl shadow-xl hover:shadow-2xl transition-all text-lg">
+                <i class="bi bi-printer"></i>
+                Export Report
+            </button>
         </div>
-        <h3 class="text-4xl font-black text-slate-700 mb-6">No daily logs</h3>
-        <p class="text-2xl text-slate-600 max-w-lg mx-auto leading-relaxed">No activities have been logged recently</p>
-      </div>
-      {% endif %}
-    </section>
-  </div>
+    </div>
 
-  <!-- Action Button -->
-  <div class="text-center">
-    <a href="{% url 'friend_progress_list' %}"
-       class="inline-flex items-center gap-4 bg-gradient-to-r from-slate-100 to-slate-200 text-slate-900 px-16 py-8 rounded-3xl text-2xl font-black border-4 border-slate-300 hover:border-slate-400 hover:shadow-2xl hover:from-slate-200 hover:to-slate-300 focus:outline-none focus:ring-4 focus:ring-slate-500/50 focus:ring-offset-2 focus:ring-offset-white transform hover:-translate-y-2 transition-all duration-300 shadow-xl group">
-      <i class="bi bi-arrow-left text-3xl group-hover:-translate-x-1 transition-transform duration-300"></i>
-      <span>Back to Friends Progress</span>
-    </a>
-  </div>
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <script>
+        // Parse Django template data
+        const weeklyData = {{ weekly_data|safe }};
+        const categoryData = {{ category_data|safe }};
 
-<style>
-  /* Custom accessible scrollbar */
-  .scrollbar-thin::-webkit-scrollbar {
-    width: 8px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-track {
-    background: #f8fafc;
-    border-radius: 4px;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: content-box;
-  }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
-  }
+        // Weekly Time Chart
+        const weeklyCtx = document.getElementById('weeklyChart').getContext('2d');
+        new Chart(weeklyCtx, {
+            type: 'bar',
+            data: {
+                labels: weeklyData.labels,
+                datasets: [{
+                    label: 'Minutes Logged',
+                    data: weeklyData.data,
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(99, 102, 241, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(168, 85, 247, 0.8)',
+                        'rgba(190, 24, 93, 0.8)',
+                        'rgba(34, 197, 94, 0.8)',
+                        'rgba(6, 182, 212, 0.8)'
+                    ],
+                    borderRadius: 8,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: {
+                            font: { size: 14, weight: 'bold' },
+                            color: '#1e293b',
+                            padding: 20,
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            font: { size: 12, weight: '600' },
+                            color: '#64748b',
+                        },
+                        grid: { color: '#e2e8f0' }
+                    },
+                    x: {
+                        ticks: {
+                            font: { size: 12, weight: '600' },
+                            color: '#64748b',
+                        },
+                        grid: { display: false }
+                    }
+                }
+            }
+        });
 
-  /* Line clamp utility */
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-  }
-</style>
+        // Category Distribution Chart
+        const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+        new Chart(categoryCtx, {
+            type: 'doughnut',
+            data: {
+                labels: categoryData.labels,
+                datasets: [{
+                    data: categoryData.data,
+                    backgroundColor: categoryData.colors,
+                    borderColor: '#ffffff',
+                    borderWidth: 3,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: { size: 13, weight: '600' },
+                            color: '#1e293b',
+                            padding: 20,
+                            boxWidth: 15,
+                            usePointStyle: true,
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+
+    <style>
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .max-w-7xl { animation: slideUp 0.6s ease-out; }
+    </style>
 {% endblock %}

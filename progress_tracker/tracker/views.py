@@ -7,6 +7,9 @@ from django.db.models import Sum, Count, Q
 from datetime import timedelta
 from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship
 from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm
+from django.views.decorators.http import require_http_methods
+
+import json
 
 # Dashboard
 @login_required
@@ -139,59 +142,87 @@ def task_delete(request, pk):
 import pytz
 from django.utils import timezone
 
+from django.core.paginator import Paginator
+
 @login_required
 def log_list(request):
-    """List daily logs"""
-    date_filter = request.GET.get('date')
+    """List logs for the current user, with category filter, stats, and pagination."""
     
-    logs = DailyLog.objects.filter(user=request.user).select_related('category')
-    
-    if date_filter:
-        logs = logs.filter(date=date_filter)
-    
-    # Group by date for template
-    logs_by_date = {}
-    for log in logs:
-        date_str = log.date.strftime('%Y-%m-%d')
-        if date_str not in logs_by_date:
-            logs_by_date[date_str] = []
-        logs_by_date[date_str].append(log)
-    
+    # Get all logs for current user
+    logs = DailyLog.objects.filter(user=request.user).select_related("category").order_by("-date", "-id")
+
+    # Filter by category if provided
+    category_id = request.GET.get("category")
+    if category_id:
+        logs = logs.filter(category_id=category_id)
+
+    # Calculate statistics
+    total_logs = logs.count()
+    total_minutes = logs.aggregate(total=Sum("duration"))["total"] or 0
+
+    # Week statistics
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    week_logs = logs.filter(date__gte=week_ago).count()
+
+    # Pagination - 10 logs per page
+    paginator = Paginator(logs, 10)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    # Get all categories for filter dropdown
+    categories = Category.objects.filter(user=request.user).order_by("name")
+
     context = {
-        'logs_by_date': logs_by_date,
-        'date_filter': date_filter,
-        'total_logs': logs.count(),
+        "page_obj": page_obj,
+        "is_paginated": page_obj.has_other_pages(),
+        "categories": categories,
+        "category_id": int(category_id) if category_id else None,
+        "total_logs": total_logs,
+        "total_minutes": total_minutes,
+        "week_logs": week_logs,
     }
-    return render(request, 'tracker/log_list.html', context)
+    
+    return render(request, "tracker/log_list.html", context)
 
 @login_required
 def log_create(request):
-    """Create a new daily log entry"""
-    if request.method == 'POST':
-        form = DailyLogForm(request.POST, user=request.user)
+    if request.method == "POST":
+        form = DailyLogForm(request.POST)
         if form.is_valid():
             log = form.save(commit=False)
             log.user = request.user
-            log.date = form.cleaned_data['date']  # Ensure date is set
             log.save()
-            messages.success(request, f"Activity '{log.activity[:50]}...' logged successfully! ({log.duration}min)")
-            return redirect('log_list')
-        else:
-            messages.error(request, "Please fix the errors below.")
+            return redirect("log_list")
     else:
-        # Default to today
-        today = timezone.now().date()
-        form = DailyLogForm(initial={'date': today}, user=request.user)
-    
-    categories = Category.objects.filter(
-        Q(is_global=True) | Q(user=request.user)
-    ).order_by('-is_global', 'name')
-    
-    return render(request, 'tracker/log_form.html', {
-        'form': form,
-        'title': 'Log New Activity',
-        'categories': categories,
-    })
+        form = DailyLogForm()
+    return render(request, "tracker/log_form.html", {"form": form})
+
+
+@login_required
+def log_update(request, pk):
+    log = get_object_or_404(DailyLog, pk=pk, user=request.user)
+    if request.method == "POST":
+        form = DailyLogForm(request.POST, instance=log)
+        if form.is_valid():
+            form.save()
+            return redirect("log_list")
+    else:
+        form = DailyLogForm(instance=log)
+    return render(request, "tracker/log_form.html", {"form": form})
+
+
+@login_required
+def log_delete(request, pk):
+    log = get_object_or_404(DailyLog, pk=pk, user=request.user)
+    if request.method == "POST":
+        log.delete()
+        return redirect("log_list")
+    return render(request, "tracker/log_confirm_delete.html", {"log": log})
+
+
+
+
 # Progress view
 @login_required
 def progress_view(request):
@@ -285,44 +316,302 @@ from django.contrib import messages
 
 @login_required
 def user_list(request):
-    """List all users except the current user, with friendship status"""
+    """Search and browse all users to find and add as friends."""
+    
+    # Get search query
+    search_query = request.GET.get('search', '').strip()
+    
+    # Start with all users except current user
     users = User.objects.exclude(id=request.user.id)
-    # Get current user's friends IDs for quick lookup
-    current_friends = request.user.friendships.values_list('friend_id', flat=True)
+    
+    # Apply search filter
+    if search_query:
+        users = users.filter(
+            Q(username__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(userprofile__bio__icontains=search_query)
+        ).distinct()
+    
+    # Order by username
+    users = users.order_by('username').select_related('userprofile')
+    
+    # Limit results for performance
+    users = users[:50]
+    
     context = {
         'users': users,
-        'current_friends': current_friends,
+        'search_query': search_query,
     }
+    
     return render(request, 'tracker/user_list.html', context)
 
+
+
+
+
+
+
+# ===== SEND FRIEND REQUEST (AUTO-ACCEPT) =====
 @login_required
-def add_friend(request, user_id):
-    """Send friend request immediately by creating friendship"""
+@require_http_methods(["POST"])
+def send_friend_request(request, user_id):
+    """Send a friend request that automatically creates mutual friendship (AJAX & redirect support)"""
+    
+    # Prevent self-requests
     if user_id == request.user.id:
-        messages.error(request, "You cannot add yourself as a friend.")
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': 'Cannot add yourself'}, status=400)
+        messages.error(request, "You cannot send a friend request to yourself.")
         return redirect('user_list')
-
-    friend_user = get_object_or_404(User, pk=user_id)
-
+    
+    try:
+        to_user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'error', 'message': 'User not found'}, status=404)
+        messages.error(request, "User not found")
+        return redirect('user_list')
+    
     # Check if already friends
-    if request.user.friendships.filter(friend=friend_user).exists():
-        messages.info(request, f"You are already friends with {friend_user.username}")
-    else:
-        Friendship.objects.create(user=request.user, friend=friend_user)
-        messages.success(request, f"You are now friends with {friend_user.username}")
-
+    if Friendship.objects.filter(user=request.user, friend=to_user).exists():
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'warning', 'message': f'Already friends with {to_user.username}'}, status=400)
+        messages.info(request, f"You are already friends with {to_user.username}")
+        return redirect('user_list')
+    
+    # Check if reverse friendship exists (they added you first)
+    reverse_friendship = Friendship.objects.filter(user=to_user, friend=request.user).exists()
+    
+    if reverse_friendship:
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'warning', 'message': f'{to_user.username} already has you as a friend'}, status=400)
+        messages.info(request, f"{to_user.username} already has you as a friend")
+        return redirect('user_list')
+    
+    # ===== AUTO-ACCEPT: Create mutual friendship =====
+    # Create friendship from current user to target user
+    friendship1, created1 = Friendship.objects.get_or_create(
+        user=request.user,
+        friend=to_user
+    )
+    
+    # Create reverse friendship from target user to current user
+    friendship2, created2 = Friendship.objects.get_or_create(
+        user=to_user,
+        friend=request.user
+    )
+    
+    # Delete any pending friend requests between them
+    FriendRequest.objects.filter(
+        from_user__in=[request.user, to_user],
+        to_user__in=[request.user, to_user],
+        status='pending'
+    ).delete()
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'success', 'message': f'You are now friends with {to_user.username}!'}, status=201)
+    messages.success(request, f"You are now friends with {to_user.username}!")
+    
     return redirect('user_list')
 
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+
+
+
+# ===== ACCEPT FRIEND REQUEST =====
 @login_required
-def remove_friend(request, user_id):
-    friend_user = get_object_or_404(User, pk=user_id)
-    friendship = request.user.friendships.filter(friend=friend_user).first()
-    if friendship:
-        friendship.delete()
-        messages.success(request, f"You are no longer friends with {friend_user.username}")
-    else:
-        messages.info(request, f"You were not friends with {friend_user.username}")
-    return redirect('user_list')
+@require_http_methods(["POST"])
+def accept_friend_request(request, request_id):
+    """Accept a friend request (AJAX enabled)"""
+    
+    try:
+        friend_request = FriendRequest.objects.get(
+            pk=request_id,
+            to_user=request.user,
+            status='pending'
+        )
+    except FriendRequest.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
+    
+    try:
+        # Mark as accepted
+        friend_request.status = 'accepted'
+        friend_request.save()
+        
+        from_user = friend_request.from_user
+        return JsonResponse({
+            'status': 'success',
+            'message': f'You are now friends with {from_user.username}'
+        }, status=200)
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ===== REJECT FRIEND REQUEST =====
+@login_required
+@require_http_methods(["POST"])
+def reject_friend_request(request, request_id):
+    """Reject a friend request (AJAX enabled)"""
+    
+    try:
+        friend_request = FriendRequest.objects.get(
+            pk=request_id,
+            to_user=request.user,
+            status='pending'
+        )
+    except FriendRequest.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
+    
+    try:
+        from_user = friend_request.from_user
+        
+        # Mark as rejected
+        friend_request.status = 'rejected'
+        friend_request.save()
+        
+        # DELETE friendships if rejected
+        Friendship.objects.filter(user=request.user, friend=from_user).delete()
+        Friendship.objects.filter(user=from_user, friend=request.user).delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Rejected friend request from {from_user.username}'
+        }, status=200)
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ===== CANCEL SENT REQUEST =====
+@login_required
+@require_http_methods(["POST"])
+def cancel_friend_request(request, user_id):
+    """Cancel a sent friend request (AJAX enabled)"""
+    
+    try:
+        to_user = User.objects.get(pk=user_id)
+    except User.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'User not found'}, status=404)
+    
+    try:
+        friend_request = FriendRequest.objects.get(
+            from_user=request.user,
+            to_user=to_user,
+            status='pending'
+        )
+        
+        friend_request.delete()
+        
+        # DELETE friendships if cancelled
+        Friendship.objects.filter(user=request.user, friend=to_user).delete()
+        Friendship.objects.filter(user=to_user, friend=request.user).delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Cancelled friend request to {to_user.username}'
+        }, status=200)
+        
+    except FriendRequest.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ===== REMOVE FRIEND =====
+@login_required
+@require_http_methods(["POST"])
+def remove_friend(request, friendship_id):
+    """Remove a friend (AJAX enabled)"""
+    
+    try:
+        friendship = Friendship.objects.get(pk=friendship_id, user=request.user)
+    except Friendship.DoesNotExist:
+        return JsonResponse({'status': 'error', 'message': 'Friendship not found'}, status=404)
+    
+    try:
+        friend = friendship.friend
+        
+        # Delete both directions
+        Friendship.objects.filter(user=request.user, friend=friend).delete()
+        Friendship.objects.filter(user=friend, friend=request.user).delete()
+        
+        # Delete associated friend requests
+        FriendRequest.objects.filter(
+            from_user__in=[request.user, friend],
+            to_user__in=[request.user, friend]
+        ).delete()
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': f'Removed {friend.username} from friends'
+        }, status=200)
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+
+# ===== FRIEND REQUESTS VIEW (unchanged) =====
+@login_required
+def friend_requests(request):
+    """View all pending friend requests"""
+    received_requests = request.user.received_friend_requests.filter(
+        status='pending'
+    ).select_related('from_user')
+    
+    sent_requests = request.user.sent_friend_requests.filter(
+        status='pending'
+    ).select_related('to_user')
+    
+    context = {
+        'received_requests': received_requests,
+        'sent_requests': sent_requests,
+    }
+    return render(request, 'tracker/friend_requests.html', context)
+
+
+
+
+# ===== FRIENDS LIST (unchanged) =====
+@login_required
+def friends_list(request):
+    """View all friends with their recent progress"""
+    friends = Friendship.objects.filter(user=request.user).select_related('friend')
+    
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    
+    friends_data = []
+    for friendship in friends:
+        friend = friendship.friend
+        completed_tasks = Task.objects.filter(
+            user=friend,
+            status='completed',
+            completed_at__date__gte=week_ago
+        ).count()
+        
+        total_time = DailyLog.objects.filter(
+            user=friend,
+            date__gte=week_ago
+        ).aggregate(total=Sum('duration'))['total'] or 0
+        
+        friends_data.append({
+            'friend': friend,
+            'friendship': friendship,
+            'completed_tasks': completed_tasks,
+            'total_time': total_time,
+        })
+    
+    context = {'friends_data': friends_data}
+    return render(request, 'tracker/friends_list.html', context)
+
+
+
+
+
+
 
 @login_required
 def friend_progress_list(request):
@@ -476,184 +765,217 @@ def user_list(request):
     }
     return render(request, 'tracker/user_list.html', context)
 
-# Send Friend Request
-@login_required
-def send_friend_request(request, user_id):
-    """Send a friend request to another user"""
-    if user_id == request.user.id:
-        messages.error(request, "You cannot send a friend request to yourself.")
-        return redirect('user_list')
-    
-    to_user = get_object_or_404(User, pk=user_id)
-    
-    # Check if already friends
-    if request.user.friendships.filter(friend=to_user).exists():
-        messages.info(request, f"You are already friends with {to_user.username}")
-        return redirect('user_list')
-    
-    # Check if request already exists
-    existing_request = FriendRequest.objects.filter(
-        from_user=request.user, 
-        to_user=to_user, 
-        status='pending'
-    ).first()
-    
-    if existing_request:
-        messages.info(request, f"Friend request already sent to {to_user.username}")
-    else:
-        FriendRequest.objects.create(from_user=request.user, to_user=to_user)
-        messages.success(request, f"Friend request sent to {to_user.username}")
-    
-    return redirect('user_list')
 
-# Accept Friend Request
-@login_required
-def accept_friend_request(request, request_id):
-    """Accept a friend request"""
-    friend_request = get_object_or_404(
-        FriendRequest, 
-        pk=request_id, 
-        to_user=request.user, 
-        status='pending'
-    )
-    
-    friend_request.accept()
-    messages.success(request, f"You are now friends with {friend_request.from_user.username}")
-    
-    return redirect('friend_requests')
 
-# Reject Friend Request
-@login_required
-def reject_friend_request(request, request_id):
-    """Reject a friend request"""
-    friend_request = get_object_or_404(
-        FriendRequest, 
-        pk=request_id, 
-        to_user=request.user, 
-        status='pending'
-    )
-    
-    friend_request.reject()
-    messages.info(request, f"Friend request from {friend_request.from_user.username} rejected")
-    
-    return redirect('friend_requests')
 
-# Cancel Sent Request
+# ===== VIEW USER PROFILE (PUBLIC) =====
 @login_required
-def cancel_friend_request(request, user_id):
-    """Cancel a sent friend request"""
-    to_user = get_object_or_404(User, pk=user_id)
-    friend_request = FriendRequest.objects.filter(
-        from_user=request.user, 
-        to_user=to_user, 
-        status='pending'
-    ).first()
+def view_user_profile(request, user_id):
+    """View any user's public profile"""
     
-    if friend_request:
-        friend_request.delete()
-        messages.success(request, f"Friend request to {to_user.username} cancelled")
+    # Get the user
+    user = get_object_or_404(User, pk=user_id)
     
-    return redirect('user_list')
-
-# Remove Friend
-@login_required
-def remove_friend(request, user_id):
-    """Remove a friend"""
-    friend_user = get_object_or_404(User, pk=user_id)
+    # Can't view your own profile this way
+    if user == request.user:
+        return redirect('dashboard')
     
-    # Delete both directions of friendship
-    Friendship.objects.filter(user=request.user, friend=friend_user).delete()
-    Friendship.objects.filter(user=friend_user, friend=request.user).delete()
-    
-    messages.success(request, f"You are no longer friends with {friend_user.username}")
-    return redirect('user_list')
-
-# Friend Requests Page
-@login_required
-def friend_requests(request):
-    """View all pending friend requests"""
-    received_requests = request.user.received_friend_requests.filter(
-        status='pending'
-    ).select_related('from_user')
-    
-    sent_requests = request.user.sent_friend_requests.filter(
-        status='pending'
-    ).select_related('to_user')
-    
-    context = {
-        'received_requests': received_requests,
-        'sent_requests': sent_requests,
-    }
-    return render(request, 'tracker/friend_requests.html', context)
-
-# Friends List and Progress
-@login_required
-def friends_list(request):
-    """View all friends with their recent progress"""
-    friends = Friendship.objects.filter(user=request.user).select_related('friend')
-    
-    today = timezone.now().date()
-    week_ago = today - timedelta(days=7)
-    
-    friends_data = []
-    for friendship in friends:
-        friend = friendship.friend
-        completed_tasks = Task.objects.filter(
-            user=friend, 
-            status='completed', 
-            completed_at__date__gte=week_ago
-        ).count()
-        total_time = DailyLog.objects.filter(
-            user=friend, 
-            date__gte=week_ago
-        ).aggregate(total=Sum('duration'))['total'] or 0
-        
-        friends_data.append({
-            'friend': friend,
-            'friendship': friendship,
-            'completed_tasks': completed_tasks,
-            'total_time': total_time,
-        })
-    
-    context = {
-        'friends_data': friends_data,
-    }
-    return render(request, 'tracker/friends_list.html', context)
-
-# View Friend Profile
-@login_required
-def view_friend_profile(request, friend_id):
-    """View detailed progress for a specific friend"""
-    friend = get_object_or_404(User, pk=friend_id)
-    
-    # Confirm friendship
-    if not request.user.friendships.filter(friend=friend).exists():
-        messages.error(request, "You can only view progress of your friends.")
-        return redirect('friends_list')
-    
-    # Get friend's recent data
-    tasks = Task.objects.filter(user=friend, status='completed').order_by('-completed_at')[:20]
-    logs = DailyLog.objects.filter(user=friend).order_by('-date')[:20]
+    # Get user's recent data
+    tasks = Task.objects.filter(user=user, status='completed').order_by('-completed_at')[:20]
+    logs = DailyLog.objects.filter(user=user).order_by('-date')[:20]
     
     # Weekly stats
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
+    
     weekly_completed = Task.objects.filter(
-        user=friend, 
-        status='completed', 
+        user=user,
+        status='completed',
         completed_at__date__gte=week_ago
     ).count()
+    
     weekly_time = DailyLog.objects.filter(
-        user=friend, 
+        user=user,
         date__gte=week_ago
     ).aggregate(total=Sum('duration'))['total'] or 0
     
+    # Check friendship status
+    is_friend = Friendship.objects.filter(user=request.user, friend=user).exists()
+    
+    # Check if friend request exists
+    friend_request = FriendRequest.objects.filter(
+        from_user=request.user,
+        to_user=user,
+        status='pending'
+    ).first()
+    
+    # Check if received friend request from this user
+    received_request = FriendRequest.objects.filter(
+        from_user=user,
+        to_user=request.user,
+        status='pending'
+    ).first()
+    
     context = {
-        'friend': friend,
+        'user': user,
         'tasks': tasks,
         'logs': logs,
         'weekly_completed': weekly_completed,
         'weekly_time': weekly_time,
+        'is_friend': is_friend,
+        'friend_request': friend_request,  # Sent request
+        'received_request': received_request,  # Received request
+    }
+    return render(request, 'tracker/user_profile.html', context)
+
+
+from django.db.models import Sum
+from datetime import timedelta
+
+@login_required
+def view_friend_profile(request, friendship_id):
+    """View detailed progress for a specific friend with charts"""
+    friendship = get_object_or_404(Friendship, pk=friendship_id, user=request.user)
+    friend = friendship.friend
+    
+    today = timezone.now().date()
+    week_ago = today - timedelta(days=7)
+    
+    # ===== STATS =====
+    total_time = DailyLog.objects.filter(user=friend).aggregate(
+        total=Sum('duration')
+    )['total'] or 0
+    
+    total_tasks = Task.objects.filter(user=friend, status='completed').count()
+    
+    week_time = DailyLog.objects.filter(
+        user=friend,
+        date__gte=week_ago
+    ).aggregate(total=Sum('duration'))['total'] or 0
+    
+    week_tasks = Task.objects.filter(
+        user=friend,
+        status='completed',
+        completed_at__date__gte=week_ago
+    ).count()
+    
+    # Activity streak
+    activity_streak = 0
+    check_date = today
+    while True:
+        has_activity = DailyLog.objects.filter(
+            user=friend,
+            date=check_date
+        ).exists()
+        if has_activity:
+            activity_streak += 1
+            check_date -= timedelta(days=1)
+        else:
+            break
+    
+    # ===== WEEKLY DATA FOR CHART =====
+    weekly_labels = []
+    weekly_values = []
+    for i in range(6, -1, -1):
+        date = today - timedelta(days=i)
+        daily_time = DailyLog.objects.filter(
+            user=friend,
+            date=date
+        ).aggregate(total=Sum('duration'))['total'] or 0
+        weekly_labels.append(date.strftime('%a'))
+        weekly_values.append(daily_time)
+    
+    weekly_data = {
+        'labels': weekly_labels,
+        'data': weekly_values
+    }
+    
+    # ===== CATEGORY DATA FOR CHART =====
+    category_data_qs = DailyLog.objects.filter(
+        user=friend,
+        date__gte=week_ago
+    ).values('category__name').annotate(
+        total=Sum('duration')
+    ).order_by('-total')[:5]
+    
+    category_labels = []
+    category_values = []
+    category_colors = [
+        'rgba(59, 130, 246, 0.8)',
+        'rgba(139, 92, 246, 0.8)',
+        'rgba(34, 197, 94, 0.8)',
+        'rgba(251, 146, 60, 0.8)',
+        'rgba(244, 63, 94, 0.8)',
+    ]
+    
+    for idx, item in enumerate(category_data_qs):
+        category_labels.append(item['category__name'] or 'Uncategorized')
+        category_values.append(item['total'])
+    
+    category_data = {
+        'labels': category_labels,
+        'data': category_values,
+        'colors': category_colors[:len(category_labels)]
+    }
+    
+    # ===== HEATMAP DATA =====
+    heatmap_data = []
+    for i in range(6, -1, -1):
+        date = today - timedelta(days=i)
+        daily_time = DailyLog.objects.filter(
+            user=friend,
+            date=date
+        ).aggregate(total=Sum('duration'))['total'] or 0
+    
+        # Color intensity based on activity
+        if daily_time == 0:
+            color = 'bg-slate-100'
+            border = 'border-slate-200'
+        elif daily_time < 30:
+            color = 'bg-green-200'
+            border = 'border-green-300'
+        elif daily_time < 60:
+            color = 'bg-green-400'
+            border = 'border-green-500'
+        elif daily_time < 120:
+            color = 'bg-green-600'
+            border = 'border-green-700'
+        else:
+            color = 'bg-green-800'
+            border = 'border-green-900'
+    
+        heatmap_data.append({
+            'label': date.strftime('%a, %b %d'),
+            'minutes': daily_time,
+            'color': color,
+            'border': border,
+            'day_label': date.strftime('%a')  # ✅ ADD THIS LINE
+        })
+    
+    # ===== RECENT TASKS & LOGS =====
+    recent_tasks = Task.objects.filter(
+        user=friend,
+        status='completed',
+        completed_at__date__gte=week_ago
+    ).order_by('-completed_at')[:10]
+    
+    recent_logs = DailyLog.objects.filter(
+        user=friend,
+        date__gte=week_ago
+    ).select_related('category').order_by('-date')[:10]
+    
+    context = {
+        'friend': friend,
+        'friendship': friendship,
+        'total_time': total_time,
+        'total_tasks': total_tasks,
+        'week_time': week_time,
+        'week_tasks': week_tasks,
+        'activity_streak': activity_streak,
+        'weekly_data': json.dumps(weekly_data),
+        'category_data': json.dumps(category_data),
+        'heatmap_data': heatmap_data,
+        'recent_tasks': recent_tasks,
+        'recent_logs': recent_logs,
     }
     return render(request, 'tracker/friend_profile.html', context)
-
