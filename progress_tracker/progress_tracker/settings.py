@@ -24,10 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 import environ
 env = environ.Env()
 environ.Env.read_env()
-SECRET_KEY = "#%j&w_p*p1@1zjp3q-k9zmwco+x=jxcsz0dl3@a+-y@33818@0"
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 
 ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','16.16.9.54','localhost']
