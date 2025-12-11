@@ -4,175 +4,300 @@
 
 {% block content %}
 <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 pb-24 md:pb-8 px-3 sm:px-4 lg:px-8">
+
   <!-- Header -->
-  <div class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
+  <header class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
       <div class="min-w-0">
-        <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-1 md:mb-2">My Friends</h1>
-        <p class="text-sm md:text-lg text-slate-600">{{ friends_data|length }} friend{{ friends_data|length|pluralize }}</p>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-1 md:mb-2 flex items-center gap-2">
+          <i class="bi bi-people-fill text-slate-700" aria-hidden="true"></i>
+          <span>My Friends</span>
+        </h1>
+        <p class="text-sm md:text-lg text-slate-600 flex items-center gap-1">
+          <i class="bi bi-person-badge" aria-hidden="true"></i>
+          <span>
+            <span id="friend-count-number" data-count="{{ friends_data|length|default:0 }}">
+              {{ friends_data|length|default:0 }}
+            </span>
+            friend{% if friends_data|length != 1 %}s{% endif %}
+          </span>
+        </p>
       </div>
-      <a href="{% url 'user_list' %}" class="btn btn-primary btn-sm md:btn-md gap-2 w-fit">
-        <i class="bi bi-person-plus"></i>
+      <a href="{% url 'user_list' %}"
+         class="btn btn-outline btn-sm md:btn-md gap-2 w-fit border-slate-300 text-slate-700 hover:border-slate-500 hover:bg-slate-50"
+         aria-label="Find new friends">
+        <i class="bi bi-person-plus" aria-hidden="true"></i>
         <span class="hidden sm:inline">Find Friends</span>
       </a>
     </div>
-  </div>
+  </header>
 
   <!-- Friends Grid -->
-  <div class="max-w-6xl mx-auto">
+  <main class="max-w-6xl mx-auto" aria-label="Friends list">
     {% if friends_data %}
-    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-      {% for item in friends_data %}
-      <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50 hover:shadow-xl md:hover:-translate-y-1 transition-all flex flex-col" id="friend-{{ item.friendship.id }}">
-        <!-- Friend Header -->
-        <div class="flex items-start justify-between mb-3 md:mb-4">
-          <div class="min-w-0">
-            <h3 class="font-bold text-slate-900 text-sm md:text-base">{{ item.friend.get_full_name|default:item.friend.username }}</h3>
-            <p class="text-xs md:text-sm text-slate-600">@{{ item.friend.username }}</p>
+      <div id="friends-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        {% for item in friends_data %}
+        <article
+          class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50 hover:shadow-xl md:hover:-translate-y-1 transition-all flex flex-col"
+          id="friend-{{ item.friendship.id }}"
+          aria-label="Friend card for {{ item.friend.get_full_name|default:item.friend.username }}"
+        >
+          <!-- Friend Header -->
+          <div class="flex items-start justify-between mb-3 md:mb-4">
+            <div class="min-w-0">
+              <h3 class="font-bold text-slate-900 text-sm md:text-base truncate flex items-center gap-1">
+                <i class="bi bi-person-circle text-slate-600" aria-hidden="true"></i>
+                <span>{{ item.friend.get_full_name|default:item.friend.username }}</span>
+              </h3>
+              <p class="text-xs md:text-sm text-slate-600 truncate flex items-center gap-1">
+                <i class="bi bi-at" aria-hidden="true"></i>
+                <span>@{{ item.friend.username }}</span>
+              </p>
+            </div>
+            <div class="w-10 h-10 md:w-12 md:h-12 bg-slate-800 rounded-lg md:rounded-xl flex-shrink-0 flex items-center justify-center text-white text-base md:text-lg">
+              <i class="bi bi-person-fill" aria-hidden="true"></i>
+            </div>
           </div>
-          <div class="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg md:rounded-xl flex-shrink-0 flex items-center justify-center text-white text-base md:text-lg">
-            <i class="bi bi-person-circle"></i>
-          </div>
-        </div>
 
-        <!-- Week Stats -->
-        <div class="space-y-2 md:space-y-3 flex-1 mb-4 text-xs md:text-sm">
-          <div class="flex items-center justify-between">
-            <span class="text-slate-600">
-              <i class="bi bi-check-circle mr-1"></i>
-              Completed This Week
-            </span>
-            <span class="font-bold text-slate-900 bg-green-100 text-green-700 px-2 py-1 rounded">
-              {{ item.completed_tasks }}
-            </span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-slate-600">
-              <i class="bi bi-clock-history mr-1"></i>
-              Time Logged (7d)
-            </span>
-            <span class="font-bold text-slate-900 bg-blue-100 text-blue-700 px-2 py-1 rounded">
-              {{ item.total_time }}m
-            </span>
-          </div>
-        </div>
+          <!-- Week Stats -->
+          <div class="space-y-2 md:space-y-3 flex-1 mb-4 text-xs md:text-sm">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-600 flex items-center gap-1">
+                <i class="bi bi-clipboard-check" aria-hidden="true"></i>
+                <span>Completed This Week</span>
+              </span>
+              <span class="font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded">
+                {{ item.completed_tasks|default:"0" }}
+              </span>
+            </div>
 
-        <!-- Progress Bar -->
-        <div class="mb-4">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs text-slate-600">Weekly Activity</span>
-            <span class="text-xs font-semibold text-slate-900">{{ item.completed_tasks }} tasks</span>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-600 flex items-center gap-1">
+                <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                <span>Time Logged (7d)</span>
+              </span>
+              <span class="font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded">
+                {{ item.total_time|default:"0" }}m
+              </span>
+            </div>
           </div>
-          <div class="w-full bg-slate-200 rounded-full h-2">
-            <div class="bg-gradient-to-r from-blue-500 to-cyan-600 h-2 rounded-full transition-all" style="width: {{ item.completed_tasks|add:1|divisibleby:5|yesno:'20,40' }}%"></div>
-          </div>
-        </div>
 
-        <!-- Actions -->
-        <div class="flex gap-2">
-          <a href="{% url 'view_friend_profile' item.friendship.id %}" class="btn btn-primary btn-xs md:btn-sm flex-1 gap-1">
-            <i class="bi bi-eye"></i>
-            <span class="hidden sm:inline">View</span>
-          </a>
-          <button onclick="removeFriend({{ item.friendship.id }}, 'friend-{{ item.friendship.id }}')" class="btn btn-error btn-xs md:btn-sm flex-1 gap-1" id="remove-btn-{{ item.friendship.id }}">
-            <i class="bi bi-x-circle"></i>
-            <span class="hidden sm:inline">Remove</span>
-          </button>
-        </div>
+          <!-- Progress Bar -->
+          <div class="mb-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs text-slate-600 flex items-center gap-1">
+                <i class="bi bi-activity" aria-hidden="true"></i>
+                <span>Weekly Activity</span>
+              </span>
+              <span class="text-xs font-semibold text-slate-900 flex items-center gap-1">
+                <i class="bi bi-list-check" aria-hidden="true"></i>
+                <span>{{ item.completed_tasks|default:"0" }} tasks</span>
+              </span>
+            </div>
+            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden" aria-hidden="true">
+              {# Expect item.activity_percent in [0,100] from the view, fallback to 0 #}
+              <div
+                class="bg-slate-700 h-2 rounded-full transition-all duration-300"
+                style="width: {{ item.activity_percent|default:'0' }}%;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Actions -->
+<div class="flex gap-2 mt-auto">
+
+  <!-- View Profile Button -->
+  <a href="{% url 'view_friend_profile' item.friendship.id %}"
+     class="btn btn-xs md:btn-sm flex-1 flex-col py-2 border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 text-center"
+     aria-label="View profile of {{ item.friend.username }}">
+    <i class="bi bi-person-badge text-lg" aria-hidden="true"></i>
+    <span class="text-[10px] md:text-xs font-medium mt-1">View Profile</span>
+  </a>
+
+  <!-- Remove Friend Button -->
+  <button
+    type="button"
+    onclick="removeFriend('{{ item.friendship.id }}', 'friend-{{ item.friendship.id }}', '{% url 'remove_friend' item.friendship.id %}')"
+    class="btn btn-xs md:btn-sm flex-1 flex-col py-2 border border-slate-300 bg-white text-slate-800 hover:bg-red-50 hover:text-red-700 text-center"
+    id="remove-btn-{{ item.friendship.id }}"
+    aria-label="Remove {{ item.friend.username }} from your friends list"
+  >
+    <i class="bi bi-person-x text-lg" aria-hidden="true"></i>
+    <span class="text-[10px] md:text-xs font-medium mt-1">Remove Friend</span>
+  </button>
+
+</div>
+        </article>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
 
     {% else %}
-    <!-- Empty State -->
-    <div class="text-center py-12 md:py-16">
-      <div class="text-4xl md:text-5xl mb-3 md:mb-4">👥</div>
-      <h3 class="text-base md:text-lg font-bold text-slate-700 mb-2">No friends yet</h3>
-      <p class="text-sm text-slate-600 mb-6">Find and connect with other users to see their progress</p>
-      <a href="{% url 'user_list' %}" class="btn btn-primary btn-sm">Explore Users</a>
-    </div>
+      <!-- Empty State -->
+      <div id="empty-state" class="text-center py-12 md:py-16">
+        <div class="text-4xl md:text-5xl mb-3 md:mb-4 text-slate-500">
+          <i class="bi bi-people" aria-hidden="true"></i>
+        </div>
+        <h3 class="text-base md:text-lg font-bold text-slate-700 mb-2">No friends yet</h3>
+        <p class="text-sm text-slate-600 mb-6">
+          Find and connect with other users to see their progress.
+        </p>
+        <a href="{% url 'user_list' %}" class="btn btn-outline btn-sm gap-2 border-slate-300 text-slate-700 hover:border-slate-500 hover:bg-slate-50">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <span>Explore Users</span>
+        </a>
+      </div>
     {% endif %}
-  </div>
+  </main>
 
   <!-- Mobile Bottom Navigation -->
-  <div class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40">
+  <nav class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40" aria-label="Bottom navigation">
     <div class="flex justify-around items-center h-16 px-2">
       <a href="{% url 'task_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-list-check text-xl"></i>
+        <i class="bi bi-list-check text-lg" aria-hidden="true"></i>
         <span class="text-xs mt-0.5">Tasks</span>
       </a>
-      <a href="{% url 'friends_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition bg-slate-50">
-        <i class="bi bi-people text-xl text-primary"></i>
-        <span class="text-xs mt-0.5">Friends</span>
+      <a href="{% url 'friends_list' %}" class="flex flex-col items-center justify-center w-full h-full bg-slate-50">
+        <i class="bi bi-people-fill text-lg" aria-hidden="true"></i>
+        <span class="text-xs mt-0.5 font-medium">Friends</span>
       </a>
       <a href="{% url 'user_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-person-plus text-xl"></i>
+        <i class="bi bi-search text-lg" aria-hidden="true"></i>
         <span class="text-xs mt-0.5">Find</span>
       </a>
       <a href="{% url 'dashboard' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-house text-xl"></i>
+        <i class="bi bi-house-door text-lg" aria-hidden="true"></i>
         <span class="text-xs mt-0.5">Home</span>
       </a>
     </div>
-  </div>
+  </nav>
 </div>
 
 <script>
-  function removeFriend(friendshipId, containerId) {
-    if (confirm('Remove this friend? You can add them back later.')) {
-      const button = document.getElementById(`remove-btn-${friendshipId}`);
-      const card = document.getElementById(containerId);
-      const originalHTML = button.innerHTML;
-      button.disabled = true;
-      button.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i>';
-      
-      fetch(`/friends/${friendshipId}/remove/`, { 
-        method: 'POST', 
-        headers: { 'X-CSRFToken': '{{ csrf_token }}' } 
-      })
-      .then(r => r.json())
-      .then(data => {
-        showToast(data.message, data.status);
-        if (data.status === 'success') {
-          card.style.opacity = '0';
-          card.style.transform = 'scale(0.95)';
-          card.style.transition = 'all 0.3s ease';
-          setTimeout(() => card.remove(), 300);
-        } else {
-          button.disabled = false;
-          button.innerHTML = originalHTML;
-        }
-      })
-      .catch(e => {
-        showToast('Error: ' + e, 'error');
+  function removeFriend(friendshipId, containerId, url) {
+    if (!confirm('Remove this friend? You can add them back later.')) return;
+
+    const button = document.getElementById(`remove-btn-${friendshipId}`);
+    const card = document.getElementById(containerId);
+    const originalHTML = button.innerHTML;
+
+    button.disabled = true;
+    button.innerHTML = '<i class="bi bi-arrow-repeat animate-spin" aria-hidden="true"></i>';
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({})
+    })
+    .then(r => r.json())
+    .then(data => {
+      showToast(data.message || 'Friend updated', data.status || 'info');
+
+      if (data.status === 'success') {
+        card.style.opacity = '0';
+        card.style.transform = 'scale(0.95)';
+        card.style.transition = 'all 0.3s ease';
+
+        setTimeout(() => {
+          card.remove();
+          updateFriendCount();
+          ensureEmptyState();
+        }, 300);
+      } else {
         button.disabled = false;
         button.innerHTML = originalHTML;
-      });
+      }
+    })
+    .catch(e => {
+      showToast('Error: ' + e, 'error');
+      button.disabled = false;
+      button.innerHTML = originalHTML;
+    });
+  }
+
+  function updateFriendCount() {
+    const countEl = document.getElementById('friend-count-number');
+    if (!countEl) return;
+
+    const current = parseInt(countEl.dataset.count || '0', 10);
+    const next = Math.max(current - 1, 0);
+
+    countEl.dataset.count = next.toString();
+    countEl.textContent = next.toString();
+
+    const labelParent = countEl.parentElement;
+    if (!labelParent) return;
+
+    const suffix = next === 1 ? ' friend' : ' friends';
+    labelParent.innerHTML =
+      `<i class="bi bi-person-badge" aria-hidden="true"></i> ` +
+      `<span><span id="friend-count-number" data-count="${next}">${next}</span>${suffix}</span>`;
+  }
+
+  function ensureEmptyState() {
+    const friendsGrid = document.getElementById('friends-grid');
+    if (friendsGrid && friendsGrid.children.length > 0) return;
+
+    if (!document.getElementById('empty-state')) {
+      const main = document.querySelector('main[max-w-6xl], main.max-w-6xl, main');
+      const container = main || document.body;
+
+      const emptyDiv = document.createElement('div');
+      emptyDiv.id = 'empty-state';
+      emptyDiv.className = 'text-center py-12 md:py-16';
+      emptyDiv.innerHTML = `
+        <div class="text-4xl md:text-5xl mb-3 md:mb-4 text-slate-500">
+          <i class="bi bi-people" aria-hidden="true"></i>
+        </div>
+        <h3 class="text-base md:text-lg font-bold text-slate-700 mb-2">No friends yet</h3>
+        <p class="text-sm text-slate-600 mb-6">Find and connect with other users to see their progress.</p>
+        <a href="{% url 'user_list' %}" class="btn btn-outline btn-sm gap-2 border-slate-300 text-slate-700 hover:border-slate-500 hover:bg-slate-50">
+          <i class="bi bi-search" aria-hidden="true"></i>
+          <span>Explore Users</span>
+        </a>
+      `;
+      container.appendChild(emptyDiv);
     }
   }
 
   function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container') || 
-      (() => {
+    const container = document.getElementById('toast-container') ||
+      (function () {
         const div = document.createElement('div');
         div.id = 'toast-container';
         div.className = 'fixed bottom-20 md:bottom-4 right-4 space-y-2 z-50';
         document.body.appendChild(div);
         return div;
       })();
-    
-    const alertClass = {
-      'success': 'alert-success',
-      'error': 'alert-error',
-      'warning': 'alert-warning',
-      'info': 'alert-info'
-    }[type] || 'alert-info';
-    
+
+    const iconMap = {
+      success: 'bi-check-circle-fill',
+      error:   'bi-exclamation-octagon-fill',
+      warning: 'bi-exclamation-triangle-fill',
+      info:    'bi-info-circle-fill'
+    };
+
+    const alertClassMap = {
+      success: 'alert-success',
+      error:   'alert-error',
+      warning: 'alert-warning',
+      info:    'alert-info'
+    };
+
+    const iconClass = iconMap[type] || iconMap.info;
+    const alertClass = alertClassMap[type] || alertClassMap.info;
+
     const alert = document.createElement('div');
-    alert.className = `alert ${alertClass} shadow-lg max-w-xs text-sm`;
-    alert.innerHTML = `<span>${message}</span>`;
+    alert.className = `alert ${alertClass} shadow-lg max-w-xs text-sm flex items-center gap-2`;
+    alert.innerHTML = `
+      <i class="bi ${iconClass}" aria-hidden="true"></i>
+      <span>${message}</span>
+    `;
     container.appendChild(alert);
-    
+
     setTimeout(() => alert.remove(), 3000);
   }
 </script>

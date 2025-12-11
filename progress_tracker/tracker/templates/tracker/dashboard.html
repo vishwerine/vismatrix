@@ -1,380 +1,248 @@
 {% extends 'tracker/base.html' %}
 
-{% block title %}Dashboard - VisMatrix.Space{% endblock %}
+{% block title %}Dashboard - VisMatrix{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 pb-24 md:pb-8 px-3 sm:px-4 lg:px-8">
-  <!-- Header - Responsive -->
-  <div class="max-w-7xl mx-auto mb-6 md:mb-12 pt-4">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
-      <div class="min-w-0">
-        <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-1 md:mb-2">Welcome back, {{ user.first_name|default:user.username }}! 👋</h1>
-        <p class="text-sm md:text-lg text-slate-600">Track your progress and stay motivated</p>
-      </div>
-      <div class="hidden md:flex gap-2 lg:gap-3 flex-wrap flex-shrink-0">
-        <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm lg:btn-md gap-2">
-          <i class="bi bi-plus-lg"></i>
-          <span class="hidden lg:inline">New Task</span>
-        </a>
-        <a href="{% url 'log_create' %}" class="btn btn-secondary btn-sm lg:btn-md gap-2">
-          <i class="bi bi-clock"></i>
-          <span class="hidden lg:inline">Log Activity</span>
-        </a>
-      </div>
-    </div>
-  </div>
+<div class="space-y-6">
 
-  <!-- Quick Stats Grid - Mobile optimized -->
-  <div class="max-w-7xl mx-auto mb-6 md:mb-12">
-    <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-4">
-      <!-- Tasks Today -->
-      <div class="bg-white/80 backdrop-blur-xl rounded-xl md:rounded-2xl p-3 md:p-6 shadow-md md:shadow-lg border border-slate-200/50 hover:shadow-lg md:hover:shadow-xl md:hover:-translate-y-1 transition-all">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
-          <div class="min-w-0">
-            <p class="text-slate-600 text-xs md:text-sm font-semibold uppercase tracking-wider">Tasks Today</p>
-            <p class="text-2xl md:text-4xl font-black text-blue-600 mt-1 md:mt-3">{{ today_tasks_count|default:0 }}</p>
-            <p class="text-xs text-slate-600 mt-1 md:mt-2">{% if completed_today %}{{ completed_today }} done{% else %}None done{% endif %}</p>
-          </div>
-          <div class="hidden md:flex w-14 md:w-16 h-14 md:h-16 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl md:rounded-2xl flex-shrink-0 items-center justify-center text-2xl md:text-3xl">
-            <i class="bi bi-checklist text-blue-600"></i>
-          </div>
+    <!-- Greeting -->
+    <header class="flex flex-col gap-1" aria-label="Dashboard header">
+        <h1 class="text-2xl md:text-3xl font-black text-base-content flex items-center gap-2">
+            <i class="bi bi-speedometer2" aria-hidden="true"></i>
+            <span>Hello, {{ user.username }}! 👋</span>
+        </h1>
+        <div class="flex flex-wrap items-center gap-2 text-sm md:text-base text-base-content/70">
+            <p>Here's your progress overview.</p>
+            <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-base-200 text-base-content/70">
+                <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                <span>{{ today|date:"D, M j" }}</span>
+            </span>
         </div>
-      </div>
+    </header>
 
-      <!-- Active Streak -->
-      <div class="bg-white/80 backdrop-blur-xl rounded-xl md:rounded-2xl p-3 md:p-6 shadow-md md:shadow-lg border border-slate-200/50 hover:shadow-lg md:hover:shadow-xl md:hover:-translate-y-1 transition-all">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
-          <div class="min-w-0">
-            <p class="text-slate-600 text-xs md:text-sm font-semibold uppercase tracking-wider">Streak</p>
-            <p class="text-2xl md:text-4xl font-black text-orange-600 mt-1 md:mt-3">{{ current_streak|default:0 }}</p>
-            <p class="text-xs text-slate-600 mt-1 md:mt-2">days</p>
-          </div>
-          <div class="hidden md:flex w-14 md:w-16 h-14 md:h-16 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl md:rounded-2xl flex-shrink-0 items-center justify-center text-2xl md:text-3xl">
-            <i class="bi bi-fire text-orange-600"></i>
-          </div>
-        </div>
-      </div>
-
-      <!-- This Month -->
-      <div class="bg-white/80 backdrop-blur-xl rounded-xl md:rounded-2xl p-3 md:p-6 shadow-md md:shadow-lg border border-slate-200/50 hover:shadow-lg md:hover:shadow-xl md:hover:-translate-y-1 transition-all">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
-          <div class="min-w-0">
-            <p class="text-slate-600 text-xs md:text-sm font-semibold uppercase tracking-wider">Month</p>
-            <p class="text-2xl md:text-4xl font-black text-emerald-600 mt-1 md:mt-3">{{ logs_this_month|default:0 }}</p>
-            <p class="text-xs text-slate-600 mt-1 md:mt-2">entries</p>
-          </div>
-          <div class="hidden md:flex w-14 md:w-16 h-14 md:h-16 bg-gradient-to-br from-emerald-100 to-emerald-200 rounded-xl md:rounded-2xl flex-shrink-0 items-center justify-center text-2xl md:text-3xl">
-            <i class="bi bi-graph-up text-emerald-600"></i>
-          </div>
-        </div>
-      </div>
-
-      <!-- Total Time -->
-      <div class="bg-white/80 backdrop-blur-xl rounded-xl md:rounded-2xl p-3 md:p-6 shadow-md md:shadow-lg border border-slate-200/50 hover:shadow-lg md:hover:shadow-xl md:hover:-translate-y-1 transition-all">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
-          <div class="min-w-0">
-            <p class="text-slate-600 text-xs md:text-sm font-semibold uppercase tracking-wider">Time</p>
-            <p class="text-2xl md:text-4xl font-black text-purple-600 mt-1 md:mt-3">{{ total_time|default:0 }}</p>
-            <p class="text-xs text-slate-600 mt-1 md:mt-2">min</p>
-          </div>
-          <div class="hidden md:flex w-14 md:w-16 h-14 md:h-16 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl md:rounded-2xl flex-shrink-0 items-center justify-center text-2xl md:text-3xl">
-            <i class="bi bi-hourglass-split text-purple-600"></i>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Main Content Grid - Mobile: stacked, Desktop: sidebar right -->
-  <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-12">
-    <!-- Pending Tasks -->
-    <div class="lg:col-span-2 order-1">
-      <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-lg md:shadow-xl border border-slate-200/50">
-        <div class="flex items-center justify-between mb-4 md:mb-8 gap-2">
-          <div class="flex items-center gap-2 md:gap-3 min-w-0">
-            <div class="w-10 md:w-12 h-10 md:h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg md:rounded-2xl flex flex-shrink-0 items-center justify-center text-white">
-              <i class="bi bi-clipboard-check text-base md:text-xl"></i>
-            </div>
-            <div class="min-w-0">
-              <h2 class="text-lg md:text-2xl font-black text-slate-900">Tasks</h2>
-              <p class="text-xs md:text-sm text-slate-600">{{ pending_tasks|length }} pending</p>
-            </div>
-          </div>
-          <a href="{% url 'task_list' %}" class="link link-primary text-xs md:text-sm font-semibold flex-shrink-0">→</a>
-        </div>
-
-        {% if pending_tasks %}
-        <div class="space-y-2 md:space-y-3 max-h-96 overflow-y-auto pr-1 md:pr-3">
-          {% for task in pending_tasks %}
-          <div class="group flex items-start gap-2 md:gap-4 p-3 md:p-4 bg-gradient-to-r from-slate-50 to-blue-50 rounded-lg md:rounded-2xl border-2 border-slate-200/50 hover:border-blue-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition-all">
-            <!-- Checkbox -->
-            <button onclick="markTaskComplete({{ task.id }})" class="checkbox checkbox-primary checkbox-sm flex-shrink-0 mt-0.5 md:mt-1" title="Mark complete"></button>
-            
-            <!-- Task Info -->
-            <div class="flex-1 min-w-0">
-              <h3 class="font-bold text-slate-900 text-sm group-hover:text-blue-700 transition-colors">{{ task.title }}</h3>
-              <div class="flex items-center gap-1 md:gap-2 mt-1 md:mt-2 flex-wrap">
-                {% if task.category %}
-                <span class="badge badge-xs md:badge-sm badge-primary opacity-75">{{ task.category.name }}</span>
-                {% endif %}
-                <span class="badge badge-xs md:badge-sm {% if task.priority == 'high' %}badge-error{% elif task.priority == 'medium' %}badge-warning{% else %}badge-success{% endif %}">{{ task.priority|first|upper }}</span>
-              </div>
-            </div>
-            
-            <!-- Actions Dropdown Mobile -->
-            <div class="dropdown dropdown-end md:hidden">
-              <button tabindex="0" class="btn btn-ghost btn-xs">
-                <i class="bi bi-three-dots"></i>
-              </button>
-              <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-lg z-50 shadow-xl border border-slate-200">
-                <li><button onclick="markTaskComplete({{ task.id }})" class="text-xs"><i class="bi bi-check-circle"></i>Complete</button></li>
-                <li><a href="{% url 'task_update' task.id %}" class="text-xs"><i class="bi bi-pencil-square"></i>Edit</a></li>
-                <li><a href="{% url 'log_create' %}?task={{ task.id }}" class="text-xs"><i class="bi bi-clock-history"></i>Log</a></li>
-                <li><button onclick="deleteTask({{ task.id }})" class="text-xs text-error"><i class="bi bi-trash2"></i>Delete</button></li>
-              </ul>
-            </div>
-
-            <!-- Actions Row Desktop -->
-            <div class="hidden md:flex gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button onclick="markTaskComplete({{ task.id }})" class="btn btn-success btn-xs gap-1" title="Complete">
-                <i class="bi bi-check-circle-fill"></i>
-              </button>
-              <a href="{% url 'task_update' task.id %}" class="btn btn-info btn-xs gap-1" title="Edit">
-                <i class="bi bi-pencil-square-fill"></i>
-              </a>
-              <a href="{% url 'log_create' %}?task={{ task.id }}" class="btn btn-primary btn-xs gap-1" title="Log">
-                <i class="bi bi-clock-history"></i>
-              </a>
-              <button onclick="deleteTask({{ task.id }})" class="btn btn-error btn-xs gap-1" title="Delete">
-                <i class="bi bi-trash2-fill"></i>
-              </button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-8 md:py-12">
-          <div class="text-4xl md:text-5xl mb-2 md:mb-4">✨</div>
-          <h3 class="text-base md:text-lg font-bold text-slate-700 mb-1 md:mb-2">All caught up!</h3>
-          <p class="text-sm text-slate-600 mb-4">No pending tasks for today</p>
-          <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm">Create a task</a>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- Sidebar Mobile Bottom, Desktop Right -->
-    <div class="space-y-4 md:space-y-6 order-3 lg:order-2">
-      <!-- Friend Requests -->
-      <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50">
-        <div class="flex items-center gap-2 mb-3 md:mb-6">
-          <div class="w-8 md:w-10 h-8 md:h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg md:rounded-xl flex flex-shrink-0 items-center justify-center text-white text-sm md:text-lg">
-            <i class="bi bi-person-plus"></i>
-          </div>
-          <h3 class="text-base md:text-xl font-black text-slate-900">Friend Requests</h3>
-          {% if pending_friend_requests|length > 0 %}
-          <span class="badge badge-error badge-xs md:badge-sm">{{ pending_friend_requests|length }}</span>
-          {% endif %}
-        </div>
-
-        {% if pending_friend_requests %}
-        <div class="space-y-2 max-h-60 overflow-y-auto">
-          {% for request in pending_friend_requests|slice:":5" %}
-          <div class="flex items-center justify-between p-2 md:p-3 bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg md:rounded-xl border border-pink-200 gap-2">
-            <div class="min-w-0">
-              <p class="font-semibold text-xs md:text-sm truncate">{{ request.from_user.username }}</p>
-              <p class="text-xs text-slate-600">{{ request.created_at|timesince }} ago</p>
-            </div>
-            <div class="flex gap-1 flex-shrink-0">
-              <button onclick="acceptFriendRequest({{ request.id }})" class="btn btn-success btn-xs" title="Accept">
-                <i class="bi bi-check"></i>
-              </button>
-              <button onclick="rejectFriendRequest({{ request.id }})" class="btn btn-outline btn-xs" title="Decline">
-                <i class="bi bi-x"></i>
-              </button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        <a href="{% url 'friend_requests' %}" class="link link-primary text-xs md:text-sm font-semibold mt-2 md:mt-4 block">View all requests →</a>
-        {% else %}
-        <p class="text-xs md:text-sm text-slate-600 text-center py-4 md:py-6">No pending requests</p>
-        {% endif %}
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50">
-        <div class="flex items-center gap-2 mb-3 md:mb-6">
-          <div class="w-8 md:w-10 h-8 md:h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg md:rounded-xl flex flex-shrink-0 items-center justify-center text-white text-sm md:text-lg">
-            <i class="bi bi-lightning"></i>
-          </div>
-          <h3 class="text-base md:text-xl font-black text-slate-900">Quick Links</h3>
-        </div>
-        <div class="flex flex-col gap-1 md:gap-2">
-          <a href="{% url 'task_list' %}" class="btn btn-outline btn-xs md:btn-sm justify-start gap-2">
-            <i class="bi bi-list-check"></i>
-            <span class="hidden sm:inline">All Tasks</span>
-          </a>
-          <a href="{% url 'log_list' %}" class="btn btn-outline btn-xs md:btn-sm justify-start gap-2">
-            <i class="bi bi-journal-text"></i>
-            <span class="hidden sm:inline">Activity</span>
-          </a>
-          <a href="{% url 'progress' %}" class="btn btn-outline btn-xs md:btn-sm justify-start gap-2">
-            <i class="bi bi-graph-up-arrow"></i>
-            <span class="hidden sm:inline">Progress</span>
-          </a>
-          <a href="{% url 'friends_list' %}" class="btn btn-outline btn-xs md:btn-sm justify-start gap-2">
-            <i class="bi bi-people"></i>
-            <span class="hidden sm:inline">Friends</span>
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Recent Activity -->
-  <div class="max-w-7xl mx-auto order-2 lg:order-3">
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-lg md:shadow-xl border border-slate-200/50">
-      <div class="flex items-center justify-between mb-4 md:mb-8 gap-2">
-        <div class="flex items-center gap-2 md:gap-3 min-w-0">
-          <div class="w-10 md:w-12 h-10 md:h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg md:rounded-2xl flex flex-shrink-0 items-center justify-center text-white">
-            <i class="bi bi-activity text-base md:text-xl"></i>
-          </div>
-          <div class="min-w-0">
-            <h2 class="text-lg md:text-2xl font-black text-slate-900">Recent</h2>
-            <p class="text-xs md:text-sm text-slate-600">Latest activities</p>
-          </div>
-        </div>
-        <a href="{% url 'log_list' %}" class="link link-primary text-xs md:text-sm font-semibold flex-shrink-0">→</a>
-      </div>
-
-      {% if recent_logs %}
-      <div class="overflow-x-auto">
-        <table class="table table-sm md:table-md w-full text-xs md:text-base">
-          <thead class="bg-slate-50">
-            <tr class="border-b-2 border-slate-200">
-              <th class="text-slate-900 font-bold">Activity</th>
-              <th class="text-slate-900 font-bold hidden md:table-cell">Category</th>
-              <th class="text-slate-900 font-bold text-right">Duration</th>
-              <th class="text-slate-900 font-bold text-right hidden sm:table-cell">Date</th>
-              <th class="text-slate-900 font-bold text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for log in recent_logs|slice:":8" %}
-            <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors">
-              <td>
-                <div>
-                  <p class="font-semibold text-slate-900">{{ log.activity|truncatewords:3 }}</p>
-                  {% if log.notes %}<p class="text-xs text-slate-600 truncate">{{ log.notes|truncatewords:2 }}</p>{% endif %}
+    <!-- Key stats -->
+    <section class="grid grid-cols-2 md:grid-cols-4 gap-3" aria-label="Key stats">
+        <div class="stats shadow bg-base-100 border border-base-200">
+            <div class="stat p-3 md:p-4">
+                <div class="stat-figure text-primary">
+                    <i class="bi bi-calendar-check w-6 h-6 text-lg opacity-80" aria-hidden="true"></i>
                 </div>
-              </td>
-              <td class="hidden md:table-cell">
-                {% if log.category %}
-                <span class="badge badge-primary badge-xs md:badge-sm">{{ log.category.name }}</span>
+                <div class="stat-title text-xs uppercase tracking-wider">Today</div>
+                <div class="stat-value text-xl md:text-3xl text-primary">
+                    {{ today_tasks_count|default:0 }}
+                </div>
+                <div class="stat-desc text-xs">
+                    {{ completed_today|default:0 }} completed
+                </div>
+            </div>
+        </div>
+        
+        <div class="stats shadow bg-base-100 border border-base-200">
+            <div class="stat p-3 md:p-4">
+                <div class="stat-figure text-secondary">
+                    <i class="bi bi-fire w-6 h-6 text-lg opacity-80" aria-hidden="true"></i>
+                </div>
+                <div class="stat-title text-xs uppercase tracking-wider">Streak</div>
+                <div class="stat-value text-xl md:text-3xl text-secondary">
+                    {{ current_streak|default:0 }}
+                </div>
+                <div class="stat-desc text-xs">days active</div>
+            </div>
+        </div>
+        
+        <div class="stats shadow bg-base-100 border border-base-200">
+            <div class="stat p-3 md:p-4">
+                <div class="stat-figure text-base-content/60">
+                    <i class="bi bi-bar-chart-line w-6 h-6 text-lg opacity-80" aria-hidden="true"></i>
+                </div>
+                <div class="stat-title text-xs uppercase tracking-wider">Month</div>
+                <div class="stat-value text-xl md:text-3xl">
+                    {{ logs_this_month|default:0 }}
+                </div>
+                <div class="stat-desc text-xs">activities</div>
+            </div>
+        </div>
+        
+        <div class="stats shadow bg-base-100 border border-base-200">
+            <div class="stat p-3 md:p-4">
+                <div class="stat-figure text-base-content/60">
+                    <i class="bi bi-clock-history w-6 h-6 text-lg opacity-80" aria-hidden="true"></i>
+                </div>
+                <div class="stat-title text-xs uppercase tracking-wider">Time Tracked</div>
+                <div class="stat-value text-xl md:text-3xl">
+                    {{ total_time|default:0 }}
+                </div>
+                <div class="stat-desc text-xs">mins total</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Weekly Overview (mini chart) -->
+    <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Weekly overview">
+        <div class="card-body p-4 md:p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="card-title text-base md:text-lg flex items-center gap-2">
+                    <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
+                    <span>Weekly Overview</span>
+                </h2>
+                <p class="text-xs text-base-content/60 hidden sm:block">
+                    Time logged across the last 7 days
+                </p>
+            </div>
+
+            {% if weekly_overview %}
+            <div class="flex items-end gap-2 md:gap-3 h-28 md:h-32">
+                {% for day in weekly_overview %}
+                <div class="flex flex-col items-center flex-1 min-w-0">
+                    <div class="w-full h-full bg-base-200 rounded-full overflow-hidden flex items-end">
+                        <div class="w-full bg-primary rounded-full transition-all duration-300"
+                             style="height: {{ day.percent|default:'0' }}%;"></div>
+                    </div>
+                    <span class="mt-1 text-[10px] md:text-[11px] uppercase tracking-wide text-base-content/60">
+                        {{ day.label }}
+                    </span>
+                    {% if day.minutes is not None %}
+                    <span class="text-[10px] md:text-[11px] text-base-content/70">
+                        {{ day.minutes }}m
+                    </span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="flex flex-col items-center justify-center py-6 text-center text-sm text-base-content/60">
+                <i class="bi bi-graph-up w-10 h-10 text-2xl mb-2 opacity-70" aria-hidden="true"></i>
+                <p>No weekly data yet. Start logging time to see your trend.</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Quick actions (mobile) -->
+    <section class="grid grid-cols-2 gap-3 md:hidden" aria-label="Quick actions">
+        <a href="{% url 'task_create' %}"
+           class="btn btn-outline gap-2 border-base-300 text-base-content hover:border-base-400 hover:bg-base-100">
+            <i class="bi bi-plus-square" aria-hidden="true"></i>
+            <span>New Task</span>
+        </a>
+        <a href="{% url 'log_create' %}"
+           class="btn btn-outline gap-2 border-base-300 text-base-content hover:border-base-400 hover:bg-base-100">
+            <i class="bi bi-stopwatch" aria-hidden="true"></i>
+            <span>Log Time</span>
+        </a>
+    </section>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Today's Tasks -->
+        <section class="card bg-base-100 shadow-md border border-base-200 lg:col-span-2" aria-label="Today's tasks">
+            <div class="card-body p-4 md:p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h2 class="card-title text-lg flex items-center gap-2">
+                        <i class="bi bi-list-check" aria-hidden="true"></i>
+                        <span>Today's Tasks</span>
+                    </h2>
+                    <a href="{% url 'task_list' %}"
+                       class="text-xs link link-primary flex items-center gap-1">
+                        <span>View All</span>
+                        <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+                    </a>
+                </div>
+                
+                {% if pending_tasks %}
+                <ul class="space-y-2">
+                    {% for task in pending_tasks|slice:":5" %}
+                    <li class="flex items-center justify-between p-3 bg-base-50 rounded-lg hover:bg-base-200 transition border border-base-100">
+                        <div class="flex-1 min-w-0 mr-3">
+                            <p class="font-medium text-sm truncate">{{ task.title }}</p>
+                            {% if task.category %}
+                            <p class="text-xs text-base-content/60 flex items-center gap-1">
+                                <i class="bi bi-tag" aria-hidden="true"></i>
+                                <span>{{ task.category.name }}</span>
+                            </p>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'log_create' %}?task={{ task.id }}"
+                           class="btn btn-circle btn-sm btn-ghost text-primary"
+                           aria-label="Log time for {{ task.title }}">
+                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
                 {% else %}
-                <span class="text-xs text-slate-500">-</span>
-                {% endif %}
-              </td>
-              <td class="text-right">
-                <span class="badge badge-ghost badge-xs md:badge-sm">{{ log.duration }}m</span>
-              </td>
-              <td class="text-right text-xs hidden sm:table-cell">{{ log.date|date:"M d" }}</td>
-              <td class="text-center">
-                <div class="flex gap-1 justify-center">
-                  <a href="{% url 'log_update' log.id %}" class="btn btn-info btn-xs gap-1" title="Edit">
-                    <i class="bi bi-pencil-square-fill"></i>
-                  </a>
-                  <button onclick="deleteLog({{ log.id }})" class="btn btn-error btn-xs gap-1" title="Delete">
-                    <i class="bi bi-trash2-fill"></i>
-                  </button>
+                <div class="flex flex-col items-center justify-center py-8 text-center opacity-60">
+                    <i class="bi bi-emoji-smile w-12 h-12 text-3xl mb-2" aria-hidden="true"></i>
+                    <p class="text-sm">All caught up! No pending tasks for today.</p>
                 </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-      {% else %}
-      <div class="text-center py-8 md:py-12">
-        <div class="text-4xl md:text-5xl mb-2 md:mb-4">📝</div>
-        <h3 class="text-base md:text-lg font-bold text-slate-700 mb-1 md:mb-2">No activities yet</h3>
-        <p class="text-sm text-slate-600 mb-4">Start tracking to see history</p>
-        <a href="{% url 'log_create' %}" class="btn btn-primary btn-sm">Log your first activity</a>
-      </div>
-      {% endif %}
-    </div>
-  </div>
+                {% endif %}
+            </div>
+        </section>
 
-  <!-- Mobile Bottom Navigation Menu -->
-  <div class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40">
-    <div class="flex justify-around items-center h-16 px-2">
-      <a href="{% url 'task_create' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-plus-circle text-xl text-primary"></i>
-        <span class="text-xs mt-0.5">New Task</span>
-      </a>
-      <a href="{% url 'log_create' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-plus-circle text-xl text-secondary"></i>
-        <span class="text-xs mt-0.5">Log</span>
-      </a>
-      <a href="{% url 'task_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-list-check text-xl"></i>
-        <span class="text-xs mt-0.5">Tasks</span>
-      </a>
-      <a href="{% url 'friends_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-people text-xl"></i>
-        <span class="text-xs mt-0.5">Friends</span>
-      </a>
+        <!-- Right column: Requests + Recent Activity -->
+        <div class="space-y-6">
+            {% if pending_friend_requests %}
+            <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Friend requests">
+                <div class="card-body p-4">
+                    <h2 class="card-title text-base mb-2 flex items-center gap-2">
+                        <span class="indicator">
+                            <span>Friend Requests</span>
+                            <span class="indicator-item badge badge-primary badge-xs"></span>
+                        </span>
+                    </h2>
+                    <div class="space-y-3">
+                        {% for request in pending_friend_requests|slice:":2" %}
+                        <div class="flex items-center justify-between gap-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <div class="avatar placeholder">
+                                    <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                                        <span class="text-xs">
+                                            {{ request.from_user.username|first|upper }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <span class="text-sm font-semibold truncate">
+                                    {{ request.from_user.username }}
+                                </span>
+                            </div>
+                            <div class="flex gap-1">
+                                <a href="{% url 'friend_requests' %}"
+                                   class="btn btn-xs btn-outline border-base-300 text-base-content hover:border-base-400 hover:bg-base-100">
+                                    <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
+                                    <span>Review</span>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Recent activity">
+                <div class="card-body p-4">
+                    <h2 class="card-title text-base flex items-center gap-2">
+                        <i class="bi bi-clock-history" aria-hidden="true"></i>
+                        <span>Recent Activity</span>
+                    </h2>
+                    <div class="space-y-4 mt-2">
+                        {% for log in recent_logs|slice:":4" %}
+                        <div class="flex gap-3 relative pb-4 last:pb-0 border-l border-base-300 ml-2 pl-4">
+                            <div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-base-100"></div>
+                            <div class="flex-1">
+                                <p class="text-sm font-medium">{{ log.activity }}</p>
+                                <p class="text-xs text-base-content/60 flex items-center gap-1">
+                                    <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                                    <span>{{ log.duration }}m{% if log.category %} • {{ log.category.name }}{% endif %}</span>
+                                </p>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-sm text-base-content/60 italic">No recent activity.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+        </div>
     </div>
-  </div>
 </div>
-
-<script>
-  function markTaskComplete(taskId) {
-    fetch(`/tasks/${taskId}/complete/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-      .then(r => location.reload())
-      .catch(e => alert('Error completing task'));
-  }
-
-  function deleteTask(taskId) {
-    if (confirm('Delete this task?')) {
-      fetch(`/tasks/${taskId}/delete/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-        .then(r => location.reload())
-        .catch(e => alert('Error deleting task'));
-    }
-  }
-
-  function deleteLog(logId) {
-    if (confirm('Delete this log entry?')) {
-      fetch(`/logs/${logId}/delete/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-        .then(r => location.reload())
-        .catch(e => alert('Error deleting log'));
-    }
-  }
-
-  function acceptFriendRequest(requestId) {
-    fetch(`/friend-requests/${requestId}/accept/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-      .then(r => location.reload())
-      .catch(e => alert('Error accepting request'));
-  }
-
-  function rejectFriendRequest(requestId) {
-    fetch(`/friend-requests/${requestId}/reject/`, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-      .then(r => location.reload())
-      .catch(e => alert('Error rejecting request'));
-  }
-</script>
-
-<style>
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  body { animation: slideUp 0.5s ease-out; }
-  
-  ::-webkit-scrollbar { width: 6px; }
-  ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-</style>
 {% endblock %}

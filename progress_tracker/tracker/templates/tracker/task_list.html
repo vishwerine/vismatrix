@@ -4,82 +4,158 @@
 
 {% block content %}
 <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 pb-24 md:pb-8 px-3 sm:px-4 lg:px-8">
+
   <!-- Header -->
-  <div class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
+  <header class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
       <div class="min-w-0">
-        <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-1 md:mb-2">My Tasks</h1>
-        <p class="text-sm md:text-lg text-slate-600">Manage and track all your tasks</p>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-1 md:mb-2 flex items-center gap-2">
+          <i class="bi bi-list-check text-slate-700" aria-hidden="true"></i>
+          <span>My Tasks</span>
+        </h1>
+        <p class="text-sm md:text-lg text-slate-600 flex items-center gap-2">
+          <span>Manage and track all your tasks</span>
+          {% if tasks %}
+          <span class="inline-flex items-center gap-1 text-xs md:text-sm text-slate-500">
+            <i class="bi bi-circle-half" aria-hidden="true"></i>
+            <span>{{ tasks|length }} task{% if tasks|length != 1 %}s{% endif %}</span>
+          </span>
+          {% endif %}
+        </p>
       </div>
-      <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm md:btn-md gap-2 w-fit">
-        <i class="bi bi-plus-lg"></i>
+      <a href="{% url 'task_create' %}"
+         class="btn btn-sm md:btn-md gap-2 w-fit border border-slate-300 bg-white text-slate-800 hover:bg-slate-100"
+         aria-label="Create a new task">
+        <i class="bi bi-plus-square" aria-hidden="true"></i>
         <span class="hidden sm:inline">New Task</span>
       </a>
     </div>
-  </div>
+  </header>
 
-  <!-- Filters - Mobile dropdown, Desktop inline -->
-  <div class="max-w-6xl mx-auto mb-6">
+  <!-- Filters -->
+  <section class="max-w-6xl mx-auto mb-6" aria-label="Task filters">
     <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50">
-      <details class="md:static cursor-pointer md:cursor-auto">
-        <summary class="flex items-center justify-between font-bold text-slate-900 md:hidden mb-0 md:mb-4">
-          <span>Filters</span>
-          <i class="bi bi-chevron-down"></i>
+      <details class="md:open">
+        <summary class="flex items-center justify-between font-semibold text-slate-900 md:hidden cursor-pointer">
+          <span class="flex items-center gap-2">
+            <i class="bi bi-funnel" aria-hidden="true"></i>
+            <span>Filters</span>
+          </span>
+          <i class="bi bi-chevron-down" aria-hidden="true"></i>
         </summary>
-        <div class="flex flex-col md:flex-row gap-2 md:gap-4 md:items-center md:flex-wrap pt-3 md:pt-0">
-          <a href="?priority=high" class="btn btn-outline btn-xs md:btn-sm gap-2">
-            <i class="bi bi-exclamation-circle"></i>
-            <span class="hidden sm:inline">High Priority</span>
-          </a>
-          <a href="?priority=medium" class="btn btn-outline btn-xs md:btn-sm gap-2">
-            <i class="bi bi-dash-circle"></i>
-            <span class="hidden sm:inline">Medium</span>
-          </a>
-          <a href="?status=completed" class="btn btn-outline btn-xs md:btn-sm gap-2">
-            <i class="bi bi-check-circle"></i>
-            <span class="hidden sm:inline">Completed</span>
-          </a>
-          <a href="{% url 'task_list' %}" class="btn btn-ghost btn-xs md:btn-sm gap-2">
-            <i class="bi bi-x-circle"></i>
-            <span class="hidden sm:inline">Clear</span>
-          </a>
+        <div class="flex flex-col md:flex-row gap-2 md:gap-3 md:items-center md:flex-wrap pt-3 md:pt-0">
+          {# Determine active filters via query params #}
+          {% with p=request.GET.priority s=request.GET.status %}
+            <a href="?priority=high"
+               class="btn btn-outline btn-xs md:btn-sm gap-2 border-slate-300 text-slate-800 hover:border-slate-500 hover:bg-slate-50 {% if p == 'high' %}!bg-slate-900 !text-slate-50{% endif %}">
+              <i class="bi bi-arrow-up-circle" aria-hidden="true"></i>
+              <span class="hidden sm:inline">High Priority</span>
+              <span class="sm:hidden">High</span>
+            </a>
+            <a href="?priority=medium"
+               class="btn btn-outline btn-xs md:btn-sm gap-2 border-slate-300 text-slate-800 hover:border-slate-500 hover:bg-slate-50 {% if p == 'medium' %}!bg-slate-900 !text-slate-50{% endif %}">
+              <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
+              <span class="hidden sm:inline">Medium Priority</span>
+              <span class="sm:hidden">Medium</span>
+            </a>
+            <a href="?status=completed"
+               class="btn btn-outline btn-xs md:btn-sm gap-2 border-slate-300 text-slate-800 hover:border-slate-500 hover:bg-slate-50 {% if s == 'completed' %}!bg-slate-900 !text-slate-50{% endif %}">
+              <i class="bi bi-check-circle" aria-hidden="true"></i>
+              <span class="hidden sm:inline">Completed</span>
+              <span class="sm:hidden">Done</span>
+            </a>
+            <a href="{% url 'task_list' %}"
+               class="btn btn-ghost btn-xs md:btn-sm gap-2 text-slate-600 hover:bg-slate-50">
+              <i class="bi bi-x-circle" aria-hidden="true"></i>
+              <span class="hidden sm:inline">Clear Filters</span>
+              <span class="sm:hidden">Clear</span>
+            </a>
+          {% endwith %}
         </div>
       </details>
     </div>
-  </div>
+  </section>
 
-  <!-- Tasks Grid/List -->
-  <div class="max-w-6xl mx-auto space-y-3 md:space-y-4">
+  <!-- Task List -->
+  <section class="max-w-6xl mx-auto space-y-3 md:space-y-4" aria-label="Task list">
     {% if tasks %}
       {% for task in tasks %}
-      <div class="group bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50 hover:border-slate-300 hover:shadow-xl md:hover:-translate-y-1 transition-all">
+      <article
+        class="relative group bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl
+         p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50
+         hover:border-slate-300 hover:shadow-xl md:hover:-translate-y-1
+         transition-all z-0 group-hover:z-20 focus-within:z-20"
+        aria-label="Task: {{ task.title }}"
+      >
         <div class="flex items-start gap-3 md:gap-4">
+
           <!-- Checkbox -->
-          <button onclick="completeTask({{ task.id }})" class="checkbox checkbox-primary checkbox-sm flex-shrink-0 mt-1 md:mt-1.5" title="Mark complete"></button>
+          <div class="flex-shrink-0 mt-1 md:mt-1.5">
+            <input
+              type="checkbox"
+              class="checkbox checkbox-sm align-top border-slate-300 [--chkbg:theme(colors.slate.800)] [--chkfg:#fff]"
+              {% if task.status == 'completed' %}checked disabled{% endif %}
+              onchange="completeTask({{ task.id }})"
+              aria-label="Mark '{{ task.title }}' as complete"
+            >
+          </div>
           
           <!-- Task Content -->
           <div class="flex-1 min-w-0">
             <div class="flex items-start justify-between gap-2">
               <div class="min-w-0">
-                <h3 class="font-bold text-slate-900 text-sm md:text-base group-hover:text-blue-700 transition-colors">{{ task.title }}</h3>
+                <h3 class="font-semibold text-slate-900 text-sm md:text-base group-hover:text-slate-800 transition-colors
+                           {% if task.status == 'completed' %}line-through text-slate-400 group-hover:text-slate-500{% endif %}">
+                  {{ task.title }}
+                </h3>
                 {% if task.description %}
-                <p class="text-xs md:text-sm text-slate-600 mt-1 line-clamp-2">{{ task.description }}</p>
+                <p class="text-xs md:text-sm text-slate-600 mt-1 line-clamp-2 {% if task.status == 'completed' %}text-slate-400{% endif %}">
+                  {{ task.description }}
+                </p>
                 {% endif %}
               </div>
             </div>
             
             <!-- Task Meta -->
-            <div class="flex flex-wrap items-center gap-2 mt-2 md:mt-3">
+            <div class="flex flex-wrap items-center gap-2 mt-2 md:mt-3 text-xs md:text-sm">
               {% if task.category %}
-              <span class="badge badge-xs md:badge-sm badge-primary opacity-75">{{ task.category.name }}</span>
-              {% endif %}
-              <span class="badge badge-xs md:badge-sm {% if task.priority == 'high' %}badge-error{% elif task.priority == 'medium' %}badge-warning{% else %}badge-success{% endif %}">
-                {{ task.priority|first|upper }}
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+                <i class="bi bi-tag" aria-hidden="true"></i>
+                <span>{{ task.category.name }}</span>
               </span>
+              {% endif %}
+
+              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full
+                           {% if task.priority == 'high' %}
+                             bg-rose-100 text-rose-700
+                           {% elif task.priority == 'medium' %}
+                             bg-amber-100 text-amber-700
+                           {% else %}
+                             bg-emerald-100 text-emerald-700
+                           {% endif %}">
+                {% if task.priority == 'high' %}
+                  <i class="bi bi-arrow-up-short" aria-hidden="true"></i>
+                  <span>High</span>
+                {% elif task.priority == 'medium' %}
+                  <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
+                  <span>Medium</span>
+                {% else %}
+                  <i class="bi bi-arrow-down-short" aria-hidden="true"></i>
+                  <span>Low</span>
+                {% endif %}
+              </span>
+
               {% if task.due_date %}
-              <span class="text-xs md:text-sm text-slate-500">
-                <i class="bi bi-calendar"></i>
-                {{ task.due_date|date:"M d" }}
+              <span class="inline-flex items-center gap-1 text-slate-500">
+                <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                <span>Due {{ task.due_date|date:"M d" }}</span>
+              </span>
+              {% endif %}
+
+              {% if task.status == 'completed' %}
+              <span class="inline-flex items-center gap-1 text-slate-400">
+                <i class="bi bi-check2-all" aria-hidden="true"></i>
+                <span>Completed</span>
               </span>
               {% endif %}
             </div>
@@ -87,72 +163,102 @@
 
           <!-- Actions Dropdown Mobile -->
           <div class="dropdown dropdown-end flex-shrink-0 md:hidden">
-            <button tabindex="0" class="btn btn-ghost btn-xs">
-              <i class="bi bi-three-dots"></i>
+            <button tabindex="0" class="btn btn-ghost btn-xs" aria-label="Task actions menu">
+              <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
             </button>
-            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-lg z-50 shadow-xl border border-slate-200">
-              <li><a href="{% url 'task_update' task.id %}" class="text-xs"><i class="bi bi-pencil-square"></i>Edit</a></li>
-              <li><a href="{% url 'log_create' %}?task={{ task.id }}" class="text-xs"><i class="bi bi-plus-circle"></i>Log time</a></li>
-              <li><a href="{% url 'task_delete' task.id %}" class="text-xs text-error"><i class="bi bi-trash2"></i>Delete</a></li>
+            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-lg z-50 shadow-xl border border-slate-200 text-xs min-w-[150px]">
+              <li>
+                <a href="{% url 'task_update' task.id %}">
+                  <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                  <span>Edit Task</span>
+                </a>
+              </li>
+              <li>
+                <a href="{% url 'log_create' %}?task={{ task.id }}">
+                  <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                  <span>Log Time</span>
+                </a>
+              </li>
+              <li>
+                <a href="{% url 'task_delete' task.id %}" class="text-rose-600">
+                  <i class="bi bi-trash" aria-hidden="true"></i>
+                  <span>Delete</span>
+                </a>
+              </li>
             </ul>
           </div>
 
           <!-- Actions Row Desktop -->
           <div class="hidden md:flex gap-2 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-            <a href="{% url 'task_update' task.id %}" class="btn btn-info btn-xs gap-1" title="Edit">
-              <i class="bi bi-pencil-square-fill"></i>
+            <a href="{% url 'task_update' task.id %}"
+               class="btn btn-xs border border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+               title="Edit task">
+              <i class="bi bi-pencil-square" aria-hidden="true"></i>
             </a>
-            <a href="{% url 'log_create' %}?task={{ task.id }}" class="btn btn-primary btn-xs gap-1" title="Log">
-              <i class="bi bi-clock-history"></i>
+            <a href="{% url 'log_create' %}?task={{ task.id }}"
+               class="btn btn-xs border border-slate-300 bg-white text-slate-800 hover:bg-slate-50"
+               title="Log time for this task">
+              <i class="bi bi-stopwatch" aria-hidden="true"></i>
             </a>
-            <a href="{% url 'task_delete' task.id %}" class="btn btn-error btn-xs gap-1" title="Delete">
-              <i class="bi bi-trash2-fill"></i>
+            <a href="{% url 'task_delete' task.id %}"
+               class="btn btn-xs border border-slate-300 bg-white text-slate-800 hover:bg-rose-50 hover:text-rose-700"
+               title="Delete task">
+              <i class="bi bi-trash" aria-hidden="true"></i>
             </a>
           </div>
         </div>
-      </div>
+      </article>
       {% endfor %}
     {% else %}
     <div class="text-center py-12 md:py-16">
       <div class="text-4xl md:text-5xl mb-3 md:mb-4">🎯</div>
       <h3 class="text-base md:text-lg font-bold text-slate-700 mb-2">No tasks yet</h3>
-      <p class="text-sm text-slate-600 mb-6">Create your first task to get started</p>
-      <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm">Create Task</a>
+      <p class="text-sm text-slate-600 mb-6">Create your first task to get started.</p>
+      <a href="{% url 'task_create' %}"
+         class="btn btn-sm gap-2 border border-slate-300 bg-white text-slate-800 hover:bg-slate-100">
+        <i class="bi bi-plus-square" aria-hidden="true"></i>
+        <span>Create Task</span>
+      </a>
     </div>
     {% endif %}
-  </div>
+  </section>
 
-  <!-- Mobile Bottom Navigation Menu -->
-  <div class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40">
+  <!-- Mobile Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40" aria-label="Bottom navigation">
     <div class="flex justify-around items-center h-16 px-2">
       <a href="{% url 'task_create' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-plus-circle text-xl text-primary"></i>
+        <i class="bi bi-plus-square text-xl" aria-hidden="true"></i>
         <span class="text-xs mt-0.5">New</span>
       </a>
-      <a href="{% url 'task_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition bg-slate-50">
-        <i class="bi bi-list-check text-xl text-primary"></i>
-        <span class="text-xs mt-0.5">Tasks</span>
+      <a href="{% url 'task_list' %}" class="flex flex-col items-center justify-center w-full h-full bg-slate-50">
+        <i class="bi bi-list-check text-xl" aria-hidden="true"></i>
+        <span class="text-xs mt-0.5 font-medium">Tasks</span>
       </a>
       <a href="{% url 'log_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-journal-text text-xl"></i>
+        <i class="bi bi-journal-text text-xl" aria-hidden="true"></i>
         <span class="text-xs mt-0.5">Logs</span>
       </a>
       <a href="{% url 'dashboard' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-house text-xl"></i>
+        <i class="bi bi-house-door text-xl" aria-hidden="true"></i>
         <span class="text-xs mt-0.5">Home</span>
       </a>
     </div>
-  </div>
+  </nav>
 </div>
 
 <script>
   function completeTask(taskId) {
-    fetch(`/tasks/${taskId}/complete/`, { 
-      method: 'POST', 
-      headers: { 'X-CSRFToken': '{{ csrf_token }}' } 
+    fetch(`/tasks/${taskId}/complete/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' }
     })
-    .then(r => location.reload())
-    .catch(e => alert('Error completing task'));
+    .then(function (r) {
+      if (!r.ok) throw new Error('Request failed');
+      window.location.reload();
+    })
+    .catch(function () {
+      alert('Error completing task. Please try again.');
+    });
   }
 </script>
 {% endblock %}

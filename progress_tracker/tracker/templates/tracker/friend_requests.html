@@ -1,266 +1,128 @@
 {% extends 'tracker/base.html' %}
 
-{% block title %}Friend Requests - VisMatrix.Space{% endblock %}
+{% block title %}Friend Requests - VisMatrix{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 pb-24 md:pb-8 px-3 sm:px-4 lg:px-8">
-  <!-- Header -->
-  <div class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
-    <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-1 md:mb-2">Friend Requests</h1>
-    <p class="text-sm md:text-lg text-slate-600">Manage your connection requests</p>
-  </div>
-
-  <!-- Tabs -->
-  <div class="max-w-6xl mx-auto">
-    <div class="tabs tabs-lifted mb-4">
-      <input 
-        type="radio" 
-        name="request_tabs" 
-        class="tab" 
-        label="Received ({{ received_requests|length }})" 
-        checked="checked" 
-      />
-      <div class="tab-content bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50 min-h-96">
-        <!-- Received Requests -->
-        {% if received_requests %}
-        <div class="space-y-3 md:space-y-4">
-          {% for freq in received_requests %}
-          <div class="bg-slate-50 rounded-xl p-4 md:p-5 flex items-center justify-between border border-slate-200 hover:bg-slate-100 transition" id="received-{{ freq.id }}">
-            <!-- User Info -->
-            <div class="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-              <div class="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-lg md:rounded-xl flex items-center justify-center text-white flex-shrink-0">
-                <i class="bi bi-person-fill"></i>
-              </div>
-              <div class="min-w-0">
-                <p class="font-bold text-slate-900 text-sm md:text-base">{{ freq.from_user.get_full_name|default:freq.from_user.username }}</p>
-                <p class="text-xs md:text-sm text-slate-600">@{{ freq.from_user.username }}</p>
-              </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex gap-2 flex-shrink-0">
-              <button 
-                onclick="acceptRequest({{ freq.id }}, 'received-{{ freq.id }}')" 
-                class="btn btn-success btn-xs md:btn-sm gap-1"
-                id="accept-btn-{{ freq.id }}"
-              >
-                <i class="bi bi-check-circle"></i>
-                <span class="hidden sm:inline">Accept</span>
-              </button>
-              <button 
-                onclick="rejectRequest({{ freq.id }}, 'received-{{ freq.id }}')" 
-                class="btn btn-error btn-xs md:btn-sm gap-1"
-                id="reject-btn-{{ freq.id }}"
-              >
-                <i class="bi bi-x-circle"></i>
-                <span class="hidden sm:inline">Reject</span>
-              </button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-8">
-          <div class="text-3xl mb-2">📭</div>
-          <p class="text-slate-600">No pending requests</p>
-        </div>
-        {% endif %}
-      </div>
-
-      <input 
-        type="radio" 
-        name="request_tabs" 
-        class="tab" 
-        label="Sent ({{ sent_requests|length }})" 
-      />
-      <div class="tab-content bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50 min-h-96">
-        <!-- Sent Requests -->
-        {% if sent_requests %}
-        <div class="space-y-3 md:space-y-4">
-          {% for freq in sent_requests %}
-          <div class="bg-slate-50 rounded-xl p-4 md:p-5 flex items-center justify-between border border-slate-200 hover:bg-slate-100 transition" id="sent-{{ freq.id }}">
-            <!-- User Info -->
-            <div class="flex items-center gap-3 md:gap-4 flex-1 min-w-0">
-              <div class="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg md:rounded-xl flex items-center justify-center text-white flex-shrink-0">
-                <i class="bi bi-person-fill"></i>
-              </div>
-              <div class="min-w-0">
-                <p class="font-bold text-slate-900 text-sm md:text-base">{{ freq.to_user.get_full_name|default:freq.to_user.username }}</p>
-                <p class="text-xs md:text-sm text-slate-600">@{{ freq.to_user.username }}</p>
-                <p class="text-xs text-slate-500 mt-1">Pending response</p>
-              </div>
-            </div>
-
-            <!-- Actions -->
-            <div class="flex gap-2 flex-shrink-0">
-              <button 
-                onclick="cancelRequest({{ freq.to_user.id }}, 'sent-{{ freq.id }}')" 
-                class="btn btn-warning btn-xs md:btn-sm gap-1"
-                id="cancel-btn-{{ freq.id }}"
-              >
-                <i class="bi bi-arrow-counterclockwise"></i>
-                <span class="hidden sm:inline">Cancel</span>
-              </button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-8">
-          <div class="text-3xl mb-2">✉️</div>
-          <p class="text-slate-600">No pending requests</p>
-        </div>
-        {% endif %}
-      </div>
+<div class="max-w-4xl mx-auto py-4">
+    <div class="mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold">Friend Requests</h1>
+        <p class="text-sm opacity-70">Manage your connection requests</p>
     </div>
-  </div>
 
-  <!-- Mobile Bottom Navigation -->
-  <div class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40">
-    <div class="flex justify-around items-center h-16 px-2">
-      <a href="{% url 'friends_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-people text-xl"></i>
-        <span class="text-xs mt-0.5">Friends</span>
-      </a>
-      <a href="{% url 'user_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-search text-xl"></i>
-        <span class="text-xs mt-0.5">Find</span>
-      </a>
-      <a href="{% url 'friend_requests' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition bg-slate-50">
-        <i class="bi bi-bell text-xl text-primary"></i>
-        <span class="text-xs mt-0.5">Requests</span>
-      </a>
-      <a href="{% url 'dashboard' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-house text-xl"></i>
-        <span class="text-xs mt-0.5">Home</span>
-      </a>
+    <div role="tablist" class="tabs tabs-lifted">
+        <input 
+            type="radio" 
+            name="request_tabs" 
+            role="tab" 
+            class="tab text-sm md:text-base" 
+            aria-label="Received ({{ received_requests|length }})"
+            checked 
+        />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4 md:p-6 shadow-md border space-y-4">
+            {% if received_requests %}
+            <div class="space-y-3">
+                {% for request in received_requests %}
+                <div id="request-{{ request.id }}" class="flex items-center justify-between p-3 bg-base-200/50 rounded-lg shadow-sm border border-base-200 transition-shadow">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="avatar placeholder">
+                            <div class="bg-primary text-primary-content rounded-full w-10 h-10">
+                                <span class="text-sm font-bold">{{ request.from_user.username|first|upper }}</span>
+                            </div>
+                        </div>
+                        <span class="font-semibold text-base truncate">{{ request.from_user.username }}</span>
+                    </div>
+                    
+                    <div class="flex gap-2 flex-shrink-0">
+                        <button 
+                            class="btn btn-sm btn-success" 
+                            onclick="handleRequest({{ request.id }}, '{% url 'accept_friend_request' request.id %}', this)">
+                            Accept
+                        </button>
+                        <button 
+                            class="btn btn-sm btn-error btn-outline"
+                            onclick="handleRequest({{ request.id }}, '{% url 'decline_friend_request' request.id %}', this)">
+                            Decline
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-10 opacity-60">
+                <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <p class="text-sm">No pending friend requests.</p>
+            </div>
+            {% endif %}
+        </div>
+
+        <input 
+            type="radio" 
+            name="request_tabs" 
+            role="tab" 
+            class="tab text-sm md:text-base" 
+            aria-label="Sent ({{ sent_requests|length }})" 
+        />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-4 md:p-6 shadow-md border space-y-4">
+            {% if sent_requests %}
+            <div class="space-y-3">
+                {% for request in sent_requests %}
+                <div id="request-{{ request.id }}" class="flex items-center justify-between p-3 bg-base-200/50 rounded-lg shadow-sm border border-base-200">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <div class="avatar placeholder">
+                            <div class="bg-secondary text-secondary-content rounded-full w-10 h-10">
+                                <span class="text-sm font-bold">{{ request.to_user.username|first|upper }}</span>
+                            </div>
+                        </div>
+                        <span class="font-semibold text-base truncate">{{ request.to_user.username }}</span>
+                    </div>
+                    
+                    <div class="flex-shrink-0">
+                        <button 
+                            class="btn btn-sm btn-warning btn-outline"
+                            onclick="handleRequest({{ request.id }}, '{% url 'cancel_friend_request' request.id %}', this)">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-10 opacity-60">
+                <svg class="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                <p class="text-sm">No pending outgoing requests.</p>
+            </div>
+            {% endif %}
+        </div>
     </div>
-  </div>
 </div>
 
 <script>
-  function acceptRequest(requestId, containerId) {
-    if (!confirm('Accept this friend request?')) return;
-    
-    const button = document.getElementById(`accept-btn-${requestId}`);
-    const container = document.getElementById(containerId);
-    const originalHTML = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i>';
-    
-    fetch(`/friends/requests/${requestId}/accept/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-    })
-    .then(r => r.json())
-    .then(data => {
-      showToast(data.message, data.status);
-      if (data.status === 'success') {
-        container.style.opacity = '0';
-        container.style.transform = 'translateX(100%)';
-        container.style.transition = 'all 0.3s ease';
-        setTimeout(() => container.remove(), 300);
-      } else {
-        button.disabled = false;
-        button.innerHTML = originalHTML;
-      }
-    })
-    .catch(e => {
-      showToast('Error: ' + e, 'error');
-      button.disabled = false;
-      button.innerHTML = originalHTML;
-    });
-  }
+    function handleRequest(requestId, url, button) {
+        const originalHTML = button.innerHTML;
+        button.disabled = true;
+        button.innerHTML = '<span class="loading loading-spinner loading-xs"></span>';
+        const container = document.getElementById(`request-${requestId}`);
 
-  function rejectRequest(requestId, containerId) {
-    if (!confirm('Reject this friend request?')) return;
-    
-    const button = document.getElementById(`reject-btn-${requestId}`);
-    const container = document.getElementById(containerId);
-    const originalHTML = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i>';
-    
-    fetch(`/friends/requests/${requestId}/reject/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-    })
-    .then(r => r.json())
-    .then(data => {
-      showToast(data.message, data.status);
-      if (data.status === 'success') {
-        container.style.opacity = '0';
-        container.style.transform = 'translateX(-100%)';
-        container.style.transition = 'all 0.3s ease';
-        setTimeout(() => container.remove(), 300);
-      } else {
-        button.disabled = false;
-        button.innerHTML = originalHTML;
-      }
-    })
-    .catch(e => {
-      showToast('Error: ' + e, 'error');
-      button.disabled = false;
-      button.innerHTML = originalHTML;
-    });
-  }
-
-  function cancelRequest(userId, containerId) {
-    if (!confirm('Cancel this friend request?')) return;
-    
-    const button = document.getElementById(`cancel-btn-${containerId.split('-')}`);
-    const container = document.getElementById(containerId);
-    const originalHTML = button.innerHTML;
-    button.disabled = true;
-    button.innerHTML = '<i class="bi bi-hourglass-split animate-spin"></i>';
-    
-    fetch(`/friends/requests/${userId}/cancel/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': '{{ csrf_token }}' }
-    })
-    .then(r => r.json())
-    .then(data => {
-      showToast(data.message, data.status);
-      if (data.status === 'success') {
-        container.style.opacity = '0';
-        container.style.transform = 'translateX(100%)';
-        container.style.transition = 'all 0.3s ease';
-        setTimeout(() => container.remove(), 300);
-      } else {
-        button.disabled = false;
-        button.innerHTML = originalHTML;
-      }
-    })
-    .catch(e => {
-      showToast('Error: ' + e, 'error');
-      button.disabled = false;
-      button.innerHTML = originalHTML;
-    });
-  }
-
-  function showToast(message, type = 'info') {
-    const container = document.getElementById('toast-container') || 
-      (() => {
-        const div = document.createElement('div');
-        div.id = 'toast-container';
-        div.className = 'fixed bottom-20 md:bottom-4 right-4 space-y-2 z-50';
-        document.body.appendChild(div);
-        return div;
-      })();
-    
-    const alertClass = {
-      'success': 'alert-success',
-      'error': 'alert-error',
-      'warning': 'alert-warning',
-      'info': 'alert-info'
-    }[type] || 'alert-info';
-    
-    const alert = document.createElement('div');
-    alert.className = `alert ${alertClass} shadow-lg max-w-xs text-sm`;
-    alert.innerHTML = `<span>${message}</span>`;
-    container.appendChild(alert);
-    
-    setTimeout(() => alert.remove(), 3000);
-  }
+        fetch(url, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === 'success') {
+                container.style.opacity = '0';
+                container.style.transform = 'scale(0.95)';
+                container.style.transition = 'all 0.3s ease';
+                setTimeout(() => container.remove(), 300);
+            } else {
+                button.disabled = false;
+                button.innerHTML = originalHTML;
+            }
+        })
+        .catch(e => {
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+        });
+    }
 </script>
 {% endblock %}

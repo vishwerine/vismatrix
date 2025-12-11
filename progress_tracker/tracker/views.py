@@ -11,69 +11,160 @@ from django.views.decorators.http import require_http_methods
 
 import json
 
-# Dashboard
 @login_required
 def dashboard(request):
-    """Main dashboard showing today's overview"""
-    today = timezone.now().date()
-    
-    # Today's stats
-    today_tasks = Task.objects.filter(user=request.user, created_at__date=today)
-    today_completed = today_tasks.filter(status='completed').count()
-    today_logs = DailyLog.objects.filter(user=request.user, date=today)
-    today_time = today_logs.aggregate(total=Sum('duration'))['total'] or 0
-    
-    # Pending tasks
-    pending_tasks = Task.objects.filter(
-        user=request.user, 
-        status__in=['pending', 'in_progress']
-    ).order_by('priority', 'due_date')[:5]
-    
-    # Recent activities
-    recent_logs = DailyLog.objects.filter(user=request.user)[:5]
+    """Main dashboard showing today's overview + weekly summary."""
 
-    # Friends list
-    friends_qs = Friendship.objects.filter(user=request.user).select_related('friend')
+    # --- Dates / ranges ---
+    today = timezone.localdate()
+    week_ago = today - timedelta(days=6)         # last 7 days including today
+    month_start = today.replace(day=1)
+
+    # --- Today's stats ---
+    today_tasks = Task.objects.filter(user=request.user, created_at__date=today)
+    today_tasks_count = today_tasks.count()
+    today_completed = today_tasks.filter(status="completed").count()
+
+    today_logs = DailyLog.objects.filter(user=request.user, date=today)
+    today_time = today_logs.aggregate(total=Sum("duration"))["total"] or 0
+
+    # --- Pending tasks (for "Today’s tasks" card) ---
+    pending_tasks = (
+        Task.objects.filter(
+            user=request.user,
+            status__in=["pending", "in_progress"],
+        )
+        .order_by("priority", "due_date")
+    )
+
+    # --- Recent activities ---
+    recent_logs = (
+        DailyLog.objects.filter(user=request.user)
+        .select_related("category")
+        .order_by("-date", "-id")[:5]
+    )
+
+    # --- Friends list & activity (for other parts of the app) ---
+    friends_qs = Friendship.objects.filter(user=request.user).select_related("friend")
     total_friends = friends_qs.count()
 
-    # Friends activity as you already have
     friends_activity = []
     for f in friends_qs[:5]:
         friend = f.friend
         completed = Task.objects.filter(
             user=friend,
-            status='completed',
-            completed_at__date__gte=week_ago
+            status="completed",
+            completed_at__date__gte=week_ago,
+            completed_at__date__lte=today,
         ).count()
-        time_spent = DailyLog.objects.filter(
-            user=friend,
-            date__gte=week_ago
-        ).aggregate(total=Sum('duration'))['total'] or 0
+        time_spent = (
+            DailyLog.objects.filter(user=friend, date__gte=week_ago, date__lte=today)
+            .aggregate(total=Sum("duration"))["total"]
+            or 0
+        )
 
-        friends_activity.append({
-            'friend': friend,
-            'completed_tasks': completed,
-            'time_spent': time_spent,
-        })
+        friends_activity.append(
+            {
+                "friend": friend,
+                "completed_tasks": completed,
+                "time_spent": time_spent,
+            }
+        )
 
-    # Suggested users (non-friends)
+    # --- Suggested users (non-friends) ---
     friend_ids = [f.friend_id for f in friends_qs]
-    suggested_users = User.objects.exclude(
-        Q(id=request.user.id) | Q(id__in=friend_ids)
-    )[:5]  # limit to 5
+    suggested_users = (
+        User.objects.exclude(Q(id=request.user.id) | Q(id__in=friend_ids))[:5]
+    )
 
-    
+    # --- Top stat: logs this month & total time overall ---
+    logs_this_month = DailyLog.objects.filter(
+        user=request.user, date__gte=month_start, date__lte=today
+    ).count()
+
+    total_time = (
+        DailyLog.objects.filter(user=request.user).aggregate(total=Sum("duration"))[
+            "total"
+        ]
+        or 0
+    )
+
+    # --- Current streak (consecutive days with at least one log, up to today) ---
+    log_dates = (
+        DailyLog.objects.filter(user=request.user, date__lte=today)
+        .values_list("date", flat=True)
+        .distinct()
+        .order_by("-date")
+    )
+    log_dates_set = set(log_dates)
+
+    streak = 0
+    cursor = today
+    while cursor in log_dates_set:
+        streak += 1
+        cursor = cursor - timedelta(days=1)
+
+    current_streak = streak
+
+    # --- Weekly overview for mini bar chart ---
+    # weekly_overview = list of dicts with label, minutes, percent
+    last_7_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    day_minutes = []
+
+    for d in last_7_days:
+        minutes = (
+            DailyLog.objects.filter(user=request.user, date=d).aggregate(
+                total=Sum("duration")
+            )["total"]
+            or 0
+        )
+        day_minutes.append((d, minutes))
+
+    max_minutes = max((m for _, m in day_minutes), default=0) or 0
+
+    weekly_overview = []
+    for d, minutes in day_minutes:
+        if max_minutes > 0:
+            percent = int(round((minutes / max_minutes) * 100))
+        else:
+            percent = 0
+
+        weekly_overview.append(
+            {
+                "label": d.strftime("%a")[0],  # M, T, W, ...
+                "minutes": minutes,
+                "percent": percent,
+                "date": d,
+            }
+        )
+
+    # --- Optional: pending friend requests (for the small card on the right) ---
+    # Only if you have a FriendRequest model with to_user/from_user and status='pending'
+    pending_friend_requests = []
+    # pending_friend_requests = (
+    #     FriendRequest.objects.filter(to_user=request.user, status="pending")
+    #     .select_related("from_user")
+    #     .order_by("-created_at")
+    # )
+
     context = {
-        'today': today,
-        'today_completed': today_completed,
-        'today_time': today_time,
-        'pending_tasks': pending_tasks,
-        'recent_logs': recent_logs,
-                'friends': friends_activity,
-        'total_friends': total_friends,
-        'suggested_users': suggested_users,
+        "today": today,
+        "today_tasks_count": today_tasks_count,
+        "completed_today": today_completed,
+        "today_time": today_time,
+        "logs_this_month": logs_this_month,
+        "total_time": total_time,
+        "current_streak": current_streak,
+        "weekly_overview": weekly_overview,
+        "pending_tasks": pending_tasks,
+        "recent_logs": recent_logs,
+        "friends": friends_activity,
+        "total_friends": total_friends,
+        "suggested_users": suggested_users,
+        "pending_friend_requests": pending_friend_requests,
     }
-    return render(request, 'tracker/dashboard.html', context)
+    return render(request, "tracker/dashboard.html", context)
+
 
 # Task views
 @login_required

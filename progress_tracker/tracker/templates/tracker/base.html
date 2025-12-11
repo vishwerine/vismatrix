@@ -2,135 +2,197 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="VisMatrix.Space - Progress Tracker & Community">
-  <title>{% block title %}VisMatrix.Space{% endblock %}</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  
-  <!-- DaisyUI -->
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@3.9.4/dist/full.css" rel="stylesheet">
-  
-  <style>
-    :root {
-      --scrollbar-width: 8px;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <meta name="description" content="VisMatrix - Track your progress with friends">
+    <meta name="theme-color" content="#06b6d4">
+    <title>{% block title %}VisMatrix.Space{% endblock %}</title>
     
-    @media (max-width: 640px) {
-      :root {
-        --scrollbar-width: 6px;
-      }
-    }
-    
-    /* Custom scrollbar */
-    ::-webkit-scrollbar {
-      width: var(--scrollbar-width);
-    }
-    ::-webkit-scrollbar-track {
-      background: #f1f5f9;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 4px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-  </style>
+    <!-- Tailwind + DaisyUI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <!-- Bootstrap Icons (used in menus & components) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+    <style>
+        body { -webkit-tap-highlight-color: transparent; }
+
+        /* Safe area padding for notched phones */
+        .safe-area-pt { padding-top: env(safe-area-inset-top); }
+        .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+        
+        /* Smooth scrolling */
+        html { scroll-behavior: smooth; }
+        
+        /* Mobile touch improvements */
+        .btn, .input, .select, .textarea { min-height: 44px; }
+
+        /* Simple fade / slide for toasts */
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(-4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .toast .alert { animation: toast-in 0.2s ease-out; }
+
+        /* Active top-nav link underline */
+        .nav-link-active {
+            position: relative;
+            font-weight: 600;
+        }
+        .nav-link-active::after {
+            content: "";
+            position: absolute;
+            left: 0.75rem;
+            right: 0.75rem;
+            bottom: 0.35rem;
+            height: 2px;
+            border-radius: 999px;
+            background: linear-gradient(to right, #0ea5e9, #22c55e);
+        }
+    </style>
 </head>
-<body class="bg-slate-50">
-  <!-- Mobile Top Header Navigation -->
-  <nav class="navbar bg-white shadow-md sticky top-0 z-50 px-2 sm:px-4">
-    <div class="flex-1">
-      <a href="{% url 'dashboard' %}" class="btn btn-ghost normal-case text-lg md:text-2xl font-black">
-        <i class="bi bi-graph-up-arrow text-primary"></i>
-        <span class="hidden sm:inline">VisMatrix</span>
-      </a>
-    </div>
+<body class="bg-base-100 min-h-screen flex flex-col font-sans">
+
+    <!-- Top Navigation -->
+    <nav class="navbar bg-base-200/90 backdrop-blur sticky top-0 z-50 safe-area-pt shadow-sm border-b border-base-300/50"
+         role="navigation" aria-label="Main navigation">
+        <div class="flex-1">
+            <a href="{% url 'dashboard' %}" class="btn btn-ghost normal-case text-xl text-primary gap-2 px-2">
+                <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
+                </svg>
+                <span class="font-bold tracking-tight">VisMatrix</span>
+            </a>
+        </div>
+        
+        <!-- Desktop nav -->
+        <div class="hidden lg:flex gap-1 px-2">
+            <a href="{% url 'dashboard' %}"
+               class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'dashboard' %}nav-link-active text-primary{% endif %}">
+                <i class="bi bi-grid-1x2" aria-hidden="true"></i>
+                <span class="ml-1">Dashboard</span>
+            </a>
+            <a href="{% url 'task_list' %}"
+               class="btn btn-ghost btn-sm px-3 {% if 'task' in request.resolver_match.url_name %}nav-link-active text-primary{% endif %}">
+                <i class="bi bi-check2-square" aria-hidden="true"></i>
+                <span class="ml-1">Tasks</span>
+            </a>
+            <a href="{% url 'log_list' %}"
+               class="btn btn-ghost btn-sm px-3 {% if 'log' in request.resolver_match.url_name %}nav-link-active text-primary{% endif %}">
+                <i class="bi bi-clock-history" aria-hidden="true"></i>
+                <span class="ml-1">Logs</span>
+            </a>
+            <a href="{% url 'category_list' %}"
+               class="btn btn-ghost btn-sm px-3 {% if 'category' in request.resolver_match.url_name %}nav-link-active text-primary{% endif %}">
+                <i class="bi bi-tags" aria-hidden="true"></i>
+                <span class="ml-1">Categories</span>
+            </a>
+            <a href="{% url 'friends_list' %}"
+               class="btn btn-ghost btn-sm px-3 {% if 'friend' in request.resolver_match.url_name %}nav-link-active text-primary{% endif %}">
+                <i class="bi bi-people" aria-hidden="true"></i>
+                <span class="ml-1">Friends</span>
+            </a>
+        </div>
+        
+        <!-- User / Auth -->
+        <div class="flex-none gap-2 pr-2">
+            {% if user.is_authenticated %}
+            <div class="dropdown dropdown-end">
+                <div tabindex="0" role="button"
+                     class="btn btn-ghost btn-circle avatar ring ring-primary ring-offset-base-100 ring-offset-2 w-9 h-9"
+                     aria-label="User menu">
+                    <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
+                        {{ user.username|first|upper }}
+                    </div>
+                </div>
+                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-52 mt-3 border border-base-200">
+                    <li class="menu-title px-4 py-2">Hi, {{ user.username }}</li>
+                    <li>
+                        <a href="{% url 'dashboard' %}">
+                            <i class="bi bi-grid-1x2" aria-hidden="true"></i> Dashboard
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'user_list' %}">
+                            <i class="bi bi-person-plus" aria-hidden="true"></i> Find Friends
+                        </a>
+                    </li>
+                    <div class="divider my-1"></div>
+                    <li>
+                        <a href="/accounts/logout/" class="text-error">
+                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            {% else %}
+            <a href="/accounts/login/" class="btn btn-primary btn-sm gap-2">
+                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                <span>Login</span>
+            </a>
+            {% endif %}
+        </div>
+    </nav>
     
-    <!-- Desktop Navigation -->
-    <div class="hidden md:flex flex-none gap-2">
-      <a href="{% url 'task_list' %}" class="btn btn-outline btn-sm">
-        <i class="bi bi-list-check"></i>
-        Tasks
-      </a>
-      <a href="{% url 'log_list' %}" class="btn btn-outline btn-sm">
-        <i class="bi bi-journal-text"></i>
-        Logs
-      </a>
-      <a href="{% url 'friends_list' %}" class="btn btn-outline btn-sm">
-        <i class="bi bi-people"></i>
-        Friends
-      </a>
-      
-      <!-- Desktop User Menu -->
-      <div class="dropdown dropdown-end">
-        <button class="btn btn-circle btn-ghost" title="User menu">
-          <i class="bi bi-person-circle text-xl"></i>
-        </button>
-        <ul class="dropdown-content menu bg-base-100 rounded-lg z-50 shadow-xl border border-slate-200 w-52">
-          <li><span class="text-sm opacity-75">{{ user.username }}</span></li>
-          <li><a href="{% url 'account_email' %}"><i class="bi bi-gear"></i>Settings</a></li>
-          <li><a href="{% url 'account_logout' %}"><i class="bi bi-box-arrow-right"></i>Logout</a></li>
-        </ul>
-      </div>
-    </div>
+    <!-- Page content -->
+    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8">
+        {% if messages %}
+        <div class="toast toast-top toast-center z-50 w-full max-w-md top-16 px-4">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} shadow-lg">
+                <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    {% if user.is_authenticated %}
+    <!-- Mobile bottom nav -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-200 safe-area-pb z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
+         aria-label="Primary navigation">
+        <div class="grid grid-cols-4 h-16 text-xs">
+            <a href="{% url 'dashboard' %}"
+               class="flex flex-col items-center justify-center gap-1 hover:text-primary hover:bg-base-200/50 transition-colors
+                      {% if request.resolver_match.url_name == 'dashboard' %}text-primary font-semibold{% endif %}">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                <span>Home</span>
+            </a>
+            <a href="{% url 'task_list' %}"
+               class="flex flex-col items-center justify-center gap-1 hover:text-primary hover:bg-base-200/50 transition-colors
+                      {% if 'task' in request.resolver_match.url_name %}text-primary font-semibold{% endif %}">
+                <i class="bi bi-check2-square text-xl" aria-hidden="true"></i>
+                <span>Tasks</span>
+            </a>
+            <a href="{% url 'log_create' %}"
+               class="flex flex-col items-center justify-center">
+                <div class="w-12 h-12 bg-primary text-primary-content rounded-full flex items-center justify-center shadow-lg transform -translate-y-4 border-4 border-base-100">
+                    <i class="bi bi-plus-lg text-xl" aria-hidden="true"></i>
+                </div>
+            </a>
+            <a href="{% url 'friends_list' %}"
+               class="flex flex-col items-center justify-center gap-1 hover:text-primary hover:bg-base-200/50 transition-colors
+                      {% if 'friend' in request.resolver_match.url_name %}text-primary font-semibold{% endif %}">
+                <i class="bi bi-people text-xl" aria-hidden="true"></i>
+                <span>Social</span>
+            </a>
+        </div>
+    </nav>
+    {% endif %}
 
-    <!-- Mobile User Menu -->
-    <div class="md:hidden dropdown dropdown-end">
-      <button class="btn btn-circle btn-ghost" title="Menu">
-        <i class="bi bi-three-dots-vertical text-lg"></i>
-      </button>
-      <ul class="dropdown-content menu bg-base-100 rounded-lg z-50 shadow-xl border border-slate-200 w-48">
-        <li><span class="text-sm opacity-75 px-4 py-2">{{ user.username }}</span></li>
-        <li><a href="{% url 'account_email' %}"><i class="bi bi-gear"></i>Settings</a></li>
-        <li><a href="{% url 'account_logout' %}"><i class="bi bi-box-arrow-right"></i>Logout</a></li>
-      </ul>
-    </div>
-  </nav>
-
-  <!-- Main Content -->
-  <main class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50">
-    {% block content %}{% endblock %}
-  </main>
-
-  <!-- Footer (Desktop Only) -->
-  <footer class="hidden md:block footer bg-base-200 text-base-content p-8 mt-12">
-    <div>
-      <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
-      </svg>
-      <p>VisMatrix.Space © 2025. Built with <i class="bi bi-heart-fill text-error"></i> for productivity.</p>
-    </div>
-  </footer>
-
-  <!-- Toast Notifications Container -->
-  <div id="toast-container" class="fixed bottom-20 md:bottom-4 right-4 space-y-2 z-50"></div>
-
-  <script>
-    // Toast notification helper
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('toast-container');
-      const alertClass = {
-        'success': 'alert-success',
-        'error': 'alert-error',
-        'warning': 'alert-warning',
-        'info': 'alert-info'
-      }[type] || 'alert-info';
-      
-      const div = document.createElement('div');
-      div.className = `alert ${alertClass} shadow-lg max-w-xs text-sm`;
-      div.innerHTML = `<span>${message}</span>`;
-      container.appendChild(div);
-      
-      setTimeout(() => div.remove(), 3000);
-    }
-  </script>
+    <script>
+        // Auto-dismiss toasts
+        setTimeout(() => {
+            const toast = document.querySelector('.toast');
+            if (!toast) return;
+            toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+            setTimeout(() => toast.remove(), 550);
+        }, 4000);
+    </script>
 </body>
 </html>
