@@ -31,7 +31,7 @@ DEBUG = env.bool("DEBUG", default=(ENVIRONMENT == "local"))
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool("DEBUG", default=True)
+DEBUG = env.bool("DEBUG", default=False)
 
 ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','3.229.115.6','localhost']
 
