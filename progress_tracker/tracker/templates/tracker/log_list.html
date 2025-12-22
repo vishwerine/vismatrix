@@ -90,6 +90,7 @@
             <thead>
               <tr>
                 <th>Activity</th>
+                <th class="hidden sm:table-cell">Task</th>
                 <th class="hidden sm:table-cell">Category</th>
                 <th class="text-right">Duration</th>
                 <th class="hidden md:table-cell text-right">Date</th>
@@ -106,6 +107,14 @@
                       <p class="text-xs text-base-content/70 truncate">{{ log.notes|truncatewords:6 }}</p>
                     {% endif %}
                   </div>
+                </td>
+
+                <td class="hidden sm:table-cell">
+                  {% if log.task %}
+                    <span class="badge badge-primary">{{ log.task.title|truncatewords:3 }}</span>
+                  {% else %}
+                    <span class="text-sm text-base-content/60">—</span>
+                  {% endif %}
                 </td>
 
                 <td class="hidden sm:table-cell">

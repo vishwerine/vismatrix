@@ -95,6 +95,7 @@ ACCOUNT_AUTHENTICATED_LOGIN_REDIRECTS = True
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_STORE_TOKENS = True
 ACCOUNT_MERGE_ENABLED = False  # Prevents 3rdparty redirect
+SOCIALACCOUNT_LOGIN_ON_GET = True
 
 
 # Social account settings
@@ -129,6 +130,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.csrf',
                 # Your new processor
                 'tracker.context_processors.pending_friend_requests_count',
             ],

@@ -68,6 +68,7 @@ class DailyLog(models.Model):
     activity = models.TextField(max_length=500)
     description = models.TextField(blank=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='logs')  # Link to task
     duration = models.PositiveIntegerField(help_text="Duration in minutes", default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 

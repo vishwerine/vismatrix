@@ -49,7 +49,7 @@ def dashboard(request):
     # --- Recent activities ---
     recent_logs = (
         DailyLog.objects.filter(user=request.user)
-        .select_related("category")
+        .select_related("category", "task")
         .order_by("-date", "-id")[:5]
     )
 
@@ -84,6 +84,9 @@ def dashboard(request):
     friend_ids = [f.friend_id for f in friends_qs]
     friends_timeline = []
 
+    # Create a mapping of friend_id to friendship_id for quick lookup
+    friendship_map = {f.friend_id: f.id for f in friends_qs}
+
     # Get recent completed tasks from friends
     if friend_ids:
         recent_friend_tasks = Task.objects.filter(
@@ -100,6 +103,7 @@ def dashboard(request):
             friends_timeline.append({
                 "type": "task",
                 "user": task.user,
+                "friendship_id": friendship_map.get(task.user_id),
                 "title": task.title,
                 "category": task.category,
                 "timestamp": task.completed_at,
@@ -124,6 +128,7 @@ def dashboard(request):
             friends_timeline.append({
                 "type": "log",
                 "user": log.user,
+                "friendship_id": friendship_map.get(log.user_id),
                 "title": log.activity,
                 "category": log.category,
                 "timestamp": timestamp,
@@ -271,6 +276,9 @@ def dashboard(request):
     }
     return render(request, "tracker/dashboard.html", context)
 
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
+
 @login_required
 def analytics(request):
     """Analytics page showing detailed statistics and charts."""
@@ -386,20 +394,30 @@ def analytics(request):
 
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-    # --- Category breakdown for pie chart ---
+
+
     category_queryset = (
         DailyLog.objects.filter(user=request.user, date__gte=week_ago, date__lte=today)
-        .values('category__name')
+        .values(name=Coalesce('category__name', 'task__category__name', Value('Uncategorized')))
         .annotate(total=Sum('duration'))
-        .order_by('-total')[:5]
+        .order_by('-total')
     )
-    category_labels = [item['category__name'] or 'Uncategorized' for item in category_queryset]
-    category_values = [item['total'] for item in category_queryset]
+    category_data = [{'name': row['name'], 'value': row['total']} for row in category_queryset]
+
+    # --- Task breakdown for weekly period ---
+    task_queryset = (
+        DailyLog.objects.filter(user=request.user, date__gte=week_ago, date__lte=today)
+        .values('task__title')
+        .annotate(total=Sum('duration'))
+        .order_by('-total')[:10]  # Show top 10 tasks
+    )
+    task_labels = [item['task__title'] or 'No Task' for item in task_queryset]
+    task_values = [item['total'] for item in task_queryset]
     
-    # Create combined category data for template
-    category_data = [
+    # Create combined task data for template
+    task_data = [
         {'name': label, 'value': value} 
-        for label, value in zip(category_labels, category_values)
+        for label, value in zip(task_labels, task_values)
     ]
 
     # Handle AJAX requests for calendar updates
@@ -429,6 +447,7 @@ def analytics(request):
         "calendar_days": calendar_days,
         "day_names": day_names,
         "category_data": category_data,
+        "task_data": task_data,
         "selected_year": year,
         "selected_month": month,
         "month_name": calendar.month_name[month],
@@ -543,7 +562,7 @@ def log_list(request):
     """List logs for the current user, with category filter, stats, and pagination."""
     
     # Get all logs for current user
-    logs = DailyLog.objects.filter(user=request.user).select_related("category").order_by("-date", "-id")
+    logs = DailyLog.objects.filter(user=request.user).select_related("category", "task").order_by("-date", "-id")
 
     # Filter by category if provided
     category_id = request.GET.get("category")
@@ -582,26 +601,39 @@ def log_list(request):
 @login_required
 def log_create(request):
     if request.method == "POST":
-        form = DailyLogForm(request.POST)
+        form = DailyLogForm(request.POST, user=request.user)
         if form.is_valid():
             log = form.save(commit=False)
             log.user = request.user
             log.save()
             return redirect("log_list")
     else:
-        form = DailyLogForm()
+        # Check for task parameter to pre-select
+        initial_data = {}
+        task_id = request.GET.get('task')
+        if task_id:
+            try:
+                task = Task.objects.get(id=task_id, user=request.user)
+                initial_data['task'] = task.id  # Use the ID, not the object
+                # Also pre-fill category if task has one
+                if task.category:
+                    initial_data['category'] = task.category.id  # Use the ID, not the object
+            except Task.DoesNotExist:
+                pass  # Ignore invalid task IDs
+        
+        form = DailyLogForm(user=request.user, initial=initial_data)
     return render(request, "tracker/log_form.html", {"form": form})
 
 @login_required
 def log_update(request, pk):
     log = get_object_or_404(DailyLog, pk=pk, user=request.user)
     if request.method == "POST":
-        form = DailyLogForm(request.POST, instance=log)
+        form = DailyLogForm(request.POST, instance=log, user=request.user)
         if form.is_valid():
             form.save()
             return redirect("log_list")
     else:
-        form = DailyLogForm(instance=log)
+        form = DailyLogForm(instance=log, user=request.user)
     return render(request, "tracker/log_form.html", {"form": form})
 
 @login_required
@@ -1172,7 +1204,7 @@ def view_user_profile(request, user_id):
     
     # Get user's recent data
     tasks = Task.objects.filter(user=user, status='completed').order_by('-completed_at')[:20]
-    logs = DailyLog.objects.filter(user=user).order_by('-date')[:20]
+    logs = DailyLog.objects.filter(user=user).select_related('category', 'task').order_by('-date')[:20]
     
     # Weekly stats
     today = timezone.now().date()
@@ -1307,54 +1339,93 @@ def view_friend_profile(request, friendship_id):
         'colors': category_colors[:len(category_labels)]
     }
 
-    # ===== HEATMAP DATA =====
-    heatmap_data = []
-    for i in range(6, -1, -1):
-        date = today - timedelta(days=i)
-        daily_time = DailyLog.objects.filter(
+    # Create combined category data for template (consistent with task_data)
+    category_data_list = [
+        {'name': label, 'value': value} 
+        for label, value in zip(category_labels, category_values)
+    ]
+
+    # Calculate total time for categories
+    category_total_time = sum(category_values)
+
+    # ===== TASK BREAKDOWN FOR WEEKLY PERIOD =====
+    task_queryset = (
+        DailyLog.objects.filter(user=friend, date__gte=week_ago, date__lte=today)
+        .values('task__title')
+        .annotate(total=Sum('duration'))
+        .order_by('-total')[:10]  # Show top 10 tasks
+    )
+    task_labels = [item['task__title'] or 'No Task' for item in task_queryset]
+    task_values = [item['total'] for item in task_queryset]
+    
+    # Create combined task data for template
+    task_data = [
+        {'name': label, 'value': value} 
+        for label, value in zip(task_labels, task_values)
+    ]
+
+    # Calculate total time for tasks
+    task_total_time = sum(task_values)
+
+    # ===== MONTHLY STATS =====
+    month_start = today.replace(day=1)
+    logs_this_month = DailyLog.objects.filter(
+        user=friend, date__gte=month_start, date__lte=today
+    ).count()
+
+    # ===== TODAY'S STATS =====
+    today_tasks = Task.objects.filter(user=friend, created_at__date=today)
+    today_tasks_count = today_tasks.count()
+    completed_today = today_tasks.filter(status="completed").count()
+
+    today_logs = DailyLog.objects.filter(user=friend, date=today)
+    today_time = today_logs.aggregate(total=Sum("duration"))["total"] or 0
+
+    # ===== CALENDAR DATA =====
+    import calendar
+    cal = calendar.monthcalendar(today.year, today.month)
+    logged_dates = set(
+        DailyLog.objects.filter(
             user=friend,
-            date=date
-        ).aggregate(total=Sum('duration'))['total'] or 0
+            date__year=today.year,
+            date__month=today.month
+        ).values_list("date", flat=True)
+    )
+    calendar_days = []
+    for week in cal:
+        for day in week:
+            if day == 0:
+                continue
+            date_obj = timezone.datetime(today.year, today.month, day).date()
+            calendar_days.append({
+                "day": day,
+                "date": date_obj,
+                "logged": date_obj in logged_dates,
+                "is_today": date_obj == today,
+                "is_future": date_obj > today,
+            })
 
-        # Color intensity based on activity
-        if daily_time == 0:
-            color = 'bg-slate-100'
-            border = 'border-slate-200'
-        elif daily_time < 30:
-            color = 'bg-green-200'
-            border = 'border-green-300'
-        elif daily_time < 60:
-            color = 'bg-green-400'
-            border = 'border-green-500'
-        elif daily_time < 120:
-            color = 'bg-green-600'
-            border = 'border-green-700'
-        else:
-            color = 'bg-green-800'
-            border = 'border-green-900'
-
-        heatmap_data.append({
-            'label': date.strftime('%a, %b %d'),
-            'minutes': daily_time,
-            'color': color,
-            'border': border,
-            'day_label': date.strftime('%a')  # ✅ ADD THIS LINE
-        })
-
-    # Day names for calendar header
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-    # ===== RECENT TASKS & LOGS =====
-    recent_tasks = Task.objects.filter(
-        user=friend,
-        status='completed',
-        completed_at__date__gte=week_ago
-    ).order_by('-completed_at')[:10]
+    # ===== WEEKLY OVERVIEW FOR LINE CHART =====
+    last_7_days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    
+    labels = []
+    data = []
+    for d in last_7_days:
+        minutes = (
+            DailyLog.objects.filter(user=friend, date=d).aggregate(
+                total=Sum("duration")
+            )["total"]
+            or 0
+        )
+        labels.append(d.strftime("%a"))
+        data.append(minutes)
 
-    recent_logs = DailyLog.objects.filter(
-        user=friend,
-        date__gte=week_ago
-    ).select_related('category').order_by('-date')[:10]
+    weekly_overview = {
+        'labels': labels,
+        'data': data
+    } if any(data) else None
 
     context = {
         'friend': friend,
@@ -1366,10 +1437,21 @@ def view_friend_profile(request, friendship_id):
         'activity_streak': activity_streak,
         'weekly_data': json.dumps(weekly_data),
         'category_data': json.dumps(category_data),
-        'heatmap_data': heatmap_data,
+        'category_data_list': category_data_list,
+        'task_data': json.dumps(task_data),
+        'category_total_time': category_total_time,
+        'task_total_time': task_total_time,
         'day_names': day_names,
-        'recent_tasks': recent_tasks,
-        'recent_logs': recent_logs,
+        'today': today,
+        'today_tasks_count': today_tasks_count,
+        'completed_today': completed_today,
+        'today_time': today_time,
+        'logs_this_month': logs_this_month,
+        'weekly_overview': weekly_overview,
+        'calendar_days': calendar_days,
+        'month_name': calendar.month_name[today.month],
+        'selected_year': today.year,
+        'selected_month': today.month,
     }
     return render(request, 'tracker/friend_profile.html', context)
 

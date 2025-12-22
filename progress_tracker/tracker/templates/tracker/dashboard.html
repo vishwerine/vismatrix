@@ -34,7 +34,7 @@
           <i class="bi bi-stopwatch" aria-hidden="true"></i>
           <span>Log Time</span>
         </a>
-        <a href="{% url 'analytics' %}" class="btn btn-ghost gap-2">
+        <a href="{% url 'analytics' %}" class="btn btn-primary gap-2">
           <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
           <span>Analytics</span>
         </a>
@@ -87,7 +87,10 @@
 
             <div class="flex-1 min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="font-semibold text-sm">{{ item.user.username }}</span>
+                <a href="{% url 'view_friend_profile' item.friendship_id %}" 
+                   class="font-semibold text-sm link link-primary hover:underline">
+                  {{ item.user.username }}
+                </a>
                 {% if item.type == 'task' %}
                   <span class="badge badge-success badge-sm">Task</span>
                 {% else %}

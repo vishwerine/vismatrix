@@ -39,7 +39,7 @@ from django.db.models import Q
 class DailyLogForm(forms.ModelForm):
     class Meta:
         model = DailyLog
-        fields = ['date', 'activity', 'description', 'category', 'duration']
+        fields = ['date', 'activity', 'description', 'category', 'task', 'duration']
         widgets = {
             'date': forms.DateInput(attrs={
                 'type': 'date',
@@ -52,15 +52,31 @@ class DailyLogForm(forms.ModelForm):
     # forms.py - Default to today in form
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
+        initial = kwargs.get('initial', {})
+        
+        # ✅ Default to TODAY in form (not model) - only if not already set
+        if 'date' not in initial:
+            initial['date'] = timezone.localdate()
+            kwargs['initial'] = initial
+        
         super().__init__(*args, **kwargs)
     
-        # ✅ Default to TODAY in form (not model)
-        if not self.data:
-            self.initial['date'] = timezone.localdate()
-    
-        #... rest of init
+        if user:
+            # Filter categories first
+            from django.db.models import Q
+            self.fields['category'].queryset = Category.objects.filter(
+                Q(is_global=True) | Q(user=user)
+            )
+            self.fields['category'].label_from_instance = self.label_from_instance
+            
+            # Filter tasks to user's tasks only - do this before setting initial
+            self.fields['task'].queryset = Task.objects.filter(user=user)
+            self.fields['task'].required = True  # Make task selection required
 
-
+    def label_from_instance(self, obj):
+        if obj.is_global:
+            return f"🌐 {obj.name}"
+        return obj.name
 
 
 class CategoryForm(forms.ModelForm):

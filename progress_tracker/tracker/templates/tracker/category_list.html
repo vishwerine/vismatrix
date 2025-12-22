@@ -16,7 +16,7 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-        {% for category in custom_categories %}
+        {% for category in user_categories %}
         <div class="card bg-base-100 shadow-sm border border-base-200">
             <div class="card-body p-4">
                 <div class="flex justify-between items-start">
@@ -32,7 +32,7 @@
                 </div>
                 
                 <div class="card-actions justify-end mt-4 pt-4 border-t border-base-100">
-                    <a href="{% url 'category_update' category.id %}" class="btn btn-sm btn-ghost">Edit</a>
+                    <a href="{% url 'category_edit' category.id %}" class="btn btn-sm btn-ghost">Edit</a>
                     <a href="{% url 'category_delete' category.id %}" class="btn btn-sm btn-ghost text-error">Delete</a>
                 </div>
             </div>

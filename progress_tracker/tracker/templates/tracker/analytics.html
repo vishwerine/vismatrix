@@ -331,11 +331,49 @@
   </section>
   {% endif %}
 
+  <!-- Task breakdown -->
+  {% if task_data %}
+  <section class="card border border-base-200 bg-base-100" aria-label="Task breakdown">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <i class="bi bi-list-task" aria-hidden="true"></i>
+            <span>Task distribution</span>
+          </h2>
+          <p class="text-sm text-base-content/70 mt-1">Minutes by task (weekly).</p>
+        </div>
+        <span class="badge badge-outline">Weekly</span>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
+          <div class="chart-wrap" style="height: 320px;">
+            <canvas id="taskChart" class="w-full" aria-label="Task distribution chart" role="img"></canvas>
+          </div>
+        </div>
+
+        <div class="space-y-3">
+          {% for item in task_data %}
+          <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
+            <div class="flex items-center justify-between gap-3">
+              <span class="font-semibold">{{ item.name }}</span>
+              <span class="font-bold tabular-nums">{{ item.value }} min</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {{ weekly_overview|json_script:"weekly-data" }}
 {{ category_data|json_script:"category-data" }}
+{{ task_data|json_script:"task-data" }}
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -410,6 +448,62 @@ document.addEventListener('DOMContentLoaded', function() {
     ];
 
     new Chart(ctx2, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+          borderColor: '#ffffff',
+          borderWidth: 2,
+          hoverOffset: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: {
+          legend: {
+            position: 'bottom',
+            labels: { boxWidth: 10, usePointStyle: true, padding: 16 }
+          },
+          tooltip: {
+            callbacks: {
+              label: (context) => {
+                const total = context.dataset.data.reduce((a,b) => a + b, 0);
+                const pct = total ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                return `${context.label}: ${context.parsed} min (${pct}%)`;
+              }
+            }
+          }
+        },
+        animation: false
+      }
+    });
+  }
+
+  const taskData = JSON.parse(document.getElementById('task-data').textContent || '[]');
+  if (taskData.length > 0) {
+    const labels = taskData.map(i => i.name);
+    const values = taskData.map(i => i.value);
+    const ctx3 = document.getElementById('taskChart').getContext('2d');
+
+    // Color set: distinct + readable (avoid very light colours)
+    const colors = [
+      'rgba(29, 78, 216, 0.85)',  // blue
+      'rgba(17, 94, 89, 0.85)',   // teal
+      'rgba(21, 128, 61, 0.85)',  // green
+      'rgba(161, 98, 7, 0.85)',   // amber
+      'rgba(185, 28, 28, 0.85)',  // red
+      'rgba(91, 33, 182, 0.85)',  // purple
+      'rgba(180, 83, 9, 0.85)',   // orange
+      'rgba(13, 148, 136, 0.85)', // cyan
+      'rgba(34, 197, 94, 0.85)',  // lime
+      'rgba(251, 146, 60, 0.85)'  // yellow
+    ];
+
+    new Chart(ctx3, {
       type: 'doughnut',
       data: {
         labels,
