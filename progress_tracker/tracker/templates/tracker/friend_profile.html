@@ -56,8 +56,8 @@
                     {% endfor %}
                 </div>
                 <div class="grid grid-cols-7 gap-1 mt-1">
-                    {% for day_label in day_labels %}
-                    <div class="text-center text-[10px] text-base-content/50">{{ day_label|slice:":1" }}</div>
+                    {% for day_name in day_names %}
+                    <div class="text-center text-[10px] text-base-content/50">{{ day_name|slice:":3" }}</div>
                     {% endfor %}
                 </div>
             </div>

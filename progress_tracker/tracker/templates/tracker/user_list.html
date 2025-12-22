@@ -126,16 +126,23 @@
     
     fetch(`/users/${userId}/send_request/`, { 
       method: 'POST', 
-      headers: { 'X-CSRFToken': '{{ csrf_token }}' } 
+      headers: { 
+        'X-CSRFToken': '{{ csrf_token }}',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json'
+      } 
     })
-    .then(r => r.json())
+    .then(r => {
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+      }
+      return r.json();
+    })
     .then(data => {
       showToast(data.message, data.status);
       if (data.status === 'success') {
-        button.classList.remove('btn-primary');
-        button.classList.add('btn-disabled');
         button.disabled = true;
-        button.innerHTML = '<i class="bi bi-check-circle"></i><span class="hidden sm:inline">Requested</span>';
+        button.innerHTML = '<i class="bi bi-check-circle"></i><span class="hidden sm:inline">Friends</span>';
       } else {
         button.disabled = false;
         button.innerHTML = originalHTML;

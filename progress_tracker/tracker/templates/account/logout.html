@@ -1,146 +1,130 @@
+{% load static %}
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="Confirm sign out from VisMatrix.Space">
+  <meta name="theme-color" content="#1d4ed8">
   <title>Sign Out Confirmation - VisMatrix.Space</title>
 
-  <!-- Tailwind CDN -->
+  <!-- App Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'branding/vismatrixicon.png' %}">
+
+  <!-- Tailwind + DaisyUI + Bootstrap Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
   <style>
-    /* WCAG AA compliant animations */
+    /* Logout page specific styles - matches base.html design system */
+    .logout-hero {
+      background: linear-gradient(135deg, rgb(248 250 252 / 0.9) 0%, rgb(241 245 249 / 0.7) 100%);
+      backdrop-filter: blur(20px);
+    }
+    
+    .logout-card {
+      background: rgb(255 255 255 / 0.98);
+      border: 1px solid rgb(226 232 240 / 0.8);
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.1);
+    }
+    
+    .logout-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    }
+    
+    /* Animations matching base.html */
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
+      from { opacity: 0; transform: translateY(30px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    @keyframes float {
-      0%, 100% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-10px) scale(1.02); }
-    }
-    /* High contrast focus rings */
-    .focus-ring:focus-visible {
-      outline: 3px solid #2563eb;
-      outline-offset: 2px;
-    }
-    /* Reduced motion support */
+    
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+    
+    /* Focus ring matching design system */
+    :focus-visible {
+      box-shadow: 0 0 0 3px rgb(29 78 216 / 0.25);
+      border-radius: 12px;
     }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-emerald-50/30 font-sans antialiased flex items-center justify-center p-4 lg:p-8 relative overflow-hidden">
-  
-  <!-- Subtle decorative elements -->
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute top-20 left-20 w-64 h-64 bg-gradient-to-r from-blue-200/20 to-emerald-200/20 rounded-full blur-xl animate-float-slow"></div>
-    <div class="absolute bottom-20 right-20 w-72 h-72 bg-gradient-to-r from-emerald-200/20 to-purple-200/20 rounded-full blur-xl animate-float-slow delay-1000"></div>
-  </div>
 
-  <div class="relative z-10 w-full max-w-sm lg:max-w-md bg-white/95 backdrop-blur-xl shadow-2xl border border-slate-200/50 rounded-2xl lg:rounded-3xl overflow-hidden animate-slideUp transition-all duration-300 hover:shadow-3xl" 
-       role="main" aria-labelledby="logout-title">
+<body class="min-h-screen flex items-center justify-center p-4 lg:p-8 logout-hero">
+  
+
+  <main id="main-logout" class="w-full max-w-sm lg:max-w-md logout-card rounded-3xl overflow-hidden animate-slideUp" role="main" aria-labelledby="logout-title">
     
-    <!-- Header - High contrast accessible -->
-    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white p-8 lg:p-10 text-center relative">
-      <div class="w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-6 bg-white/20 rounded-2xl flex items-center justify-center shadow-xl ring-2 ring-white/30">
-        <i class="bi bi-box-arrow-right text-4xl lg:text-5xl" aria-hidden="true"></i>
+    <!-- Header -->
+    <div class="logout-header text-white p-8 lg:p-10 text-center relative overflow-hidden">
+      <div class="w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-8 bg-white/20 rounded-2xl flex items-center justify-center shadow-2xl ring-2 ring-white/30">
+        <i class="bi bi-box-arrow-right text-3xl lg:text-4xl" aria-hidden="true"></i>
       </div>
-      <h1 id="logout-title" class="text-3xl lg:text-4xl font-black tracking-tight mb-3" role="banner">
+      <h1 id="logout-title" class="text-3xl lg:text-4xl font-black tracking-tight mb-4">
         Sign Out?
       </h1>
-      <p class="text-lg lg:text-xl font-semibold text-slate-200 leading-relaxed">
+      <p class="text-xl font-semibold text-slate-200 mb-6 opacity-90 leading-relaxed">
         Confirm you want to sign out of VisMatrix.Space
       </p>
     </div>
 
     <div class="p-8 lg:p-10 space-y-6">
       <!-- Reassurance message -->
-      <div class="bg-gradient-to-r from-emerald-50 to-blue-50 border-l-6 border-emerald-500 border border-emerald-200 text-emerald-900 p-6 rounded-2xl" 
-           role="status" aria-label="Data safety confirmation">
-        <div class="flex items-start gap-3">
-          <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg">
-            <i class="bi bi-shield-check text-white text-xl" aria-hidden="true"></i>
-          </div>
-          <div>
-            <p class="font-semibold text-lg leading-6">
-              Your progress is safe
-            </p>
-            <p class="text-base text-emerald-800 leading-relaxed">
-              All data automatically saved and ready when you return
-            </p>
-          </div>
+      <div class="alert alert-success shadow-lg border-l-4">
+        <i class="bi bi-shield-check flex-shrink-0"></i>
+        <div>
+          <h3 class="font-bold text-lg">Your progress is safe</h3>
+          <div class="text-sm">All data automatically saved and ready when you return</div>
         </div>
       </div>
 
-      <!-- Action buttons - WCAG AA compliant -->
-      <form method="post" class="space-y-3" role="form">
-        {% csrf_token %}
-        
-        <button 
-          type="submit"
-          class="w-full bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200 text-lg flex items-center justify-center gap-3 focus-ring"
-          aria-describedby="logout-confirm">
-          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-          <span>Yes, Sign Me Out</span>
-        </button>
-      </form>
+      <!-- Action buttons -->
+      <div class="space-y-3">
+        <form method="post" class="w-full">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-error w-full h-14 text-lg font-bold shadow-lg lg:btn-lg gap-3">
+            <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+            <span>Yes, Sign Me Out</span>
+          </button>
+        </form>
 
-      <a 
-        href="{% url 'dashboard' %}"
-        class="w-full block bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-900 hover:text-slate-800 font-bold py-4 px-6 rounded-2xl shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200 text-lg flex items-center justify-center gap-3 focus-ring text-center"
-        role="button" 
-        aria-label="Cancel and return to dashboard">
-        <i class="bi bi-arrow-left" aria-hidden="true"></i>
-        <span>Stay Signed In</span>
-      </a>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline w-full h-14 text-lg font-bold shadow-sm lg:btn-lg gap-3">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          <span>Stay Signed In</span>
+        </a>
+      </div>
 
       <!-- Help text -->
-      <div class="pt-6 border-t border-slate-200 text-center">
+      <div class="text-center pt-6 border-t border-slate-200">
         <p class="text-sm text-slate-600">
           You'll need to sign in again to access your progress
         </p>
       </div>
     </div>
-  </div>
+  </main>
 
   <script>
     // Enhanced accessibility and UX
-    document.addEventListener('DOMContentLoaded', function() {
-      // Focus management
-      const firstButton = document.querySelector('button[type="submit"]');
-      if (firstButton) {
-        firstButton.focus();
-      }
-
-      // Keyboard navigation enhancement
-      document.addEventListener('keydown', function(e) {
-        // Escape key cancels logout
+    document.addEventListener('DOMContentLoaded', () => {
+      // Auto-focus logout button
+      const logoutBtn = document.querySelector('button[type="submit"]');
+      if (logoutBtn) logoutBtn.focus();
+      
+      // Escape key cancels logout
+      document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           window.location.href = "{% url 'dashboard' %}";
         }
-        
-        // Enter on buttons
-        if (e.key === 'Enter' && e.target.tagName === 'BUTTON') {
-          e.target.click();
-        }
       });
-
-      // Prevent accidental form submission
-      const form = document.querySelector('form');
+      
+      // Prevent double-submit
       let submitCount = 0;
+      const form = document.querySelector('form');
       if (form) {
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', () => {
           submitCount++;
-          if (submitCount > 1) {
-            e.preventDefault();
-            return false;
-          }
+          if (submitCount > 1) return false;
         });
       }
     });

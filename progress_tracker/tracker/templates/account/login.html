@@ -1,211 +1,168 @@
 {% load socialaccount %}
+{% load static %}
+{% load widget_tweaks %}
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="Sign in to VisMatrix.Space - Track your progress with friends">
+  <meta name="theme-color" content="#1d4ed8">
   <title>Login - VisMatrix.Space</title>
 
-  <!-- Tailwind CDN -->
+  <!-- App Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'branding/vismatrixicon.png' %}">
+
+  <!-- Tailwind + DaisyUI + Bootstrap Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Bootstrap Icons CDN -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
   <style>
-    /* WCAG AA compliant accessible animations */
+    /* Login page specific styles - matches base.html design system */
+    .login-hero {
+      background: linear-gradient(135deg, rgb(248 250 252 / 0.9) 0%, rgb(241 245 249 / 0.7) 100%);
+      backdrop-filter: blur(20px);
+    }
+    
+    .login-card {
+      background: rgb(255 255 255 / 0.98);
+      border: 1px solid rgb(226 232 240 / 0.8);
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.1);
+    }
+    
+    .login-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    }
+    
+    /* Animations matching base.html */
     @keyframes slideUp {
       from { opacity: 0; transform: translateY(30px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    @keyframes float {
-      0%, 100% { transform: translate(0, 0) scale(1); }
-      33% { transform: translate(30px, -30px) scale(1.05); }
-      66% { transform: translate(-30px, 30px) scale(0.95); }
-    }
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-    /* High contrast focus rings */
-    .focus-ring:focus-visible {
-      outline: 3px solid hsl(221, 83%, 53%);
-      outline-offset: 2px;
-    }
-    /* Reduced motion support */
+    
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+    
+    /* Enhanced focus states for inputs */
+    .input:focus {
+      border-color: rgb(29 78 216);
+      box-shadow: 0 0 0 3px rgb(29 78 216 / 0.25);
     }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 font-sans antialiased relative overflow-hidden">
+
+<body class="min-h-screen flex items-center justify-center p-4 lg:p-8 login-hero">
   
-  <!-- Subtle decorative background -->
-  <div class="absolute inset-0">
-    <div class="absolute -top-40 -left-40 w-80 h-80 bg-gradient-to-r from-blue-200/30 to-emerald-200/30 rounded-full blur-3xl animate-float-slow"></div>
-    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-gradient-to-l from-emerald-200/30 to-purple-200/30 rounded-full blur-3xl animate-float-slow delay-1000"></div>
-  </div>
 
-  <div class="relative z-10 flex min-h-screen items-center justify-center p-4 lg:p-8">
-    <div class="w-full max-w-md bg-white/95 backdrop-blur-xl shadow-2xl border border-slate-200/50 rounded-3xl overflow-hidden animate-slideUp" 
-         role="main" aria-labelledby="login-title">
-      
-      <!-- Header - High contrast accessible -->
-      <header class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white p-8 lg:p-12 text-center relative overflow-hidden">
-        <div class="icon-container w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-6 bg-white/20 rounded-2xl flex items-center justify-center shadow-xl ring-2 ring-white/30">
-          <i class="bi bi-graph-up-arrow text-4xl lg:text-5xl" aria-hidden="true"></i>
-        </div>
-        <h1 id="login-title" class="text-3xl lg:text-4xl font-black tracking-tight mb-3" role="banner">
-          Welcome Back!
-        </h1>
-        <p class="text-lg lg:text-xl font-semibold text-slate-200 mb-3">
-          Sign in to your VisMatrix.Space account
-        </p>
-        <div class="inline-block bg-emerald-400/90 text-emerald-900 px-4 py-2 rounded-full font-bold text-sm shadow-lg border border-emerald-300/50">
-          Agentic AI arrives March 2026
-        </div>
-      </header>
-
-      <main class="p-8 lg:p-10 space-y-6">
-        <!-- Error alerts -->
-        {% if form.non_field_errors %}
-        <div class="border-l-6 border-red-500 bg-red-50 border border-red-200 text-red-900 p-4 rounded-lg" 
-             role="alert" aria-live="polite">
-          <div class="flex items-start gap-2">
-            <i class="bi bi-exclamation-triangle-fill mt-0.5 flex-shrink-0 text-lg" aria-hidden="true"></i>
-            <div>
-              {% for error in form.non_field_errors %}
-                <p class="font-medium">{{ error }}</p>
-              {% endfor %}
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
-        <!-- Google Sign In - WCAG AA compliant -->
-        {% get_providers as socialaccount_providers %}
-        {% if socialaccount_providers %}
-        <div class="space-y-3">
-          <a href="{% provider_login_url 'google' %}"
-             class="group relative flex w-full items-center justify-center gap-3 rounded-2xl border-2 border-slate-300 bg-white py-4 px-6 font-semibold text-slate-900 shadow-sm hover:shadow-md hover:border-slate-400 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200 focus-ring"
-             role="button" aria-label="Continue with Google account">
-            <svg width="20" height="20" viewBox="0 0 24 24" class="flex-shrink-0 group-hover:scale-110 transition-transform" aria-hidden="true">
-              <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-              <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-              <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-              <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-            </svg>
-            <span>Continue with Google</span>
-          </a>
-        </div>
-
-        <div class="relative text-center text-slate-500 my-6">
-          <span class="relative z-10 bg-white px-6 py-1 text-sm font-medium">or use email</span>
-          <div class="absolute inset-0 top-1/2 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-        </div>
-        {% endif %}
-
-        <!-- Login Form - WCAG AA compliant -->
-        <form method="post" class="space-y-5" novalidate role="form" aria-describedby="login-help">
-          {% csrf_token %}
-          
-          <!-- Username/Email Field -->
-          <div>
-            <label for="{{ form.login.id_for_label }}" class="block mb-2 font-semibold text-slate-900 text-sm leading-6">
-              {{ form.login.label }}
-            </label>
-            <input 
-              type="text" 
-              name="{{ form.login.name }}" 
-              id="{{ form.login.id_for_label }}"
-              class="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 placeholder-slate-500 text-base leading-6 shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:border-blue-500 invalid:border-red-500 invalid:ring-2 invalid:ring-red-500/50 hover:border-slate-300 focus-ring"
-              placeholder="Username or email address"
-              value="{{ form.login.value|default_if_none:'' }}"
-              required 
-              aria-describedby="{{ form.login.id_for_label }}-help"
-              autocomplete="username email"
-            />
-            {% if form.login.errors %}
-            <p id="{{ form.login.id_for_label }}-help" class="mt-2 text-sm text-red-700 flex items-center gap-1">
-              <i class="bi bi-exclamation-circle-fill flex-shrink-0" aria-hidden="true"></i>
-              {{ form.login.errors|first }}
-            </p>
-            {% endif %}
-          </div>
-
-          <!-- Password Field -->
-          <div>
-            <label for="{{ form.password.id_for_label }}" class="block mb-2 font-semibold text-slate-900 text-sm leading-6">
-              {{ form.password.label }}
-            </label>
-            <input 
-              type="password" 
-              name="{{ form.password.name }}" 
-              id="{{ form.password.id_for_label }}"
-              class="w-full px-4 py-3 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 placeholder-slate-500 text-base leading-6 shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:border-blue-500 invalid:border-red-500 invalid:ring-2 invalid:ring-red-500/50 hover:border-slate-300 focus-ring"
-              placeholder="Enter your password"
-              required 
-              autocomplete="current-password"
-            />
-            {% if form.password.errors %}
-            <p id="{{ form.password.id_for_label }}-help" class="mt-2 text-sm text-red-700 flex items-center gap-1">
-              <i class="bi bi-exclamation-circle-fill flex-shrink-0" aria-hidden="true"></i>
-              {{ form.password.errors|first }}
-            </p>
-            {% endif %}
-          </div>
-
-          <!-- Submit Button -->
-          <button 
-            type="submit"
-            class="w-full bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white font-bold py-4 px-6 rounded-2xl shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200 text-lg flex items-center justify-center gap-3 focus-ring"
-            aria-describedby="login-help">
-            <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-            <span>Sign In</span>
-          </button>
-        </form>
-
-        <!-- Help text and signup link -->
-        <div class="text-center pt-6 border-t border-slate-200">
-          <p class="text-sm text-slate-600 mb-2">
-            Need help? <a href="#" class="font-semibold text-slate-900 hover:text-slate-700">Forgot password?</a>
-          </p>
-          <p class="text-sm text-slate-600">
-            Don't have an account? 
-            <a href="{% url 'account_signup' %}" class="font-semibold text-slate-900 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500/50 rounded focus-ring">Create one now</a>
-          </p>
-        </div>
-      </main>
+  <main id="main-login" class="w-full max-w-md login-card rounded-3xl overflow-hidden animate-slideUp" role="main" aria-labelledby="login-title">
+    
+    <!-- Header -->
+    <div class="login-header text-white p-8 lg:p-12 text-center relative overflow-hidden">
+      <div class="w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-8 bg-white/20 rounded-2xl flex items-center justify-center shadow-2xl ring-2 ring-white/30">
+        <i class="bi bi-graph-up-arrow text-3xl lg:text-4xl" aria-hidden="true"></i>
+      </div>
+      <h1 id="login-title" class="text-3xl lg:text-4xl font-black tracking-tight mb-4">
+        Welcome Back!
+      </h1>
+      <p class="text-xl font-semibold text-slate-200 mb-6 opacity-90">
+        Sign in to your VisMatrix.Space account
+      </p>
+      <div class="inline-block bg-emerald-400/90 text-emerald-900 px-6 py-3 rounded-2xl font-bold text-sm shadow-lg border border-emerald-300/50 tracking-wide">
+        Agentic AI arrives March 2026
+      </div>
     </div>
-  </div>
+
+    <div class="p-8 lg:p-10 space-y-6">
+      <!-- Social Login -->
+      {% get_providers as socialaccount_providers %}
+      {% if socialaccount_providers %}
+      <div class="card-compact p-0">
+        <a href="{% provider_login_url 'google' %}"
+           class="btn btn-outline w-full gap-3 normal-case h-14 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-md transition-all duration-200 text-base font-semibold"
+           role="button" aria-label="Continue with Google account">
+          <i class="bi bi-google text-xl" aria-hidden="true"></i>
+          <span>Continue with Google</span>
+        </a>
+      </div>
+
+      <div class="divider text-sm text-slate-500 before:bg-slate-200 after:bg-slate-200">or use email</div>
+      {% endif %}
+
+      <!-- Error alerts -->
+      {% if form.non_field_errors %}
+      <div class="alert alert-error shadow-lg">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+        <span>{% for error in form.non_field_errors %}{{ error }}{% endfor %}</span>
+      </div>
+      {% endif %}
+
+      <!-- Login Form -->
+      <form method="post" class="space-y-6" novalidate role="form">
+        {% csrf_token %}
+        
+        <!-- Username/Email Field -->
+        <div class="form-control w-full">
+          <label for="{{ form.login.id_for_label }}" class="label">
+            <span class="label-text font-semibold text-base">Email or Username</span>
+          </label>
+          {% render_field form.login class="input input-bordered w-full h-14 text-base leading-relaxed lg:input-lg" placeholder="Enter email or username" autocomplete="username email" %}
+          {% if form.login.errors %}
+          <label class="label">
+            <span class="label-text-alt text-error">{{ form.login.errors|first }}</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <!-- Password Field -->
+        <div class="form-control w-full">
+          <label for="{{ form.password.id_for_label }}" class="label">
+            <span class="label-text font-semibold text-base">Password</span>
+          </label>
+          {% render_field form.password class="input input-bordered w-full h-14 text-base leading-relaxed lg:input-lg" placeholder="Enter your password" autocomplete="current-password" %}
+          {% if form.password.errors %}
+          <label class="label">
+            <span class="label-text-alt text-error">{{ form.password.errors|first }}</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary w-full h-14 text-lg font-bold shadow-lg hover:shadow-xl gap-3 lg:btn-lg">
+          <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+          <span>Sign In</span>
+        </button>
+      </form>
+
+      <!-- Help links -->
+      <div class="text-center space-y-3 pt-6 border-t border-slate-200">
+        <p class="text-sm text-slate-600">
+          <a href="#" class="link link-hover font-semibold text-slate-900 hover:text-primary">Forgot password?</a>
+        </p>
+        <p class="text-sm text-slate-600">
+          Don't have an account? 
+          <a href="{% url 'account_signup' %}" class="link link-hover font-bold text-primary">Create one now</a>
+        </p>
+      </div>
+    </div>
+  </main>
 
   <script>
-    // Enhanced accessibility keyboard navigation
-    document.addEventListener('DOMContentLoaded', function() {
-      // Focus management for better UX
-      const form = document.querySelector('form');
-      if (form) {
-        form.addEventListener('submit', function() {
-          // Allow Enter key to submit
+    // Auto-focus first field and enhance accessibility
+    document.addEventListener('DOMContentLoaded', () => {
+      const firstField = document.querySelector('input[type="text"], input[type="email"]');
+      if (firstField) firstField.focus();
+      
+      // Auto-dismiss alerts after 8s
+      setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(alert => {
+          alert.style.transition = 'opacity 0.5s';
+          alert.style.opacity = '0';
+          setTimeout(() => alert.remove(), 500);
         });
-        
-        // Auto-focus first field
-        const firstField = form.querySelector('input[type="text"], input[type="email"]');
-        if (firstField) {
-          firstField.focus();
-        }
-      }
-
-      // Trap focus within modal for screen readers
-      const mainContent = document.querySelector('[role="main"]');
-      mainContent.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-          // Allow escape to dismiss if needed
-        }
-      });
+      }, 8000);
     });
   </script>
 </body>

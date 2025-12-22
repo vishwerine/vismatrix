@@ -1,0 +1,232 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Daily Summary - {{ selected_date|date:"M j, Y" }} - VisMatrix{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header with Navigation -->
+    <header class="flex flex-col gap-4" aria-label="Daily summary header">
+        <div class="flex items-center justify-between">
+            <h1 class="text-2xl md:text-3xl font-black text-base-content flex items-center gap-2">
+                <i class="bi bi-calendar-day" aria-hidden="true"></i>
+                <span>{{ selected_date|date:"l, F j, Y" }}</span>
+            </h1>
+            <div class="flex gap-2">
+                {% if has_prev %}
+                <a href="{% url 'daily_summary' prev_date.year prev_date.month prev_date.day %}" 
+                   class="btn btn-sm btn-ghost">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                    <span class="hidden sm:inline">Previous</span>
+                </a>
+                {% endif %}
+                <a href="{% url 'analytics' %}?year={{ selected_date.year }}&month={{ selected_date.month }}" 
+                   class="btn btn-sm btn-outline">
+                    <i class="bi bi-calendar" aria-hidden="true"></i>
+                    <span class="hidden sm:inline">Calendar</span>
+                </a>
+                {% if has_next %}
+                <a href="{% url 'daily_summary' next_date.year next_date.month next_date.day %}" 
+                   class="btn btn-sm btn-ghost">
+                    <span class="hidden sm:inline">Next</span>
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Summary Stats -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="stats shadow bg-base-100 border border-base-200">
+                <div class="stat p-3">
+                    <div class="stat-figure text-primary">
+                        <i class="bi bi-clock w-5 h-5" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-title text-xs">Time Logged</div>
+                    <div class="stat-value text-xl text-primary">{{ total_time }}</div>
+                    <div class="stat-desc text-xs">minutes</div>
+                </div>
+            </div>
+            
+            <div class="stats shadow bg-base-100 border border-base-200">
+                <div class="stat p-3">
+                    <div class="stat-figure text-success">
+                        <i class="bi bi-check-circle w-5 h-5" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-title text-xs">Tasks Done</div>
+                    <div class="stat-value text-xl text-success">{{ total_tasks }}</div>
+                    <div class="stat-desc text-xs">completed</div>
+                </div>
+            </div>
+            
+            <div class="stats shadow bg-base-100 border border-base-200">
+                <div class="stat p-3">
+                    <div class="stat-figure text-info">
+                        <i class="bi bi-journal-text w-5 h-5" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-title text-xs">Activities</div>
+                    <div class="stat-value text-xl text-info">{{ total_logs }}</div>
+                    <div class="stat-desc text-xs">logged</div>
+                </div>
+            </div>
+            
+            <div class="stats shadow bg-base-100 border border-base-200">
+                <div class="stat p-3">
+                    <div class="stat-figure text-secondary">
+                        <i class="bi bi-tags w-5 h-5" aria-hidden="true"></i>
+                    </div>
+                    <div class="stat-title text-xs">Categories</div>
+                    <div class="stat-value text-xl text-secondary">{{ category_breakdown|length }}</div>
+                    <div class="stat-desc text-xs">used</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Time Logs -->
+        <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Time logs">
+            <div class="card-body p-4 md:p-6">
+                <h2 class="card-title text-lg flex items-center gap-2">
+                    <i class="bi bi-clock-history" aria-hidden="true"></i>
+                    <span>Time Logs</span>
+                    <span class="badge badge-info badge-sm">{{ total_logs }}</span>
+                </h2>
+                
+                {% if day_logs %}
+                <div class="space-y-3 mt-4">
+                    {% for log in day_logs %}
+                    <div class="flex gap-3 p-3 bg-base-50 rounded-lg">
+                        <div class="flex-1">
+                            <p class="font-medium text-sm">{{ log.activity }}</p>
+                            <div class="flex items-center gap-2 mt-1 text-xs text-base-content/60">
+                                <i class="bi bi-clock" aria-hidden="true"></i>
+                                <span>{{ log.duration }} minutes</span>
+                                {% if log.category %}
+                                <span class="mx-1">•</span>
+                                <i class="bi bi-tag" aria-hidden="true"></i>
+                                <span>{{ log.category.name }}</span>
+                                {% endif %}
+                            </div>
+                            {% if log.description %}
+                            <p class="text-xs text-base-content/70 mt-1">{{ log.description }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="flex flex-col items-center justify-center py-8 text-center opacity-60">
+                    <i class="bi bi-clock text-3xl mb-2" aria-hidden="true"></i>
+                    <p class="text-sm">No time logs for this day</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+        
+        <!-- Completed Tasks -->
+        <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Completed tasks">
+            <div class="card-body p-4 md:p-6">
+                <h2 class="card-title text-lg flex items-center gap-2">
+                    <i class="bi bi-check-circle" aria-hidden="true"></i>
+                    <span>Completed Tasks</span>
+                    <span class="badge badge-success badge-sm">{{ total_tasks }}</span>
+                </h2>
+                
+                {% if completed_tasks %}
+                <div class="space-y-3 mt-4">
+                    {% for task in completed_tasks %}
+                    <div class="flex gap-3 p-3 bg-success/5 rounded-lg border border-success/20">
+                        <div class="flex-1">
+                            <p class="font-medium text-sm">{{ task.title }}</p>
+                            {% if task.description %}
+                            <p class="text-xs text-base-content/70 mt-1">{{ task.description }}</p>
+                            {% endif %}
+                            <div class="flex items-center gap-2 mt-1 text-xs text-base-content/60">
+                                <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                                <span>Completed at {{ task.completed_at|date:"g:i A" }}</span>
+                                {% if task.category %}
+                                <span class="mx-1">•</span>
+                                <i class="bi bi-tag" aria-hidden="true"></i>
+                                <span>{{ task.category.name }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="text-success">
+                            <i class="bi bi-check-circle-fill text-lg" aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="flex flex-col items-center justify-center py-8 text-center opacity-60">
+                    <i class="bi bi-check-circle text-3xl mb-2" aria-hidden="true"></i>
+                    <p class="text-sm">No tasks completed this day</p>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+    </div>
+
+    <!-- Category Breakdown -->
+    {% if category_breakdown %}
+    <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Category breakdown">
+        <div class="card-body p-4 md:p-6">
+            <h2 class="card-title text-lg flex items-center gap-2">
+                <i class="bi bi-pie-chart" aria-hidden="true"></i>
+                <span>Time by Category</span>
+            </h2>
+            
+            <div class="overflow-x-auto mt-4">
+                <table class="table table-compact w-full">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th class="text-center">Time</th>
+                            <th class="text-center">Activities</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for category in category_breakdown %}
+                        <tr>
+                            <td class="font-medium">
+                                {% if category.category__name %}
+                                    {{ category.category__name }}
+                                {% else %}
+                                    <span class="text-base-content/60">Uncategorized</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-primary badge-sm">{{ category.total_time }}m</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge badge-ghost badge-sm">{{ category.log_count }}</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="flex flex-wrap gap-3 justify-center">
+        <a href="{% url 'log_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-circle" aria-hidden="true"></i>
+            <span>Log Time</span>
+        </a>
+        <a href="{% url 'task_create' %}" class="btn btn-secondary">
+            <i class="bi bi-plus-square" aria-hidden="true"></i>
+            <span>Add Task</span>
+        </a>
+        <a href="{% url 'analytics' %}?year={{ selected_date.year }}&month={{ selected_date.month }}" class="btn btn-outline">
+            <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
+            <span>View Analytics</span>
+        </a>
+    </div>
+
+</div>
+{% endblock %}

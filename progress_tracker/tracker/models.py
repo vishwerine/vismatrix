@@ -137,3 +137,26 @@ class Friendship(models.Model):
     
     def __str__(self):
         return f"{self.user.username} is friends with {self.friend.username}"
+
+
+class ActivityReaction(models.Model):
+    """Reactions (stars) to friends' activities"""
+    REACTION_TYPES = [
+        ('star', 'Star'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_reactions')
+    # Can react to either a task completion or a daily log
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='reactions')
+    daily_log = models.ForeignKey(DailyLog, on_delete=models.CASCADE, null=True, blank=True, related_name='reactions')
+    reaction_type = models.CharField(max_length=10, choices=REACTION_TYPES, default='star')
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('user', 'task', 'daily_log')  # One reaction per user per activity
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        activity_type = "task" if self.task else "log"
+        activity_id = self.task.id if self.task else self.daily_log.id
+        return f"{self.user.username} starred {activity_type} {activity_id}"

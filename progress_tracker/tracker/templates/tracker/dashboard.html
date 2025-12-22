@@ -3,246 +3,295 @@
 {% block title %}Dashboard - VisMatrix{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<main class="space-y-6">
 
-    <!-- Greeting -->
-    <header class="flex flex-col gap-1" aria-label="Dashboard header">
-        <h1 class="text-2xl md:text-3xl font-black text-base-content flex items-center gap-2">
-            <i class="bi bi-speedometer2" aria-hidden="true"></i>
-            <span>Hello, {{ user.username }}! 👋</span>
-        </h1>
-        <div class="flex flex-wrap items-center gap-2 text-sm md:text-base text-base-content/70">
-            <p>Here's your progress overview.</p>
-            <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-base-200 text-base-content/70">
-                <i class="bi bi-calendar-event" aria-hidden="true"></i>
-                <span>{{ today|date:"D, M j" }}</span>
-            </span>
+  <!-- Header (simple, high-contrast, no gradients) -->
+  <header class="card border border-base-200 bg-base-100" role="banner">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content truncate">
+            Welcome back, {{ user.username }}!
+          </h1>
+          <p class="text-sm text-base-content/70 mt-1">
+            Your progress overview and updates for today.
+          </p>
         </div>
-    </header>
 
-    <!-- Key stats -->
-    <section class="grid grid-cols-2 md:grid-cols-4 gap-3" aria-label="Key stats">
-        <div class="stats shadow bg-base-100 border border-base-200">
-            <div class="stat p-3 md:p-4">
-                <div class="stat-figure text-primary">
-                    <i class="bi bi-calendar-check w-6 h-6 text-lg opacity-80" aria-hidden="true"></i>
-                </div>
-                <div class="stat-title text-xs uppercase tracking-wider">Today</div>
-                <div class="stat-value text-xl md:text-3xl text-primary">
-                    {{ today_tasks_count|default:0 }}
-                </div>
-                <div class="stat-desc text-xs">
-                    {{ completed_today|default:0 }} completed
-                </div>
-            </div>
+        <div class="flex items-center gap-2 text-sm text-base-content/70">
+          <i class="bi bi-calendar-event text-primary text-lg" aria-hidden="true"></i>
+          <span class="font-semibold">{{ today|date:"l, F j, Y" }}</span>
         </div>
-        
-        <div class="stats shadow bg-base-100 border border-base-200">
-            <div class="stat p-3 md:p-4">
-                <div class="stat-figure text-secondary">
-                    <i class="bi bi-fire w-6 h-6 text-lg opacity-80" aria-hidden="true"></i>
-                </div>
-                <div class="stat-title text-xs uppercase tracking-wider">Streak</div>
-                <div class="stat-value text-xl md:text-3xl text-secondary">
-                    {{ current_streak|default:0 }}
-                </div>
-                <div class="stat-desc text-xs">days active</div>
-            </div>
-        </div>
-        
-        <div class="stats shadow bg-base-100 border border-base-200">
-            <div class="stat p-3 md:p-4">
-                <div class="stat-figure text-base-content/60">
-                    <i class="bi bi-bar-chart-line w-6 h-6 text-lg opacity-80" aria-hidden="true"></i>
-                </div>
-                <div class="stat-title text-xs uppercase tracking-wider">Month</div>
-                <div class="stat-value text-xl md:text-3xl">
-                    {{ logs_this_month|default:0 }}
-                </div>
-                <div class="stat-desc text-xs">activities</div>
-            </div>
-        </div>
-        
-        <div class="stats shadow bg-base-100 border border-base-200">
-            <div class="stat p-3 md:p-4">
-                <div class="stat-figure text-base-content/60">
-                    <i class="bi bi-clock-history w-6 h-6 text-lg opacity-80" aria-hidden="true"></i>
-                </div>
-                <div class="stat-title text-xs uppercase tracking-wider">Time Tracked</div>
-                <div class="stat-value text-xl md:text-3xl">
-                    {{ total_time|default:0 }}
-                </div>
-                <div class="stat-desc text-xs">mins total</div>
-            </div>
-        </div>
-    </section>
+      </div>
 
-    <!-- Weekly Overview (mini chart) -->
-    <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Weekly overview">
-        <div class="card-body p-4 md:p-5">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="card-title text-base md:text-lg flex items-center gap-2">
-                    <i class="bi bi-graph-up-arrow" aria-hidden="true"></i>
-                    <span>Weekly Overview</span>
-                </h2>
-                <p class="text-xs text-base-content/60 hidden sm:block">
-                    Time logged across the last 7 days
-                </p>
-            </div>
-
-            {% if weekly_overview %}
-            <div class="flex items-end gap-2 md:gap-3 h-28 md:h-32">
-                {% for day in weekly_overview %}
-                <div class="flex flex-col items-center flex-1 min-w-0">
-                    <div class="w-full h-full bg-base-200 rounded-full overflow-hidden flex items-end">
-                        <div class="w-full bg-primary rounded-full transition-all duration-300"
-                             style="height: {{ day.percent|default:'0' }}%;"></div>
-                    </div>
-                    <span class="mt-1 text-[10px] md:text-[11px] uppercase tracking-wide text-base-content/60">
-                        {{ day.label }}
-                    </span>
-                    {% if day.minutes is not None %}
-                    <span class="text-[10px] md:text-[11px] text-base-content/70">
-                        {{ day.minutes }}m
-                    </span>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="flex flex-col items-center justify-center py-6 text-center text-sm text-base-content/60">
-                <i class="bi bi-graph-up w-10 h-10 text-2xl mb-2 opacity-70" aria-hidden="true"></i>
-                <p>No weekly data yet. Start logging time to see your trend.</p>
-            </div>
-            {% endif %}
-        </div>
-    </section>
-
-    <!-- Quick actions (mobile) -->
-    <section class="grid grid-cols-2 gap-3 md:hidden" aria-label="Quick actions">
-        <a href="{% url 'task_create' %}"
-           class="btn btn-outline gap-2 border-base-300 text-base-content hover:border-base-400 hover:bg-base-100">
-            <i class="bi bi-plus-square" aria-hidden="true"></i>
-            <span>New Task</span>
+      <!-- Quick actions (kept minimal and consistent) -->
+      <div class="mt-4 flex flex-col sm:flex-row gap-2">
+        <a href="{% url 'task_create' %}" class="btn btn-outline gap-2">
+          <i class="bi bi-plus-square" aria-hidden="true"></i>
+          <span>New Task</span>
         </a>
-        <a href="{% url 'log_create' %}"
-           class="btn btn-outline gap-2 border-base-300 text-base-content hover:border-base-400 hover:bg-base-100">
-            <i class="bi bi-stopwatch" aria-hidden="true"></i>
-            <span>Log Time</span>
+        <a href="{% url 'log_create' %}" class="btn btn-primary gap-2">
+          <i class="bi bi-stopwatch" aria-hidden="true"></i>
+          <span>Log Time</span>
         </a>
-    </section>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Today's Tasks -->
-        <section class="card bg-base-100 shadow-md border border-base-200 lg:col-span-2" aria-label="Today's tasks">
-            <div class="card-body p-4 md:p-6">
-                <div class="flex items-center justify-between mb-2">
-                    <h2 class="card-title text-lg flex items-center gap-2">
-                        <i class="bi bi-list-check" aria-hidden="true"></i>
-                        <span>Today's Tasks</span>
-                    </h2>
-                    <a href="{% url 'task_list' %}"
-                       class="text-xs link link-primary flex items-center gap-1">
-                        <span>View All</span>
-                        <i class="bi bi-arrow-right-short" aria-hidden="true"></i>
-                    </a>
-                </div>
-                
-                {% if pending_tasks %}
-                <ul class="space-y-2">
-                    {% for task in pending_tasks|slice:":5" %}
-                    <li class="flex items-center justify-between p-3 bg-base-50 rounded-lg hover:bg-base-200 transition border border-base-100">
-                        <div class="flex-1 min-w-0 mr-3">
-                            <p class="font-medium text-sm truncate">{{ task.title }}</p>
-                            {% if task.category %}
-                            <p class="text-xs text-base-content/60 flex items-center gap-1">
-                                <i class="bi bi-tag" aria-hidden="true"></i>
-                                <span>{{ task.category.name }}</span>
-                            </p>
-                            {% endif %}
-                        </div>
-                        <a href="{% url 'log_create' %}?task={{ task.id }}"
-                           class="btn btn-circle btn-sm btn-ghost text-primary"
-                           aria-label="Log time for {{ task.title }}">
-                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                        </a>
-                    </li>
-                    {% endfor %}
-                </ul>
-                {% else %}
-                <div class="flex flex-col items-center justify-center py-8 text-center opacity-60">
-                    <i class="bi bi-emoji-smile w-12 h-12 text-3xl mb-2" aria-hidden="true"></i>
-                    <p class="text-sm">All caught up! No pending tasks for today.</p>
-                </div>
-                {% endif %}
-            </div>
-        </section>
-
-        <!-- Right column: Requests + Recent Activity -->
-        <div class="space-y-6">
-            {% if pending_friend_requests %}
-            <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Friend requests">
-                <div class="card-body p-4">
-                    <h2 class="card-title text-base mb-2 flex items-center gap-2">
-                        <span class="indicator">
-                            <span>Friend Requests</span>
-                            <span class="indicator-item badge badge-primary badge-xs"></span>
-                        </span>
-                    </h2>
-                    <div class="space-y-3">
-                        {% for request in pending_friend_requests|slice:":2" %}
-                        <div class="flex items-center justify-between gap-2">
-                            <div class="flex items-center gap-2 min-w-0">
-                                <div class="avatar placeholder">
-                                    <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
-                                        <span class="text-xs">
-                                            {{ request.from_user.username|first|upper }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <span class="text-sm font-semibold truncate">
-                                    {{ request.from_user.username }}
-                                </span>
-                            </div>
-                            <div class="flex gap-1">
-                                <a href="{% url 'friend_requests' %}"
-                                   class="btn btn-xs btn-outline border-base-300 text-base-content hover:border-base-400 hover:bg-base-100">
-                                    <i class="bi bi-arrow-right-circle" aria-hidden="true"></i>
-                                    <span>Review</span>
-                                </a>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </section>
-            {% endif %}
-
-            <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Recent activity">
-                <div class="card-body p-4">
-                    <h2 class="card-title text-base flex items-center gap-2">
-                        <i class="bi bi-clock-history" aria-hidden="true"></i>
-                        <span>Recent Activity</span>
-                    </h2>
-                    <div class="space-y-4 mt-2">
-                        {% for log in recent_logs|slice:":4" %}
-                        <div class="flex gap-3 relative pb-4 last:pb-0 border-l border-base-300 ml-2 pl-4">
-                            <div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-primary ring-2 ring-base-100"></div>
-                            <div class="flex-1">
-                                <p class="text-sm font-medium">{{ log.activity }}</p>
-                                <p class="text-xs text-base-content/60 flex items-center gap-1">
-                                    <i class="bi bi-stopwatch" aria-hidden="true"></i>
-                                    <span>{{ log.duration }}m{% if log.category %} • {{ log.category.name }}{% endif %}</span>
-                                </p>
-                            </div>
-                        </div>
-                        {% empty %}
-                        <p class="text-sm text-base-content/60 italic">No recent activity.</p>
-                        {% endfor %}
-                    </div>
-                </div>
-            </section>
-        </div>
+        <a href="{% url 'analytics' %}" class="btn btn-ghost gap-2">
+          <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
+          <span>Analytics</span>
+        </a>
+      </div>
     </div>
-</div>
+  </header>
+
+  {% if star_notifications_count > 0 %}
+  <!-- Notifications (calm, readable) -->
+  <section class="alert alert-warning" role="alert" aria-live="polite">
+    <div class="flex items-start gap-3 w-full">
+      <i class="bi bi-star-fill text-xl" aria-hidden="true"></i>
+      <div class="flex-1 min-w-0">
+        <h2 class="font-bold text-base">
+          You have {{ star_notifications_count }} star{{ star_notifications_count|pluralize }}.
+        </h2>
+        <p class="text-sm text-base-content/70">Friends appreciated your activities.</p>
+      </div>
+      <a href="{% url 'notifications' %}" class="btn btn-outline btn-sm gap-2">
+        <i class="bi bi-bell" aria-hidden="true"></i>
+        <span>View</span>
+      </a>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Main layout -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Left: Friends -->
+    {% if friends_timeline %}
+    <section class="card border border-base-200 bg-base-100 lg:col-span-2" aria-label="Friends activity">
+      <div class="card-body p-5 sm:p-6">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <i class="bi bi-people" aria-hidden="true"></i>
+            <span>Friends Feed</span>
+          </h2>
+          <a href="{% url 'friends_list' %}" class="link link-primary text-sm">View all</a>
+        </div>
+
+        <div class="mt-4 divide-y divide-base-200">
+          {% for item in friends_timeline %}
+          <article class="py-4 flex items-start gap-3">
+            <div class="avatar placeholder">
+              <div class="bg-neutral text-neutral-content rounded-full w-10">
+                <span class="text-sm">{{ item.user.username|first|upper }}</span>
+              </div>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-semibold text-sm">{{ item.user.username }}</span>
+                {% if item.type == 'task' %}
+                  <span class="badge badge-success badge-sm">Task</span>
+                {% else %}
+                  <span class="badge badge-info badge-sm">Log</span>
+                {% endif %}
+              </div>
+
+              <p class="mt-1 text-sm">
+                {% if item.type == 'task' %}
+                  Completed: <span class="font-semibold">{{ item.title }}</span>
+                {% else %}
+                  Logged: <span class="font-semibold">{{ item.title }}</span>
+                {% endif %}
+              </p>
+
+              <p class="mt-1 text-xs text-base-content/70 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-clock" aria-hidden="true"></i>
+                  {{ item.timestamp|date:"M j, g:i A" }}
+                </span>
+                {% if item.duration %}
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                  {{ item.duration }}m
+                </span>
+                {% endif %}
+                {% if item.category %}
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-tag" aria-hidden="true"></i>
+                  {{ item.category.name }}
+                </span>
+                {% endif %}
+              </p>
+            </div>
+
+            <!-- Star action (clear target + aria) -->
+            <button
+              class="star-btn btn btn-ghost btn-sm gap-2"
+              data-activity-type="{{ item.type }}"
+              data-activity-id="{{ item.id }}"
+              aria-label="{% if item.user_starred %}Unstar this activity{% else %}Star this activity{% endif %}">
+              <i class="bi bi-star{% if item.user_starred %}-fill{% endif %} {% if item.user_starred %}text-warning{% endif %}" aria-hidden="true"></i>
+              <span class="star-count text-sm tabular-nums">{{ item.star_count }}</span>
+            </button>
+          </article>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <!-- Right: side cards -->
+    <aside class="space-y-6">
+
+      {% if pending_friend_requests %}
+      <section class="card border border-base-200 bg-base-100" aria-label="Friend requests">
+        <div class="card-body p-5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-base font-bold flex items-center gap-2">
+              <i class="bi bi-person-plus" aria-hidden="true"></i>
+              <span>Friend Requests</span>
+            </h2>
+            <a href="{% url 'friend_requests' %}" class="link link-primary text-sm">Review</a>
+          </div>
+
+          <div class="mt-3 space-y-3">
+            {% for request in pending_friend_requests|slice:":2" %}
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-2 min-w-0">
+                <div class="avatar placeholder">
+                  <div class="bg-neutral text-neutral-content rounded-full w-9">
+                    <span class="text-xs">{{ request.from_user.username|first|upper }}</span>
+                  </div>
+                </div>
+                <span class="text-sm font-semibold truncate">{{ request.from_user.username }}</span>
+              </div>
+              <a href="{% url 'friend_requests' %}" class="btn btn-outline btn-sm">Open</a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
+      <!-- Today's Tasks -->
+      <section class="card border border-base-200 bg-base-100" aria-label="Today's tasks">
+        <div class="card-body p-5">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold flex items-center gap-2">
+              <i class="bi bi-list-check" aria-hidden="true"></i>
+              <span>Today</span>
+            </h2>
+            <a href="{% url 'task_list' %}" class="link link-primary text-sm">View all</a>
+          </div>
+
+          {% if pending_tasks %}
+          <ul class="mt-3 space-y-2">
+            {% for task in pending_tasks|slice:":3" %}
+            <li class="flex items-center justify-between gap-3 p-3 rounded-xl border border-base-200 bg-base-100 hover:bg-base-200/40 transition">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold truncate">{{ task.title }}</p>
+                {% if task.category %}
+                <p class="text-xs text-base-content/70 flex items-center gap-1 mt-1">
+                  <i class="bi bi-tag" aria-hidden="true"></i>
+                  <span class="truncate">{{ task.category.name }}</span>
+                </p>
+                {% endif %}
+              </div>
+              <a href="{% url 'log_create' %}?task={{ task.id }}"
+                 class="btn btn-primary btn-sm"
+                 aria-label="Log time for {{ task.title }}">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span class="sr-only">Log</span>
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+          {% else %}
+          <div class="mt-4 p-4 rounded-xl bg-base-200/50 text-center">
+            <p class="text-sm text-base-content/70">All caught up for today.</p>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="card border border-base-200 bg-base-100" aria-label="Recent activity">
+        <div class="card-body p-5">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold flex items-center gap-2">
+              <i class="bi bi-clock-history" aria-hidden="true"></i>
+              <span>Recent</span>
+            </h2>
+            <a href="{% url 'log_list' %}" class="link link-primary text-sm">View all</a>
+          </div>
+
+          <div class="mt-3 space-y-3">
+            {% for log in recent_logs|slice:":3" %}
+            <div class="p-3 rounded-xl border border-base-200 bg-base-100">
+              <p class="text-sm font-semibold">{{ log.activity }}</p>
+              <p class="mt-1 text-xs text-base-content/70 flex items-center gap-2">
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                  {{ log.duration }}m
+                </span>
+                {% if log.category %}
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-tag" aria-hidden="true"></i>
+                  {{ log.category.name }}
+                </span>
+                {% endif %}
+              </p>
+            </div>
+            {% empty %}
+            <p class="text-sm text-base-content/70 italic">No recent activity.</p>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+    </aside>
+  </div>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.star-btn').forEach(button => {
+    button.addEventListener('click', async function () {
+      const activityType = this.dataset.activityType;
+      const activityId = this.dataset.activityId;
+      const starIcon = this.querySelector('.bi');
+      const starCount = this.querySelector('.star-count');
+
+      try {
+        const response = await fetch('{% url "toggle_star_reaction" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+          },
+          body: JSON.stringify({ activity_type: activityType, activity_id: activityId })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const starred = !!data.starred;
+
+          // icon + emphasis (avoid relying on colour only by using filled/outline)
+          starIcon.classList.toggle('bi-star-fill', starred);
+          starIcon.classList.toggle('bi-star', !starred);
+          starIcon.classList.toggle('text-warning', starred);
+
+          this.setAttribute('aria-label', starred ? 'Unstar this activity' : 'Star this activity');
+          starCount.textContent = data.star_count;
+        } else {
+          console.error('Error:', data.error);
+        }
+      } catch (err) {
+        console.error('Network error:', err);
+      }
+    });
+  });
+});
+</script>
+
 {% endblock %}

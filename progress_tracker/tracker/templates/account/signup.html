@@ -1,306 +1,221 @@
 {% load static %}
+{% load widget_tweaks %}
+{% load socialaccount %}
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="Create your free VisMatrix.Space account - Track progress with friends">
+  <meta name="theme-color" content="#1d4ed8">
   <title>Create Account - VisMatrix.Space</title>
 
-  <!-- Tailwind CDN -->
+  <!-- App Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'branding/vismatrixicon.png' %}">
+
+  <!-- Tailwind + DaisyUI + Bootstrap Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
   <style>
-    /* WCAG AA compliant animations */
+    /* Signup page specific styles - matches base.html design system */
+    .signup-hero {
+      background: linear-gradient(135deg, rgb(248 250 252 / 0.9) 0%, rgb(241 245 249 / 0.7) 100%);
+      backdrop-filter: blur(20px);
+    }
+    
+    .signup-card {
+      background: rgb(255 255 255 / 0.98);
+      border: 1px solid rgb(226 232 240 / 0.8);
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.1);
+    }
+    
+    .signup-header {
+      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    }
+    
+    /* Animations matching base.html */
     @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
+      from { opacity: 0; transform: translateY(30px); }
       to { opacity: 1; transform: translateY(0); }
     }
-    @keyframes float {
-      0%, 100% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-8px) scale(1.02); }
-    }
-    /* High contrast focus rings */
-    .focus-ring:focus-visible {
-      outline: 3px solid #2563eb;
-      outline-offset: 2px;
-    }
-    /* Custom scrollbar */
-    .custom-scrollbar::-webkit-scrollbar {
-      width: 8px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-track {
-      background: rgba(248, 250, 252, 0.8);
-      border-radius: 9999px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-      background: linear-gradient(to bottom, #cbd5e1, #94a3b8);
-      border-radius: 9999px;
-    }
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(to bottom, #94a3b8, #64748b);
-    }
-    /* Reduced motion support */
+    
     @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after {
-        animation-duration: 0.01ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.01ms !important;
-      }
+      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+    }
+    
+    /* Enhanced focus states */
+    .input:focus {
+      border-color: rgb(29 78 216);
+      box-shadow: 0 0 0 3px rgb(29 78 216 / 0.25);
     }
   </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/50 to-emerald-50/30 font-sans antialiased relative overflow-y-auto">
+
+<body class="min-h-screen flex items-center justify-center p-4 lg:p-8 signup-hero">
   
-  <!-- Full viewport scrolling content -->
-  <div class="min-h-screen flex flex-col">
-    <!-- Subtle decorative background -->
-    <div class="absolute inset-0 pointer-events-none">
-      <div class="absolute top-1/4 left-1/4 w-72 h-72 lg:w-96 lg:h-96 bg-gradient-to-r from-blue-200/20 to-emerald-200/20 rounded-full blur-xl animate-float-slow"></div>
-      <div class="absolute bottom-1/4 right-1/4 w-64 h-64 lg:w-80 lg:h-80 bg-gradient-to-r from-emerald-200/20 to-purple-200/20 rounded-full blur-xl animate-float-slow delay-1000"></div>
+
+  <main id="main-signup" class="w-full max-w-md lg:max-w-lg signup-card rounded-3xl overflow-hidden animate-slideUp max-h-[90vh] overflow-y-auto" role="main" aria-labelledby="signup-title">
+    
+    <!-- Header -->
+    <div class="signup-header text-white p-8 lg:p-10 text-center relative sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm border-b border-white/20">
+      <div class="w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-8 bg-white/20 rounded-2xl flex items-center justify-center shadow-2xl ring-2 ring-white/30">
+        <i class="bi bi-person-plus-fill text-3xl lg:text-4xl" aria-hidden="true"></i>
+      </div>
+      <h1 id="signup-title" class="text-3xl lg:text-4xl font-black tracking-tight mb-4">
+        Create Account
+      </h1>
+      <p class="text-xl font-semibold text-slate-200 mb-6 opacity-90 leading-relaxed max-w-sm mx-auto">
+        Join VisMatrix.Space and start tracking your progress today
+      </p>
+      <div class="inline-flex items-center gap-2 bg-emerald-400/90 text-emerald-900 px-6 py-3 rounded-2xl font-bold text-base lg:text-lg shadow-lg border border-emerald-300/50">
+        <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+        <span>Free Forever Plan</span>
+      </div>
     </div>
 
-    <!-- Hero section with scrollable content -->
-    <section class="flex-1 flex items-center justify-center py-12 lg:py-20 px-4 lg:px-8 relative z-10">
-      <div class="w-full max-w-md lg:max-w-lg bg-white/95 backdrop-blur-xl shadow-2xl border border-slate-200/50 rounded-2xl lg:rounded-3xl overflow-hidden animate-slideUp transition-all duration-300 hover:shadow-3xl max-h-[90vh] custom-scrollbar overflow-y-auto" 
-           role="main" aria-labelledby="signup-title">
-        
-        <!-- Header - High contrast accessible -->
-        <header class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-700 text-white p-8 lg:p-10 text-center relative sticky top-0 z-20 bg-slate-900/95 backdrop-blur-sm border-b border-white/20">
-          <div class="w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-6 bg-white/20 rounded-2xl flex items-center justify-center shadow-xl ring-2 ring-white/30">
-            <i class="bi bi-person-plus-fill text-4xl lg:text-5xl" aria-hidden="true"></i>
-          </div>
-          <h1 id="signup-title" class="text-3xl lg:text-4xl font-black tracking-tight mb-3" role="banner">
-            Create Account
-          </h1>
-          <p class="text-lg lg:text-xl font-semibold text-slate-200 leading-relaxed max-w-sm mx-auto">
-            Join VisMatrix.Space and start tracking your progress today
-          </p>
-          
-          <!-- Free plan badge -->
-          <div class="inline-block mt-6 bg-emerald-400/90 text-emerald-900 px-6 py-3 rounded-2xl font-bold text-base lg:text-lg shadow-lg border border-emerald-300/50">
-            <i class="bi bi-check-circle-fill mr-2" aria-hidden="true"></i>
-            Free Forever Plan
-          </div>
-        </header>
-
-        <main class="p-8 lg:p-10 space-y-6 pb-12 lg:pb-16">
-          <!-- Feature highlight -->
-          <div class="bg-gradient-to-r from-emerald-50 to-blue-50 border-l-6 border-emerald-500 border border-emerald-200 text-emerald-900 p-6 rounded-2xl" 
-               role="status" aria-label="Free plan features">
-            <div class="flex items-start gap-3">
-              <div class="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5 shadow-lg">
-                <i class="bi bi-infinity text-white text-xl" aria-hidden="true"></i>
-              </div>
-              <div>
-                <p class="font-semibold text-lg leading-6">
-                  Unlimited Everything
-                </p>
-                <p class="text-base text-emerald-800 leading-relaxed">
-                  Track unlimited tasks, logs, categories with full AI insights
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Error alerts -->
-          {% if form.non_field_errors %}
-          <div class="border-l-6 border-red-500 bg-red-50 border border-red-200 text-red-900 p-5 rounded-2xl" 
-               role="alert" aria-live="polite">
-            <div class="flex items-start gap-2">
-              <i class="bi bi-exclamation-triangle-fill mt-0.5 flex-shrink-0 text-xl" aria-hidden="true"></i>
-              <div>
-                {% for error in form.non_field_errors %}
-                  <p class="font-medium">{{ error }}</p>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-          {% endif %}
-
-          <!-- Registration Form - WCAG AA compliant -->
-          <form method="post" class="space-y-6" novalidate role="form" aria-describedby="signup-help">
-            {% csrf_token %}
-            
-            <!-- Username Field -->
-            <div>
-              <label for="{{ form.username.id_for_label }}" class="block mb-3 font-semibold text-slate-900 text-sm leading-6">
-                Username
-                <span class="text-slate-500 font-normal text-xs ml-1">(unique, 3-30 characters)</span>
-              </label>
-              <input 
-                type="text" 
-                name="{{ form.username.name }}" 
-                id="{{ form.username.id_for_label }}"
-                class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 placeholder-slate-500 text-base leading-6 shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:border-blue-500 invalid:border-red-500 invalid:ring-2 invalid:ring-red-500/50 hover:border-slate-300 focus-ring"
-                placeholder="Choose a unique username"
-                value="{{ form.username.value|default_if_none:'' }}"
-                required 
-                maxlength="30" 
-                minlength="3"
-                pattern="[a-zA-Z0-9_]+"
-                autocomplete="username"
-                aria-describedby="{{ form.username.id_for_label }}-help"
-              />
-              {% if form.username.help_text %}
-              <p id="{{ form.username.id_for_label }}-help" class="mt-2 text-xs text-slate-600">{{ form.username.help_text }}</p>
-              {% endif %}
-              {% if form.username.errors %}
-              <p class="mt-2 text-sm text-red-700 flex items-center gap-1">
-                <i class="bi bi-exclamation-circle-fill flex-shrink-0" aria-hidden="true"></i>
-                {{ form.username.errors|first }}
-              </p>
-              {% endif %}
-            </div>
-
-            <!-- Email Field -->
-            <div>
-              <label for="{{ form.email.id_for_label }}" class="block mb-3 font-semibold text-slate-900 text-sm leading-6">
-                Email Address
-              </label>
-              <input 
-                type="email" 
-                name="{{ form.email.name }}" 
-                id="{{ form.email.id_for_label }}"
-                class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 placeholder-slate-500 text-base leading-6 shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:border-blue-500 invalid:border-red-500 invalid:ring-2 invalid:ring-red-500/50 hover:border-slate-300 focus-ring"
-                placeholder="your.email@example.com"
-                value="{{ form.email.value|default_if_none:'' }}"
-                required 
-                autocomplete="email"
-              />
-              {% if form.email.errors %}
-              <p class="mt-2 text-sm text-red-700 flex items-center gap-1">
-                <i class="bi bi-exclamation-circle-fill flex-shrink-0" aria-hidden="true"></i>
-                {{ form.email.errors|first }}
-              </p>
-              {% endif %}
-            </div>
-
-            <!-- Password Field 1 -->
-            <div>
-              <label for="{{ form.password1.id_for_label }}" class="block mb-3 font-semibold text-slate-900 text-sm leading-6">
-                Password
-                <span class="text-slate-500 font-normal text-xs ml-1">(8+ characters, strong)</span>
-              </label>
-              <input 
-                type="password" 
-                name="{{ form.password1.name }}" 
-                id="{{ form.password1.id_for_label }}"
-                class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 placeholder-slate-500 text-base leading-6 shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:border-blue-500 invalid:border-red-500 invalid:ring-2 invalid:ring-red-500/50 hover:border-slate-300 focus-ring"
-                placeholder="Create a strong password"
-                minlength="8"
-                required 
-                autocomplete="new-password"
-              />
-              {% if form.password1.errors %}
-              <p class="mt-2 text-sm text-red-700 flex items-center gap-1">
-                <i class="bi bi-exclamation-circle-fill flex-shrink-0" aria-hidden="true"></i>
-                {{ form.password1.errors|first }}
-              </p>
-              {% endif %}
-            </div>
-
-            <!-- Password Field 2 -->
-            <div>
-              <label for="{{ form.password2.id_for_label }}" class="block mb-3 font-semibold text-slate-900 text-sm leading-6">
-                Confirm Password
-              </label>
-              <input 
-                type="password" 
-                name="{{ form.password2.name }}" 
-                id="{{ form.password2.id_for_label }}"
-                class="w-full px-4 py-3.5 rounded-2xl border-2 border-slate-200 bg-white text-slate-900 placeholder-slate-500 text-base leading-6 shadow-sm transition-all duration-200 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:border-blue-500 invalid:border-red-500 invalid:ring-2 invalid:ring-red-500/50 hover:border-slate-300 focus-ring"
-                placeholder="Confirm your password"
-                required 
-                autocomplete="new-password"
-              />
-              {% if form.password2.errors %}
-              <p class="mt-2 text-sm text-red-700 flex items-center gap-1">
-                <i class="bi bi-exclamation-circle-fill flex-shrink-0" aria-hidden="true"></i>
-                {{ form.password2.errors|first }}
-              </p>
-              {% endif %}
-            </div>
-
-            <!-- Submit Button -->
-            <button 
-              type="submit"
-              class="w-full bg-gradient-to-r from-slate-900 to-slate-800 hover:from-slate-800 hover:to-slate-700 text-white font-bold py-4 px-8 rounded-2xl shadow-lg hover:shadow-xl focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 focus-visible:ring-offset-2 focus-visible:ring-offset-white transition-all duration-200 text-lg flex items-center justify-center gap-3 focus-ring"
-              aria-describedby="signup-help">
-              <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-              <span>Create My Account</span>
-            </button>
-          </form>
-
-          <!-- Login link -->
-          <div class="text-center pt-8 border-t border-slate-200 pb-12">
-            <p class="text-sm text-slate-600">
-              Already have an account? 
-              <a href="{% url 'account_login' %}" 
-                 class="font-semibold text-slate-900 hover:text-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500/50 rounded focus-ring">
-                Sign in instead
-              </a>
-            </p>
-          </div>
-        </main>
+    <div class="p-8 lg:p-10 space-y-6 pb-12 lg:pb-16">
+      <!-- Feature highlight -->
+      <div class="alert alert-success shadow-lg border-l-4">
+        <i class="bi bi-infinity flex-shrink-0"></i>
+        <div>
+          <h3 class="font-bold text-lg">Unlimited Everything</h3>
+          <div class="text-sm">Track unlimited tasks, logs, categories with full AI insights</div>
+        </div>
       </div>
-    </section>
 
-    <!-- Footer -->
-    <footer class="text-center py-12 text-sm text-slate-600 bg-white/50 backdrop-blur-sm border-t border-slate-200/50">
-      <p>© 2025 VisMatrix.Space - Free productivity tracking for everyone</p>
-    </footer>
-  </div>
+      <!-- Google Sign Up Option -->
+      {% get_providers as socialaccount_providers %}
+      {% if socialaccount_providers %}
+      <div class="card-compact p-0">
+        <a href="{% provider_login_url 'google' process='connect' %}"
+           class="btn btn-outline w-full h-14 gap-3 normal-case border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-md transition-all duration-200 text-base font-semibold text-lg"
+           role="button" aria-label="Continue with Google to create account">
+          <i class="bi bi-google text-xl" aria-hidden="true"></i>
+          <span>Continue with Google</span>
+        </a>
+      </div>
+
+      <div class="divider text-sm text-slate-500 before:bg-slate-200 after:bg-slate-200">or create account with email</div>
+      {% endif %}
+
+      <!-- Error alerts -->
+      {% if form.non_field_errors %}
+      <div class="alert alert-error shadow-lg">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+        <span>{% for error in form.non_field_errors %}{{ error }}{% endfor %}</span>
+      </div>
+      {% endif %}
+
+      <!-- Registration Form -->
+      <form method="post" class="space-y-6" novalidate role="form">
+        {% csrf_token %}
+        
+        <!-- Username Field -->
+        <div class="form-control w-full">
+          <label for="{{ form.username.id_for_label }}" class="label">
+            <span class="label-text font-semibold text-base">Username 
+              <span class="text-slate-500 font-normal text-sm">(unique, 3-30 characters)</span>
+            </span>
+          </label>
+          {% render_field form.username class="input input-bordered w-full h-14 text-base lg:input-lg" placeholder="Choose a unique username" autocomplete="username" %}
+          {% if form.username.errors %}
+          <label class="label">
+            <span class="label-text-alt text-error">{{ form.username.errors|first }}</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <!-- Email Field -->
+        <div class="form-control w-full">
+          <label for="{{ form.email.id_for_label }}" class="label">
+            <span class="label-text font-semibold text-base">Email Address</span>
+          </label>
+          {% render_field form.email class="input input-bordered w-full h-14 text-base lg:input-lg" placeholder="your.email@example.com" autocomplete="email" %}
+          {% if form.email.errors %}
+          <label class="label">
+            <span class="label-text-alt text-error">{{ form.email.errors|first }}</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <!-- Password Field 1 -->
+        <div class="form-control w-full">
+          <label for="{{ form.password1.id_for_label }}" class="label">
+            <span class="label-text font-semibold text-base">Password 
+              <span class="text-slate-500 font-normal text-sm">(8+ characters)</span>
+            </span>
+          </label>
+          {% render_field form.password1 class="input input-bordered w-full h-14 text-base lg:input-lg" placeholder="Create a strong password" autocomplete="new-password" %}
+          {% if form.password1.errors %}
+          <label class="label">
+            <span class="label-text-alt text-error">{{ form.password1.errors|first }}</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <!-- Password Field 2 -->
+        <div class="form-control w-full">
+          <label for="{{ form.password2.id_for_label }}" class="label">
+            <span class="label-text font-semibold text-base">Confirm Password</span>
+          </label>
+          {% render_field form.password2 class="input input-bordered w-full h-14 text-base lg:input-lg" placeholder="Confirm your password" autocomplete="new-password" %}
+          {% if form.password2.errors %}
+          <label class="label">
+            <span class="label-text-alt text-error">{{ form.password2.errors|first }}</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-primary w-full h-14 text-lg font-bold shadow-lg hover:shadow-xl gap-3 lg:btn-lg">
+          <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+          <span>Create My Account</span>
+        </button>
+      </form>
+
+      <!-- Login link -->
+      <div class="text-center pt-8 border-t border-slate-200 pb-12">
+        <p class="text-sm text-slate-600">
+          Already have an account? 
+          <a href="{% url 'account_login' %}" class="link link-hover font-bold text-primary">Sign in instead</a>
+        </p>
+      </div>
+    </div>
+  </main>
 
   <script>
     // Enhanced accessibility and UX
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', () => {
       // Auto-focus first field
       const firstField = document.querySelector('input[type="text"]');
-      if (firstField) {
-        firstField.focus();
-      }
-
-      // Real-time password validation preview
-      const password1 = document.getElementById('{{ form.password1.id_for_label }}');
-      const password2 = document.getElementById('{{ form.password2.id_for_label }}');
+      if (firstField) firstField.focus();
+      
+      // Real-time password matching validation
+      const password1 = document.querySelector('input[name="password1"]');
+      const password2 = document.querySelector('input[name="password2"]');
       
       if (password1 && password2) {
         const validatePasswords = () => {
           if (password1.value && password2.value && password1.value !== password2.value) {
             password2.setCustomValidity('Passwords do not match');
-            password2.classList.add('ring-2', 'ring-red-500/50', 'border-red-500');
+            password2.classList.add('border-error');
           } else {
             password2.setCustomValidity('');
-            password2.classList.remove('ring-2', 'ring-red-500/50', 'border-red-500');
+            password2.classList.remove('border-error');
           }
         };
         
         password1.addEventListener('input', validatePasswords);
         password2.addEventListener('input', validatePasswords);
       }
-
-      // Keyboard shortcuts
-      document.addEventListener('keydown', function(e) {
-        // Escape goes back to login
+      
+      // Escape goes back to login
+      document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           window.location.href = "{% url 'account_login' %}";
         }
-      });
-
-      // Smooth scrolling for internal anchors
-      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
-          e.preventDefault();
-          const target = document.querySelector(this.getAttribute('href'));
-          if (target) {
-            target.scrollIntoView({
-              behavior: 'smooth',
-              block: 'start'
-            });
-          }
-        });
       });
     });
   </script>

@@ -26,11 +26,14 @@ env = environ.Env()
 environ.Env.read_env()
 SECRET_KEY = env('SECRET_KEY')
 
+ENVIRONMENT = env("ENVIRONMENT", default="local")  # local | prod
+DEBUG = env.bool("DEBUG", default=(ENVIRONMENT == "local"))
+
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = env.bool("DEBUG", default=True)
 
-
-ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','16.16.9.54','localhost']
+ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','3.229.115.6','localhost']
 
 
 # Application definition
@@ -74,10 +77,14 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Allauth settings
-ACCOUNT_EMAIL_REQUIRED = False
-ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+# ACCOUNT_EMAIL_REQUIRED = False
+# ACCOUNT_USERNAME_REQUIRED = True
+# ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable email verification
+
+# Updated Allauth settings for newer versions
+ACCOUNT_LOGIN_METHODS = {'username', 'email'}
+ACCOUNT_SIGNUP_FIELDS = ['username*', 'email', 'password1*', 'password2*']
 
 # Login settings
 LOGIN_URL = '/accounts/login/'  # allauth login URL
@@ -181,13 +188,38 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-# or
-STATIC_ROOT = '/home/ubuntu/djangowebapp/newversion/vismatrix/progress_tracker/staticfiles'
+STATIC_ROOT = env("STATIC_ROOT", default=os.path.join(BASE_DIR, "staticfiles"))
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
+
+STATICFILES_DIRS = []
+
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
+# --- Same-domain Next.js + Django (reverse proxy) ---
+if ENVIRONMENT == "prod":
+    CSRF_TRUSTED_ORIGINS = ["https://vismatrix.space", "https://www.vismatrix.space"]
+
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SAMESITE = "Lax"
+    CSRF_COOKIE_SAMESITE = "Lax"
+
+    SESSION_COOKIE_DOMAIN = ".vismatrix.space"
+    CSRF_COOKIE_DOMAIN = ".vismatrix.space"
+
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_SSL_REDIRECT = True
+else:
+    # Local dev
+    CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+
+# --- End Same-domain Next.js + Django (reverse proxy) ---
 

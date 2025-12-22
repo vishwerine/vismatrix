@@ -2,197 +2,418 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <meta name="description" content="VisMatrix - Track your progress with friends">
-    <meta name="theme-color" content="#06b6d4">
-    <title>{% block title %}VisMatrix.Space{% endblock %}</title>
-    
-    <!-- Tailwind + DaisyUI -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
-    <!-- Bootstrap Icons (used in menus & components) -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="description" content="VisMatrix - Track your progress with friends">
+  <meta name="theme-color" content="#1d4ed8">
+  <title>{% block title %}VisMatrix.Space{% endblock %}</title>
 
-    <style>
-        body { -webkit-tap-highlight-color: transparent; }
+  <!-- App Icons / Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'branding/vismatrixicon.png' %}">
+  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'branding/vismatrixicon.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'branding/vismatrixicon.png' %}">
+  <meta name="apple-mobile-web-app-title" content="VisMatrix">
+  <meta name="application-name" content="VisMatrix">
 
-        /* Safe area padding for notched phones */
-        .safe-area-pt { padding-top: env(safe-area-inset-top); }
-        .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
-        
-        /* Smooth scrolling */
-        html { scroll-behavior: smooth; }
-        
-        /* Mobile touch improvements */
-        .btn, .input, .select, .textarea { min-height: 44px; }
+  <!-- Tailwind + DaisyUI -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
+  <!-- Bootstrap Icons -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
-        /* Simple fade / slide for toasts */
-        @keyframes toast-in {
-            from { opacity: 0; transform: translateY(-4px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        .toast .alert { animation: toast-in 0.2s ease-out; }
+  <style>
+    /* ============================================================
+       Simplified, accessible design tokens (high contrast, calm)
+       ============================================================ */
+    :root {
+      /* Core */
+      --bg: #ffffff;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;     /* slate-50 */
+      --border: #e2e8f0;        /* slate-200 */
+      --text: #0f172a;          /* slate-900 */
+      --muted: #475569;         /* slate-600 */
 
-        /* Active top-nav link underline */
-        .nav-link-active {
-            position: relative;
-            font-weight: 600;
-        }
-        .nav-link-active::after {
-            content: "";
-            position: absolute;
-            left: 0.75rem;
-            right: 0.75rem;
-            bottom: 0.35rem;
-            height: 2px;
-            border-radius: 999px;
-            background: linear-gradient(to right, #0ea5e9, #22c55e);
-        }
-    </style>
+      /* Brand (blue) */
+      --primary: #1d4ed8;       /* blue-700 */
+      --primary-hover: #1e40af; /* blue-800 */
+      --primary-ink: #ffffff;
+
+      /* Status (kept readable) */
+      --success: #15803d;       /* green-700 */
+      --warning: #a16207;       /* amber-700 */
+      --error: #b91c1c;         /* red-700 */
+      --info: #1d4ed8;
+
+      /* Layout */
+      --radius: 14px;
+      --radius-sm: 10px;
+      --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 10px 18px rgb(15 23 42 / 0.06);
+
+      /* Type */
+      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+      /* Focus ring (highly visible) */
+      --focus: 0 0 0 3px rgb(29 78 216 / 0.25);
+    }
+
+    /* Base */
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Prefer reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+    }
+
+    /* Focus visibility */
+    :focus-visible {
+      outline: none;
+      box-shadow: var(--focus);
+      border-radius: 10px;
+    }
+
+    /* Skip link */
+    .skip-link {
+      position: absolute;
+      top: -48px;
+      left: 12px;
+      z-index: 1000;
+      background: var(--text);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      text-decoration: none;
+    }
+    .skip-link:focus { top: 12px; }
+
+    /* ============================================================
+       Make DaisyUI defaults align to our tokens (no heavy overrides)
+       ============================================================ */
+    [data-theme="light"] {
+      --p: 220 85% 47%; /* primary */
+      --pc: 0 0% 100%;
+      --b1: 0 0% 100%;  /* base-100 */
+      --b2: 210 40% 98%;/* base-200 */
+      --b3: 214 32% 91%;/* base-300 */
+      --bc: 222 47% 11%;/* base-content */
+      --er: 0 74% 42%;
+      --su: 142 72% 29%;
+      --wa: 45 93% 34%;
+      --in: 220 85% 47%;
+      --rounded-box: 14px;
+      --rounded-btn: 12px;
+      --rounded-badge: 9999px;
+    }
+
+    /* ============================================================
+       Intuitive + simpler UI primitives
+       ============================================================ */
+    /* Buttons: keep them simple and consistent */
+    .btn {
+      min-height: 44px;            /* touch target */
+      border-radius: 12px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    .btn:focus-visible { box-shadow: var(--focus); }
+
+    /* Make ghost buttons clearly interactive */
+    .btn-ghost:hover { background: var(--surface-2); }
+
+    /* Inputs: clearer border + focus ring */
+    .input, .select, .textarea {
+      border-radius: 12px;
+      border-width: 1px;
+      border-color: var(--border);
+      background: var(--surface);
+      min-height: 44px;
+    }
+    .input:focus, .select:focus, .textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: var(--focus);
+    }
+
+    /* Cards: calmer surface */
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: none;
+      background: var(--surface);
+    }
+
+    /* Navbar: solid, no blur (better readability) */
+    .vm-navbar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* Active nav: simple pill */
+    .vm-nav-active {
+      background: rgb(29 78 216 / 0.10);
+      color: var(--primary) !important;
+      font-weight: 700;
+    }
+
+    /* Toasts: better contrast and spacing */
+    .toast .alert {
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      border-radius: 14px;
+    }
+    .alert-info { background: rgb(29 78 216 / 0.08); color: var(--text); border-color: rgb(29 78 216 / 0.25); }
+    .alert-success { background: rgb(21 128 61 / 0.08); color: var(--text); border-color: rgb(21 128 61 / 0.25); }
+    .alert-warning { background: rgb(161 98 7 / 0.10); color: var(--text); border-color: rgb(161 98 7 / 0.25); }
+    .alert-error { background: rgb(185 28 28 / 0.08); color: var(--text); border-color: rgb(185 28 28 / 0.25); }
+
+    /* Mobile bottom nav: simplified, consistent icons */
+    .vm-bottomnav {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+    }
+    .vm-bottomnav a {
+      min-height: 64px;
+    }
+    .vm-bottomnav .vm-fab {
+      width: 48px;
+      height: 48px;
+      border-radius: 9999px;
+      background: var(--primary);
+      color: var(--primary-ink);
+      box-shadow: var(--shadow);
+      border: 3px solid var(--surface);
+    }
+    .vm-bottomnav .vm-active {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    /* Improved dropdown menu */
+    .vm-dropdown {
+      border: 1px solid rgb(226 232 240 / 0.8);
+      border-radius: var(--radius);
+      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+      backdrop-filter: blur(10px);
+      background: rgb(255 255 255 / 0.95);
+    }
+
+    .vm-dropdown .menu-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--text);
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgb(226 232 240 / 0.5);
+      margin: 0;
+    }
+
+    .vm-dropdown li > a {
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      margin: 0.125rem 0;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-weight: 500;
+    }
+
+    .vm-dropdown li > a:hover {
+      background: rgb(29 78 216 / 0.08);
+      color: var(--primary);
+      transform: translateX(2px);
+    }
+
+    .vm-dropdown .divider {
+      margin: 0.5rem 0;
+      border-color: rgb(226 232 240 / 0.5);
+    }
+
+    .vm-dropdown li > a.text-error:hover {
+      background: rgb(185 28 28 / 0.08);
+      color: var(--error);
+    }
+
+    /* Keep safe-area utility */
+    .safe-area-pt { padding-top: env(safe-area-inset-top); }
+    .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+  </style>
 </head>
-<body class="bg-base-100 min-h-screen flex flex-col font-sans">
 
-    <!-- Top Navigation -->
-    <nav class="navbar bg-base-200/90 backdrop-blur sticky top-0 z-50 safe-area-pt shadow-sm border-b border-base-300/50"
-         role="navigation" aria-label="Main navigation">
-        <div class="flex-1">
-            <a href="{% url 'dashboard' %}" class="btn btn-ghost normal-case text-xl text-primary gap-2 px-2">
-                <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
-                </svg>
-                <span class="font-bold tracking-tight">VisMatrix</span>
-            </a>
+<body class="min-h-screen flex flex-col">
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  <!-- Top Navigation -->
+  <nav class="navbar vm-navbar sticky top-0 z-50 safe-area-pt" role="navigation" aria-label="Main navigation">
+    <div class="flex-1">
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-base-200 transition">
+        <img
+          src="{% static 'branding/vismatrixlogo.png' %}"
+          alt="VisMatrix logo"
+          class="w-8 h-8 object-contain"
+          loading="eager"
+        />
+        <span class="font-bold text-lg tracking-tight">
+          VisMatrix<span class="text-primary">.space</span>
+        </span>
+      </a>
+    </div>
+
+    <!-- Desktop nav (simpler: fewer effects, clearer active state) -->
+    <div class="hidden lg:flex items-center gap-1 px-2">
+      <a href="{% url 'dashboard' %}"
+         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'dashboard' %}vm-nav-active{% endif %}">
+        <i class="bi bi-grid-1x2" aria-hidden="true"></i>
+        <span class="ml-1">Dashboard</span>
+      </a>
+
+      <a href="{% url 'analytics' %}"
+         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'analytics' %}vm-nav-active{% endif %}">
+        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
+        <span class="ml-1">Analytics</span>
+      </a>
+
+      <a href="{% url 'task_list' %}"
+         class="btn btn-ghost btn-sm px-3 {% if 'task' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
+        <i class="bi bi-check2-square" aria-hidden="true"></i>
+        <span class="ml-1">Tasks</span>
+      </a>
+
+      <a href="{% url 'log_list' %}"
+         class="btn btn-ghost btn-sm px-3 {% if 'log' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
+        <i class="bi bi-clock-history" aria-hidden="true"></i>
+        <span class="ml-1">Logs</span>
+      </a>
+
+      <a href="{% url 'friends_list' %}"
+         class="btn btn-ghost btn-sm px-3 {% if 'friend' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
+        <i class="bi bi-people" aria-hidden="true"></i>
+        <span class="ml-1">Friends</span>
+      </a>
+    </div>
+
+    <!-- User / Auth -->
+    <div class="flex-none gap-2 pr-2">
+      {% if user.is_authenticated %}
+      <div class="dropdown dropdown-end">
+        <div tabindex="0" role="button"
+             class="btn btn-ghost btn-circle avatar w-10 h-10 bg-base-200 hover:bg-base-300 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.05]"
+             aria-label="User menu">
+          <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm shadow-md ring-1 ring-white/20">
+            {{ user.username|first|upper }}
+          </div>
         </div>
-        
-        <!-- Desktop nav -->
-        <div class="hidden lg:flex gap-1 px-2">
-            <a href="{% url 'dashboard' %}"
-               class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'dashboard' %}nav-link-active text-primary{% endif %}">
-                <i class="bi bi-grid-1x2" aria-hidden="true"></i>
-                <span class="ml-1">Dashboard</span>
+
+        <ul tabindex="0" class="vm-dropdown dropdown-content z-[1] menu p-0 mt-2 w-64">
+          <li class="menu-title">Hi, {{ user.username }}</li>
+
+          <li><a href="{% url 'dashboard' %}">
+            <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
+            Dashboard
+          </a></li>
+          
+          <li><a href="{% url 'notifications' %}">
+            <i class="bi bi-bell text-lg opacity-80" aria-hidden="true"></i>
+            Notifications
+          </a></li>
+          
+          <li><a href="{% url 'category_list' %}">
+            <i class="bi bi-tags text-lg opacity-80" aria-hidden="true"></i>
+            Categories
+          </a></li>
+          
+          <li><a href="{% url 'user_list' %}">
+            <i class="bi bi-person-plus text-lg opacity-80" aria-hidden="true"></i>
+            Find Friends
+          </a></li>
+
+          <div class="divider mx-4 my-2"></div>
+
+          <li>
+            <a href="/accounts/logout/" class="text-error hover:text-error font-medium">
+              <i class="bi bi-box-arrow-right text-lg opacity-90" aria-hidden="true"></i>
+              Sign out
             </a>
-            <a href="{% url 'task_list' %}"
-               class="btn btn-ghost btn-sm px-3 {% if 'task' in request.resolver_match.url_name %}nav-link-active text-primary{% endif %}">
-                <i class="bi bi-check2-square" aria-hidden="true"></i>
-                <span class="ml-1">Tasks</span>
-            </a>
-            <a href="{% url 'log_list' %}"
-               class="btn btn-ghost btn-sm px-3 {% if 'log' in request.resolver_match.url_name %}nav-link-active text-primary{% endif %}">
-                <i class="bi bi-clock-history" aria-hidden="true"></i>
-                <span class="ml-1">Logs</span>
-            </a>
-            <a href="{% url 'category_list' %}"
-               class="btn btn-ghost btn-sm px-3 {% if 'category' in request.resolver_match.url_name %}nav-link-active text-primary{% endif %}">
-                <i class="bi bi-tags" aria-hidden="true"></i>
-                <span class="ml-1">Categories</span>
-            </a>
-            <a href="{% url 'friends_list' %}"
-               class="btn btn-ghost btn-sm px-3 {% if 'friend' in request.resolver_match.url_name %}nav-link-active text-primary{% endif %}">
-                <i class="bi bi-people" aria-hidden="true"></i>
-                <span class="ml-1">Friends</span>
-            </a>
-        </div>
-        
-        <!-- User / Auth -->
-        <div class="flex-none gap-2 pr-2">
-            {% if user.is_authenticated %}
-            <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button"
-                     class="btn btn-ghost btn-circle avatar ring ring-primary ring-offset-base-100 ring-offset-2 w-9 h-9"
-                     aria-label="User menu">
-                    <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
-                        {{ user.username|first|upper }}
-                    </div>
-                </div>
-                <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-52 mt-3 border border-base-200">
-                    <li class="menu-title px-4 py-2">Hi, {{ user.username }}</li>
-                    <li>
-                        <a href="{% url 'dashboard' %}">
-                            <i class="bi bi-grid-1x2" aria-hidden="true"></i> Dashboard
-                        </a>
-                    </li>
-                    <li>
-                        <a href="{% url 'user_list' %}">
-                            <i class="bi bi-person-plus" aria-hidden="true"></i> Find Friends
-                        </a>
-                    </li>
-                    <div class="divider my-1"></div>
-                    <li>
-                        <a href="/accounts/logout/" class="text-error">
-                            <i class="bi bi-box-arrow-right" aria-hidden="true"></i> Logout
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            {% else %}
-            <a href="/accounts/login/" class="btn btn-primary btn-sm gap-2">
-                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                <span>Login</span>
-            </a>
-            {% endif %}
-        </div>
-    </nav>
-    
-    <!-- Page content -->
-    <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8">
-        {% if messages %}
-        <div class="toast toast-top toast-center z-50 w-full max-w-md top-16 px-4">
-            {% for message in messages %}
-            <div class="alert alert-{{ message.tags|default:'info' }} shadow-lg">
-                <span>{{ message }}</span>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-        
-        {% block content %}{% endblock %}
-    </main>
-    
-    {% if user.is_authenticated %}
-    <!-- Mobile bottom nav -->
-    <nav class="lg:hidden fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-200 safe-area-pb z-40 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]"
-         aria-label="Primary navigation">
-        <div class="grid grid-cols-4 h-16 text-xs">
-            <a href="{% url 'dashboard' %}"
-               class="flex flex-col items-center justify-center gap-1 hover:text-primary hover:bg-base-200/50 transition-colors
-                      {% if request.resolver_match.url_name == 'dashboard' %}text-primary font-semibold{% endif %}">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                </svg>
-                <span>Home</span>
-            </a>
-            <a href="{% url 'task_list' %}"
-               class="flex flex-col items-center justify-center gap-1 hover:text-primary hover:bg-base-200/50 transition-colors
-                      {% if 'task' in request.resolver_match.url_name %}text-primary font-semibold{% endif %}">
-                <i class="bi bi-check2-square text-xl" aria-hidden="true"></i>
-                <span>Tasks</span>
-            </a>
-            <a href="{% url 'log_create' %}"
-               class="flex flex-col items-center justify-center">
-                <div class="w-12 h-12 bg-primary text-primary-content rounded-full flex items-center justify-center shadow-lg transform -translate-y-4 border-4 border-base-100">
-                    <i class="bi bi-plus-lg text-xl" aria-hidden="true"></i>
-                </div>
-            </a>
-            <a href="{% url 'friends_list' %}"
-               class="flex flex-col items-center justify-center gap-1 hover:text-primary hover:bg-base-200/50 transition-colors
-                      {% if 'friend' in request.resolver_match.url_name %}text-primary font-semibold{% endif %}">
-                <i class="bi bi-people text-xl" aria-hidden="true"></i>
-                <span>Social</span>
-            </a>
-        </div>
-    </nav>
+          </li>
+        </ul>
+      </div>
+      {% else %}
+      <a href="/accounts/login/" class="btn btn-primary btn-sm gap-2">
+        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+        <span>Login</span>
+      </a>
+      {% endif %}
+    </div>
+  </nav>
+
+  <!-- Page content -->
+  <main id="main-content"
+        class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8"
+        role="main">
+    {% if messages %}
+    <div class="toast toast-top toast-center z-50 w-full max-w-md top-16 px-4">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }}">
+        <span>{{ message }}</span>
+      </div>
+      {% endfor %}
+    </div>
     {% endif %}
 
-    <script>
-        // Auto-dismiss toasts
-        setTimeout(() => {
-            const toast = document.querySelector('.toast');
-            if (!toast) return;
-            toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-            setTimeout(() => toast.remove(), 550);
-        }, 4000);
-    </script>
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if user.is_authenticated %}
+  <!-- Mobile bottom nav (intuitive: 4 primary actions + clear Add) -->
+  <nav class="lg:hidden fixed bottom-0 left-0 right-0 vm-bottomnav safe-area-pb z-40"
+       aria-label="Primary navigation">
+    <div class="grid grid-cols-4 h-16 text-xs">
+      <a href="{% url 'dashboard' %}"
+         class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/60 transition
+                {% if request.resolver_match.url_name == 'dashboard' %}vm-active{% endif %}">
+        <i class="bi bi-house-door text-xl" aria-hidden="true"></i>
+        <span>Home</span>
+      </a>
+
+      <a href="{% url 'task_list' %}"
+         class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/60 transition
+                {% if 'task' in request.resolver_match.url_name %}vm-active{% endif %}">
+        <i class="bi bi-check2-square text-xl" aria-hidden="true"></i>
+        <span>Tasks</span>
+      </a>
+
+      <a href="{% url 'log_create' %}" class="flex flex-col items-center justify-center" aria-label="Add log">
+        <div class="vm-fab flex items-center justify-center -translate-y-4">
+          <i class="bi bi-plus-lg text-2xl" aria-hidden="true"></i>
+        </div>
+      </a>
+
+      <a href="{% url 'friends_list' %}"
+         class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/60 transition
+                {% if 'friend' in request.resolver_match.url_name %}vm-active{% endif %}">
+        <i class="bi bi-people text-xl" aria-hidden="true"></i>
+        <span>Friends</span>
+      </a>
+    </div>
+  </nav>
+  {% endif %}
+
+  <script>
+    // Auto-dismiss toasts
+    setTimeout(() => {
+      const toast = document.querySelector('.toast');
+      if (!toast) return;
+      toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+      setTimeout(() => toast.remove(), 550);
+    }, 4000);
+  </script>
 </body>
 </html>

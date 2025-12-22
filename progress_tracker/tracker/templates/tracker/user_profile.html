@@ -1,4 +1,5 @@
 {% extends 'tracker/base.html' %}
+{% load math_filters %}
 
 {% block title %}{{ user.get_full_name|default:user.username }} - VisMatrix.Space{% endblock %}
 
@@ -18,13 +19,6 @@
         <div class="min-w-0 flex-1">
           <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900">{{ user.get_full_name|default:user.username }}</h1>
           <p class="text-sm md:text-base text-slate-600 mb-1">@{{ user.username }}</p>
-          
-          {% if user.userprofile.bio %}
-          <p class="text-sm md:text-base text-slate-700 mt-2 max-w-2xl">
-            <i class="bi bi-quote mr-1 text-slate-400"></i>
-            {{ user.userprofile.bio }}
-          </p>
-          {% endif %}
           
           <p class="text-xs md:text-sm text-slate-500 mt-3">
             <i class="bi bi-calendar mr-1"></i>
@@ -92,7 +86,7 @@
               </span>
             </div>
             <div class="w-full bg-slate-200 rounded-full h-2">
-              <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full" style="width: {{ weekly_completed|add:1|divisibleby:5|yesno:'20,40' }}%"></div>
+              <div class="bg-gradient-to-r from-green-500 to-emerald-600 h-2 rounded-full" style="width: {% if weekly_completed > 0 %}{{ weekly_completed|mul:20 }}{% else %}5{% endif %}%"></div>
             </div>
           </div>
           
@@ -108,7 +102,7 @@
               </span>
             </div>
             <div class="w-full bg-slate-200 rounded-full h-2">
-              <div class="bg-gradient-to-r from-blue-500 to-cyan-600 h-2 rounded-full" style="width: {{ weekly_time|divisibleby:100|yesno:'25,60' }}%"></div>
+              <div class="bg-gradient-to-r from-blue-500 to-cyan-600 h-2 rounded-full" style="width: {% if weekly_time > 0 %}{{ weekly_time|div:10 }}{% else %}5{% endif %}%"></div>
             </div>
           </div>
         </div>
@@ -184,10 +178,13 @@
           <div class="bg-slate-50 rounded-lg p-3 md:p-4 border border-slate-200 text-xs md:text-sm">
             <div class="flex items-center justify-between gap-2">
               <div class="min-w-0 flex-1">
-                <p class="font-semibold text-slate-900 line-clamp-1">{{ log.category.name }}</p>
+                <p class="font-semibold text-slate-900 line-clamp-1">{{ log.activity }}</p>
                 <p class="text-slate-600 text-xs mt-1">
                   <i class="bi bi-calendar mr-1"></i>
                   {{ log.date|date:"M d, Y" }}
+                  {% if log.category %}
+                  <span class="ml-2 text-slate-500">• {{ log.category.name }}</span>
+                  {% endif %}
                 </p>
               </div>
               <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-bold flex-shrink-0">

@@ -4,108 +4,126 @@
 {% block title %}{{ title|default:"Create Task" }}{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 pb-24 md:pb-8 px-3 sm:px-4 lg:px-8">
-  <div class="max-w-2xl mx-auto pt-4">
-    <!-- Header -->
-    <div class="mb-6 md:mb-8">
-      <h1 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-900 mb-1 md:mb-2">
-        {{ title|default:"Create Task" }}
-      </h1>
-      <p class="text-sm md:text-base text-slate-600">
-        {{ subtitle|default:"Fill in the details below" }}
-      </p>
-    </div>
+<main class="py-8 sm:py-10">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 space-y-6">
 
-    <!-- Form Card -->
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-8 shadow-lg md:shadow-xl border border-slate-200/50">
-      <form method="POST" class="space-y-4 md:space-y-6">
-        {% csrf_token %}
-
-        <!-- Form Fields -->
-        {% for field in form %}
-          {% if field.widget.input_type != 'hidden' %}
-          <div class="form-control">
-            <label class="label">
-              <span class="label-text font-semibold text-sm md:text-base">
-                {{ field.label }}
-                {% if field.field.required %}<span class="text-error">*</span>{% endif %}
-              </span>
-            </label>
-            
-            {% if field.widget.input_type == 'textarea' %}
-              {{ field|add_class:"textarea textarea-bordered text-xs md:text-sm h-24 md:h-32" }}
-            {% elif field.widget.input_type == 'select' %}
-              {{ field|add_class:"select select-bordered text-xs md:text-sm" }}
-            {% elif field.widget.input_type == 'date' %}
-              {{ field|add_class:"input input-bordered text-xs md:text-sm" }}
-            {% else %}
-              {{ field|add_class:"input input-bordered text-xs md:text-sm" }}
-            {% endif %}
-
-            {% if field.help_text %}
-            <label class="label">
-              <span class="label-text-alt text-xs text-slate-600">{{ field.help_text|safe }}</span>
-            </label>
-            {% endif %}
-
-            {% if field.errors %}
-            <label class="label">
-              <span class="label-text-alt text-xs text-error">
-                <i class="bi bi-exclamation-circle"></i>
-                {{ field.errors.0 }}
-              </span>
-            </label>
-            {% endif %}
+    <!-- Header (simple + consistent) -->
+    <header class="card border border-base-200 bg-base-100" role="banner">
+      <div class="card-body p-5 sm:p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content truncate">
+              {{ title|default:"Create task" }}
+            </h1>
+            <p class="text-sm text-base-content/70 mt-1">
+              {{ subtitle|default:"Fill in the details below." }}
+            </p>
           </div>
-          {% endif %}
-        {% endfor %}
-
-        <!-- Buttons -->
-        <div class="flex flex-col md:flex-row gap-2 md:gap-3 pt-4 md:pt-6">
-          <button type="submit" class="btn btn-primary btn-sm md:btn-md flex-1 md:flex-auto gap-2">
-            <i class="bi bi-check-circle"></i>
-            <span class="hidden sm:inline">Save</span>
-          </button>
-          <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn btn-outline btn-sm md:btn-md flex-1 md:flex-auto gap-2">
-            <i class="bi bi-x-circle"></i>
-            <span class="hidden sm:inline">Cancel</span>
+          <a href="{% url 'task_list' %}" class="btn btn-outline btn-sm gap-2">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
+            <span>Tasks</span>
           </a>
         </div>
-      </form>
-    </div>
+      </div>
+    </header>
 
-    <!-- Tips Section (Mobile collapsible) -->
-    <details class="mt-6 md:mt-8 bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50 md:block">
-      <summary class="font-bold text-slate-900 cursor-pointer md:cursor-auto md:hidden flex items-center justify-between">
-        <span>💡 Tips</span>
-        <i class="bi bi-chevron-down"></i>
-      </summary>
-      <h3 class="font-bold text-slate-900 mb-2 md:mb-3 text-sm md:text-base hidden md:block">💡 Tips</h3>
-      <ul class="text-xs md:text-sm text-slate-600 space-y-2 mt-3 md:mt-0">
-        <li>✓ Be specific with task titles</li>
-        <li>✓ Set realistic due dates</li>
-        <li>✓ Use priority levels wisely</li>
-        <li>✓ Group by category for better tracking</li>
-      </ul>
-    </details>
-  </div>
+    <!-- Form card -->
+    <section class="card border border-base-200 bg-base-100" aria-label="Task form">
+      <div class="card-body p-5 sm:p-6">
+        <form method="POST" novalidate class="space-y-5">
+          {% csrf_token %}
 
-  <!-- Mobile Bottom Navigation -->
-  <div class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40">
-    <div class="flex justify-around items-center h-16 px-2">
-      <a href="{% url 'task_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-list-check text-xl"></i>
-        <span class="text-xs mt-0.5">Tasks</span>
-      </a>
-      <a href="{% url 'log_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-journal-text text-xl"></i>
-        <span class="text-xs mt-0.5">Logs</span>
-      </a>
-      <a href="{% url 'dashboard' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-house text-xl"></i>
-        <span class="text-xs mt-0.5">Home</span>
-      </a>
+{% for field in form %}
+  {% if field.widget.input_type == 'hidden' %}
+    {{ field }}
+  {% else %}
+    <div>
+      <label for="{{ field.id_for_label }}" class="label font-semibold">
+        <span class="label-text flex items-center gap-2">
+          {% if field.name == 'title' %}
+            <i class="bi bi-card-text text-primary" aria-hidden="true"></i>
+          {% elif field.name == 'description' %}
+            <i class="bi bi-chat-square-text text-primary" aria-hidden="true"></i>
+          {% elif field.name == 'due_date' %}
+            <i class="bi bi-calendar3 text-primary" aria-hidden="true"></i>
+          {% elif field.name == 'priority' %}
+            <i class="bi bi-flag text-primary" aria-hidden="true"></i>
+          {% elif field.name == 'category' %}
+            <i class="bi bi-tag text-primary" aria-hidden="true"></i>
+          {% else %}
+            <i class="bi bi-pencil text-primary" aria-hidden="true"></i>
+          {% endif %}
+          {{ field.label }}
+          {% if field.field.required %}
+            <span class="text-error" aria-hidden="true">*</span>
+            <span class="sr-only">Required</span>
+          {% endif %}
+        </span>
+      </label>
+
+      {# Textarea #}
+      {% if field.widget.input_type == 'textarea' %}
+        {% render_field field class="textarea textarea-bordered w-full min-h-[110px]" %}
+
+      {# Select widgets often have no input_type; detect via field.field.widget.choices #}
+      {% elif field.field.widget.choices %}
+        {% render_field field class="select select-bordered w-full" %}
+
+      {# Everything else: input #}
+      {% else %}
+        {% render_field field class="input input-bordered w-full" %}
+      {% endif %}
+
+      {% if field.help_text %}
+        <p class="mt-2 text-xs text-base-content/70">{{ field.help_text|safe }}</p>
+      {% endif %}
+
+      {% if field.errors %}
+        <p class="mt-2 text-sm text-error flex items-start gap-2">
+          <i class="bi bi-exclamation-circle-fill mt-0.5" aria-hidden="true"></i>
+          <span>{{ field.errors.0 }}</span>
+        </p>
+      {% endif %}
     </div>
+  {% endif %}
+{% endfor %}
+
+
+          <!-- Actions -->
+          <div class="pt-2 border-t border-base-200">
+            <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+              <button type="submit" class="btn btn-primary gap-2">
+                <i class="bi bi-check-lg" aria-hidden="true"></i>
+                <span>Save task</span>
+              </button>
+
+              <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn btn-ghost gap-2">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                <span>Cancel</span>
+              </a>
+            </div>
+          </div>
+
+        </form>
+      </div>
+    </section>
+
+    <!-- Tips (simple, optional) -->
+    <aside class="card border border-base-200 bg-base-100" aria-label="Tips">
+      <div class="card-body p-5 sm:p-6">
+        <h2 class="text-base font-bold flex items-center gap-2">
+          <i class="bi bi-lightbulb text-primary" aria-hidden="true"></i>
+          <span>Tips</span>
+        </h2>
+        <ul class="mt-3 space-y-2 text-sm text-base-content/70 list-disc pl-5">
+          <li>Write specific titles (“Gym — legs”, “Read 20 pages”).</li>
+          <li>Set a realistic due date to reduce pressure.</li>
+          <li>Use priority to decide what to do first.</li>
+          <li>Categories make analytics much more useful.</li>
+        </ul>
+      </div>
+    </aside>
+
   </div>
-</div>
+</main>
 {% endblock %}

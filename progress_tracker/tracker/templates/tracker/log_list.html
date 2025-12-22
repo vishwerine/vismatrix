@@ -3,197 +3,218 @@
 {% block title %}Activity Logs - VisMatrix.Space{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 pb-24 md:pb-8 px-3 sm:px-4 lg:px-8">
-  <!-- Header -->
-  <div class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
-      <div class="min-w-0">
-        <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-1 md:mb-2">Activity Logs</h1>
-        <p class="text-sm md:text-lg text-slate-600">Track your productivity and progress</p>
+<main class="py-8 sm:py-10">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
+
+    <!-- Header -->
+    <header class="card border border-base-200 bg-base-100" role="banner">
+      <div class="card-body p-5 sm:p-6">
+        <div class="flex items-start justify-between gap-4">
+          <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content truncate">Activity logs</h1>
+            <p class="text-sm text-base-content/70 mt-1">Track your productivity and progress.</p>
+          </div>
+          <a href="{% url 'log_create' %}" class="btn btn-primary btn-sm gap-2">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>New log</span>
+          </a>
+        </div>
       </div>
-      <a href="{% url 'log_create' %}" class="btn btn-secondary btn-sm md:btn-md gap-2 w-fit">
-        <i class="bi bi-plus-lg"></i>
-        <span class="hidden sm:inline">New Log</span>
-      </a>
-    </div>
-  </div>
+    </header>
 
-  <!-- Stats Cards -->
-  <div class="max-w-6xl mx-auto mb-6 md:mb-8 grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4">
-    <!-- Total Logs -->
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50">
-      <p class="text-xs md:text-sm text-slate-600 mb-2">Total Logs</p>
-      <div class="text-2xl sm:text-3xl md:text-4xl font-black text-blue-600">{{ total_logs }}</div>
-    </div>
-
-    <!-- This Week -->
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50">
-      <p class="text-xs md:text-sm text-slate-600 mb-2">This Week</p>
-      <div class="text-2xl sm:text-3xl md:text-4xl font-black text-green-600">{{ week_logs }}</div>
-    </div>
-
-    <!-- Total Time -->
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50">
-      <p class="text-xs md:text-sm text-slate-600 mb-2">Total Time</p>
-      <div class="text-2xl sm:text-3xl md:text-4xl font-black text-purple-600">
-        {% widthratio total_minutes 60 1 %}h
+    <!-- Stats -->
+    <section class="grid grid-cols-2 sm:grid-cols-3 gap-4" aria-label="Stats">
+      <div class="card border border-base-200 bg-base-100">
+        <div class="card-body p-4">
+          <p class="text-xs text-base-content/70">Total logs</p>
+          <p class="text-2xl font-extrabold tabular-nums">{{ total_logs }}</p>
+        </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Filter Section -->
-  <div class="max-w-6xl mx-auto mb-6">
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50">
-      <details class="md:static cursor-pointer md:cursor-auto">
-        <summary class="flex items-center justify-between font-bold text-slate-900 md:hidden mb-0 md:mb-4">
-          <span>Filters</span>
-          <i class="bi bi-chevron-down"></i>
-        </summary>
-        
-        <div class="flex flex-col md:flex-row gap-2 md:gap-3 md:items-center md:flex-wrap pt-3 md:pt-0">
-          <!-- Category Filter -->
-          <form method="GET" class="flex gap-2 flex-1 md:flex-auto">
-            <select name="category" class="select select-bordered select-sm md:select-md text-xs md:text-sm flex-1" onchange="this.form.submit()">
-              <option value="">All Categories</option>
-              {% for category in categories %}
-                <option value="{{ category.id }}" {% if category.id == category_id %}selected{% endif %}>
-                  {{ category.name }}
-                </option>
-              {% endfor %}
-            </select>
+      <div class="card border border-base-200 bg-base-100">
+        <div class="card-body p-4">
+          <p class="text-xs text-base-content/70">This week</p>
+          <p class="text-2xl font-extrabold tabular-nums">{{ week_logs }}</p>
+        </div>
+      </div>
+
+      <div class="card border border-base-200 bg-base-100">
+        <div class="card-body p-4">
+          <p class="text-xs text-base-content/70">Total time</p>
+          <p class="text-2xl font-extrabold tabular-nums">
+            {% widthratio total_minutes 60 1 %}h
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Filters -->
+    <section class="card border border-base-200 bg-base-100" aria-label="Filters">
+      <div class="card-body p-5 sm:p-6">
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-end sm:justify-between">
+          <form method="GET" class="flex items-end gap-3 w-full sm:w-auto">
+            <div class="w-full sm:w-72">
+              <label class="label font-semibold">
+                <span class="label-text flex items-center gap-2">
+                  <i class="bi bi-tag text-primary" aria-hidden="true"></i>
+                  Category
+                </span>
+              </label>
+              <select name="category" class="select select-bordered w-full" onchange="this.form.submit()">
+                <option value="">All categories</option>
+                {% for category in categories %}
+                  <option value="{{ category.id }}" {% if category.id == category_id %}selected{% endif %}>
+                    {{ category.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
           </form>
 
-          <!-- Clear Filter -->
           {% if category_id %}
-          <a href="{% url 'log_list' %}" class="btn btn-ghost btn-xs md:btn-sm gap-2">
-            <i class="bi bi-x-circle"></i>
-            <span class="hidden sm:inline">Clear</span>
-          </a>
-          {% endif %}
-        </div>
-      </details>
-    </div>
-  </div>
-
-  <!-- Logs Table - Responsive -->
-  <div class="max-w-6xl mx-auto">
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50 overflow-x-auto">
-      {% if page_obj.object_list %}
-      <table class="table table-sm md:table-md w-full text-xs md:text-base">
-        <thead class="bg-slate-50">
-          <tr class="border-b-2 border-slate-200">
-            <th class="text-slate-900 font-bold">Activity</th>
-            <th class="text-slate-900 font-bold hidden sm:table-cell">Category</th>
-            <th class="text-slate-900 font-bold text-right">Duration</th>
-            <th class="text-slate-900 font-bold text-right hidden md:table-cell">Date</th>
-            <th class="text-slate-900 font-bold text-center">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for log in page_obj.object_list %}
-          <tr class="border-b border-slate-200 hover:bg-slate-50 transition-colors">
-            <td>
-              <div>
-                <p class="font-semibold text-slate-900 text-xs md:text-sm">{{ log.activity|truncatewords:5 }}</p>
-                {% if log.notes %}<p class="text-xs text-slate-600 truncate">{{ log.notes|truncatewords:4 }}</p>{% endif %}
-              </div>
-            </td>
-            <td class="hidden sm:table-cell">
-              {% if log.category %}
-              <span class="badge badge-primary badge-xs md:badge-sm">{{ log.category.name|truncatewords:1 }}</span>
-              {% else %}
-              <span class="text-xs text-slate-500">-</span>
-              {% endif %}
-            </td>
-            <td class="text-right">
-              <span class="badge badge-ghost badge-xs md:badge-sm">{{ log.duration }}m</span>
-            </td>
-            <td class="text-right text-xs hidden md:table-cell text-slate-600">{{ log.date|date:"M d, Y" }}</td>
-            <td class="text-center">
-              <div class="dropdown dropdown-end md:hidden">
-                <button tabindex="0" class="btn btn-ghost btn-xs">
-                  <i class="bi bi-three-dots"></i>
-                </button>
-                <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-lg z-50 shadow-xl border border-slate-200">
-                  <li><a href="{% url 'log_update' log.id %}" class="text-xs"><i class="bi bi-pencil-square"></i>Edit</a></li>
-                  <li><a href="{% url 'log_delete' log.id %}" class="text-xs text-error"><i class="bi bi-trash2"></i>Delete</a></li>
-                </ul>
-              </div>
-              <div class="hidden md:flex gap-1 justify-center">
-                <a href="{% url 'log_update' log.id %}" class="btn btn-info btn-xs gap-1" title="Edit">
-                  <i class="bi bi-pencil-square-fill"></i>
-                </a>
-                <a href="{% url 'log_delete' log.id %}" class="btn btn-error btn-xs gap-1" title="Delete">
-                  <i class="bi bi-trash2-fill"></i>
-                </a>
-              </div>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
-      <!-- Pagination -->
-      {% if is_paginated %}
-      <div class="flex items-center justify-between mt-6 pt-6 border-t border-slate-200">
-        <div class="text-xs md:text-sm text-slate-600">
-          Page <span class="font-bold">{{ page_obj.number }}</span> of <span class="font-bold">{{ page_obj.paginator.num_pages }}</span>
-        </div>
-        <div class="flex gap-2">
-          {% if page_obj.has_previous %}
-          <a href="?page=1" class="btn btn-outline btn-xs md:btn-sm">
-            <i class="bi bi-chevron-double-left"></i>
-          </a>
-          <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-outline btn-xs md:btn-sm">
-            <i class="bi bi-chevron-left"></i>
-            <span class="hidden sm:inline">Prev</span>
-          </a>
-          {% endif %}
-
-          {% if page_obj.has_next %}
-          <a href="?page={{ page_obj.next_page_number }}" class="btn btn-outline btn-xs md:btn-sm">
-            <span class="hidden sm:inline">Next</span>
-            <i class="bi bi-chevron-right"></i>
-          </a>
-          <a href="?page={{ page_obj.paginator.num_pages }}" class="btn btn-outline btn-xs md:btn-sm">
-            <i class="bi bi-chevron-double-right"></i>
+          <a href="{% url 'log_list' %}" class="btn btn-ghost btn-sm gap-2">
+            <i class="bi bi-x-circle" aria-hidden="true"></i>
+            <span>Clear</span>
           </a>
           {% endif %}
         </div>
       </div>
-      {% endif %}
+    </section>
 
-      {% else %}
-      <div class="text-center py-12 md:py-16">
-        <div class="text-4xl md:text-5xl mb-3 md:mb-4">📝</div>
-        <h3 class="text-base md:text-lg font-bold text-slate-700 mb-2">No logs yet</h3>
-        <p class="text-sm text-slate-600 mb-6">Start logging your activities to track progress</p>
-        <a href="{% url 'log_create' %}" class="btn btn-secondary btn-sm">Log Activity</a>
+    <!-- Logs table -->
+    <section class="card border border-base-200 bg-base-100" aria-label="Logs">
+      <div class="card-body p-0">
+        {% if page_obj.object_list %}
+        <div class="overflow-x-auto">
+          <table class="table w-full">
+            <thead>
+              <tr>
+                <th>Activity</th>
+                <th class="hidden sm:table-cell">Category</th>
+                <th class="text-right">Duration</th>
+                <th class="hidden md:table-cell text-right">Date</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for log in page_obj.object_list %}
+              <tr class="hover">
+                <td>
+                  <div class="min-w-0">
+                    <p class="font-semibold truncate">{{ log.activity|truncatewords:6 }}</p>
+                    {% if log.notes %}
+                      <p class="text-xs text-base-content/70 truncate">{{ log.notes|truncatewords:6 }}</p>
+                    {% endif %}
+                  </div>
+                </td>
+
+                <td class="hidden sm:table-cell">
+                  {% if log.category %}
+                    <span class="badge badge-outline">{{ log.category.name|truncatewords:2 }}</span>
+                  {% else %}
+                    <span class="text-sm text-base-content/60">—</span>
+                  {% endif %}
+                </td>
+
+                <td class="text-right">
+                  <span class="badge badge-ghost">{{ log.duration }}m</span>
+                </td>
+
+                <td class="hidden md:table-cell text-right text-sm text-base-content/70">
+                  {{ log.date|date:"M d, Y" }}
+                </td>
+
+                <td class="text-center">
+                  <!-- Mobile actions -->
+                  <div class="dropdown dropdown-end md:hidden">
+                    <button tabindex="0" class="btn btn-ghost btn-sm" aria-label="Row actions">
+                      <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                    </button>
+                    <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 shadow-lg border border-base-200 w-40">
+                      <li><a href="{% url 'log_update' log.id %}"><i class="bi bi-pencil-square" aria-hidden="true"></i>Edit</a></li>
+                      <li><a href="{% url 'log_delete' log.id %}" class="text-error"><i class="bi bi-trash2" aria-hidden="true"></i>Delete</a></li>
+                    </ul>
+                  </div>
+
+                  <!-- Desktop actions -->
+                  <div class="hidden md:flex justify-center gap-2">
+                    <a href="{% url 'log_update' log.id %}" class="btn btn-outline btn-sm" aria-label="Edit log">
+                      <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                    </a>
+                    <a href="{% url 'log_delete' log.id %}" class="btn btn-outline btn-sm text-error" aria-label="Delete log">
+                      <i class="bi bi-trash2" aria-hidden="true"></i>
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if is_paginated %}
+        <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between p-5 border-t border-base-200">
+          <p class="text-sm text-base-content/70">
+            Page <span class="font-semibold">{{ page_obj.number }}</span> of <span class="font-semibold">{{ page_obj.paginator.num_pages }}</span>
+          </p>
+
+          <div class="join">
+            {% if page_obj.has_previous %}
+              <a href="?page=1" class="btn btn-outline btn-sm join-item" aria-label="First page">
+                <i class="bi bi-chevron-double-left" aria-hidden="true"></i>
+              </a>
+              <a href="?page={{ page_obj.previous_page_number }}" class="btn btn-outline btn-sm join-item" aria-label="Previous page">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                <span class="hidden sm:inline">Prev</span>
+              </a>
+            {% endif %}
+
+            {% if page_obj.has_next %}
+              <a href="?page={{ page_obj.next_page_number }}" class="btn btn-outline btn-sm join-item" aria-label="Next page">
+                <span class="hidden sm:inline">Next</span>
+                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+              </a>
+              <a href="?page={{ page_obj.paginator.num_pages }}" class="btn btn-outline btn-sm join-item" aria-label="Last page">
+                <i class="bi bi-chevron-double-right" aria-hidden="true"></i>
+              </a>
+            {% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="p-8 sm:p-10 text-center">
+          <div class="text-4xl mb-3">📝</div>
+          <h2 class="text-lg font-bold">No logs yet</h2>
+          <p class="text-sm text-base-content/70 mt-1">Start logging your activities to track progress.</p>
+          <a href="{% url 'log_create' %}" class="btn btn-primary btn-sm mt-4">Log activity</a>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
-    </div>
-  </div>
+    </section>
 
-  <!-- Mobile Bottom Navigation -->
-  <div class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40">
-    <div class="flex justify-around items-center h-16 px-2">
-      <a href="{% url 'log_create' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-plus-circle text-xl text-secondary"></i>
-        <span class="text-xs mt-0.5">New</span>
-      </a>
-      <a href="{% url 'task_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-list-check text-xl"></i>
-        <span class="text-xs mt-0.5">Tasks</span>
-      </a>
-      <a href="{% url 'log_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition bg-slate-50">
-        <i class="bi bi-journal-text text-xl text-secondary"></i>
-        <span class="text-xs mt-0.5">Logs</span>
-      </a>
-      <a href="{% url 'dashboard' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-house text-xl"></i>
-        <span class="text-xs mt-0.5">Home</span>
-      </a>
-    </div>
+    <!-- Mobile quick nav (optional; base.html already has one, remove if duplicated) -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-base-100 border-t border-base-200 z-40">
+      <div class="grid grid-cols-4 h-16 text-xs">
+        <a href="{% url 'log_create' %}" class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/40">
+          <i class="bi bi-plus-circle text-xl text-primary" aria-hidden="true"></i>
+          <span>New</span>
+        </a>
+        <a href="{% url 'task_list' %}" class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/40">
+          <i class="bi bi-list-check text-xl" aria-hidden="true"></i>
+          <span>Tasks</span>
+        </a>
+        <a href="{% url 'log_list' %}" class="flex flex-col items-center justify-center gap-1 bg-base-200/40">
+          <i class="bi bi-journal-text text-xl text-primary" aria-hidden="true"></i>
+          <span>Logs</span>
+        </a>
+        <a href="{% url 'dashboard' %}" class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/40">
+          <i class="bi bi-house text-xl" aria-hidden="true"></i>
+          <span>Home</span>
+        </a>
+      </div>
+    </nav>
+
   </div>
-</div>
+</main>
 {% endblock %}

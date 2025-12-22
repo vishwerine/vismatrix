@@ -1,0 +1,81 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Notifications - VisMatrix{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <header class="flex flex-col gap-1" aria-label="Notifications header">
+        <h1 class="text-2xl md:text-3xl font-black text-base-content flex items-center gap-2">
+            <i class="bi bi-bell" aria-hidden="true"></i>
+            <span>Notifications</span>
+        </h1>
+        <div class="flex flex-wrap items-center gap-2 text-sm md:text-base text-base-content/70">
+            <p>Stars and appreciation from your friends</p>
+            {% if total_stars > 0 %}
+            <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-warning/10 text-warning">
+                <i class="bi bi-star-fill" aria-hidden="true"></i>
+                <span>{{ total_stars }} star{{ total_stars|pluralize }}</span>
+            </span>
+            {% endif %}
+        </div>
+    </header>
+
+    <!-- Stars Received -->
+    <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Stars received">
+        <div class="card-body p-4 md:p-6">
+            <h2 class="card-title text-lg flex items-center gap-2">
+                <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+                <span>Stars Received</span>
+            </h2>
+
+            {% if stars %}
+            <div class="space-y-4 mt-4">
+                {% for star in stars %}
+                <div class="flex gap-3 relative pb-4 last:pb-0 border-l border-base-300 ml-2 pl-4">
+                    <div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-warning ring-2 ring-base-100"></div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="avatar placeholder">
+                                <div class="bg-neutral-focus text-neutral-content rounded-full w-8 h-8">
+                                    <span class="text-sm">
+                                        {{ star.user.username|first|upper }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <span class="font-medium">{{ star.user.username }}</span>
+                                <span class="text-sm text-base-content/60 ml-1">starred your</span>
+                                {% if star.type == 'task' %}
+                                <span class="badge badge-success badge-xs">task</span>
+                                {% else %}
+                                <span class="badge badge-info badge-xs">activity</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="text-sm font-medium mb-1">
+                            "{{ star.activity }}"
+                        </p>
+                        <p class="text-xs text-base-content/60 flex items-center gap-1">
+                            <i class="bi bi-clock" aria-hidden="true"></i>
+                            <span>{{ star.timestamp|date:"M j, g:i A" }}</span>
+                            <span class="mx-1">•</span>
+                            <span>{{ star.timestamp|timesince }} ago</span>
+                        </p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="flex flex-col items-center justify-center py-8 text-center opacity-60">
+                <i class="bi bi-star w-12 h-12 text-warning/50 mb-2" aria-hidden="true"></i>
+                <p class="text-sm">No stars received yet</p>
+                <p class="text-xs text-base-content/60 mt-1">Complete tasks and log activities to get stars from friends!</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+</div>
+{% endblock %}
