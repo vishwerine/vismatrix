@@ -46,4 +46,7 @@ urlpatterns = [
     # Daily summary
     path("daily/<int:year>/<int:month>/<int:day>/", views.daily_summary, name="daily_summary"),
 
+    # About page
+    path("about/", views.about, name="about"),
+
 ]

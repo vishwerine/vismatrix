@@ -1617,3 +1617,8 @@ def notifications(request):
     }
     
     return render(request, 'tracker/notifications.html', context)
+
+
+def about(request):
+    """About page for VisMatrix company information."""
+    return render(request, 'tracker/about.html')

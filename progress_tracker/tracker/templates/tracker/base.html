@@ -254,16 +254,23 @@
   <!-- Top Navigation -->
   <nav class="navbar vm-navbar sticky top-0 z-50 safe-area-pt" role="navigation" aria-label="Main navigation">
     <div class="flex-1">
-      <a href="{% url 'dashboard' %}" class="flex items-center gap-2 px-2 py-2 rounded-xl hover:bg-base-200 transition">
-        <img
-          src="{% static 'branding/vismatrixlogo.png' %}"
-          alt="VisMatrix logo"
-          class="w-8 h-8 object-contain"
-          loading="eager"
-        />
-        <span class="font-bold text-lg tracking-tight">
-          VisMatrix<span class="text-primary">.space</span>
-        </span>
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-3 hover:opacity-90 transition">
+        <!-- Startup Icon + (optional) wordmark/logo on larger screens -->
+        <div class="flex items-center gap-2">
+          <img
+            src="{% static 'branding/vismatrixicon.png' %}"
+            alt="VisMatrix icon"
+            class="w-9 h-9 rounded-xl ring-1 ring-slate-200 bg-white p-1 object-contain"
+            loading="eager"
+          />
+        </div>
+
+        <div class="leading-tight">
+          <div class="text-base sm:text-lg font-black tracking-tight">
+            VisMatrix<span class="text-primary">.space</span>
+          </div>
+          <div class="text-xs text-slate-600 hidden sm:block">AI-powered personal achievement</div>
+        </div>
       </a>
     </div>
 
@@ -298,53 +305,75 @@
         <i class="bi bi-people" aria-hidden="true"></i>
         <span class="ml-1">Friends</span>
       </a>
+
+      <a href="{% url 'about' %}"
+         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'about' %}vm-nav-active{% endif %}">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span class="ml-1">About</span>
+      </a>
     </div>
 
     <!-- User / Auth -->
     <div class="flex-none gap-2 pr-2">
       {% if user.is_authenticated %}
-      <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button"
-             class="btn btn-ghost btn-circle avatar w-10 h-10 bg-base-200 hover:bg-base-300 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.05]"
-             aria-label="User menu">
-          <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm shadow-md ring-1 ring-white/20">
-            {{ user.username|first|upper }}
-          </div>
-        </div>
+<div class="dropdown dropdown-end" id="userMenu">
+  <div
+    id="userMenuButton"
+    tabindex="0"
+    role="button"
+    class="btn btn-ghost btn-circle avatar w-10 h-10 bg-base-200 hover:bg-base-300 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.05]"
+    aria-label="User menu"
+    aria-haspopup="true"
+    aria-expanded="false"
+  >
+    <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm shadow-md ring-1 ring-white/20">
+      {{ user.username|first|upper }}
+    </div>
+  </div>
 
-        <ul tabindex="0" class="vm-dropdown dropdown-content z-[1] menu p-0 mt-2 w-64">
-          <li class="menu-title">Hi, {{ user.username }}</li>
+  <ul
+    id="userMenuDropdown"
+    class="vm-dropdown dropdown-content z-[1] menu p-0 mt-2 w-64 hidden"
+    role="menu"
+  >
+    <li class="menu-title">Hi, {{ user.username }}</li>
 
-          <li><a href="{% url 'dashboard' %}">
-            <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
-            Dashboard
-          </a></li>
-          
-          <li><a href="{% url 'notifications' %}">
-            <i class="bi bi-bell text-lg opacity-80" aria-hidden="true"></i>
-            Notifications
-          </a></li>
-          
-          <li><a href="{% url 'category_list' %}">
-            <i class="bi bi-tags text-lg opacity-80" aria-hidden="true"></i>
-            Categories
-          </a></li>
-          
-          <li><a href="{% url 'user_list' %}">
-            <i class="bi bi-person-plus text-lg opacity-80" aria-hidden="true"></i>
-            Find Friends
-          </a></li>
+    <li><a href="{% url 'dashboard' %}">
+      <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
+      Dashboard
+    </a></li>
 
-          <div class="divider mx-4 my-2"></div>
+    <li><a href="{% url 'notifications' %}">
+      <i class="bi bi-bell text-lg opacity-80" aria-hidden="true"></i>
+      Notifications
+    </a></li>
 
-          <li>
-            <a href="/accounts/logout/" class="text-error hover:text-error font-medium">
-              <i class="bi bi-box-arrow-right text-lg opacity-90" aria-hidden="true"></i>
-              Sign out
-            </a>
-          </li>
-        </ul>
-      </div>
+    <li><a href="{% url 'category_list' %}">
+      <i class="bi bi-tags text-lg opacity-80" aria-hidden="true"></i>
+      Categories
+    </a></li>
+
+    <li><a href="{% url 'user_list' %}">
+      <i class="bi bi-person-plus text-lg opacity-80" aria-hidden="true"></i>
+      Find Friends
+    </a></li>
+
+    <div class="divider mx-4 my-2"></div>
+
+    <li><a href="{% url 'about' %}">
+      <i class="bi bi-info-circle text-lg opacity-80" aria-hidden="true"></i>
+      About VisMatrix
+    </a></li>
+
+    <li>
+      <a href="/accounts/logout/" class="text-error hover:text-error font-medium">
+        <i class="bi bi-box-arrow-right text-lg opacity-90" aria-hidden="true"></i>
+        Sign out
+      </a>
+    </li>
+  </ul>
+</div>
+
       {% else %}
       <a href="/accounts/login/" class="btn btn-primary btn-sm gap-2">
         <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
@@ -414,6 +443,40 @@
       toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
       setTimeout(() => toast.remove(), 550);
     }, 4000);
+      (function () {
+    const menu = document.getElementById('userMenu');
+    const btn = document.getElementById('userMenuButton');
+    const dropdown = document.getElementById('userMenuDropdown');
+    if (!menu || !btn || !dropdown) return;
+
+    const openMenu = () => {
+      dropdown.classList.remove('hidden');
+      btn.setAttribute('aria-expanded', 'true');
+    };
+
+    const closeMenu = () => {
+      dropdown.classList.add('hidden');
+      btn.setAttribute('aria-expanded', 'false');
+    };
+
+    const toggleMenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropdown.classList.contains('hidden') ? openMenu() : closeMenu();
+    };
+
+    btn.addEventListener('click', toggleMenu);
+
+    // Close on click outside
+    document.addEventListener('click', (e) => {
+      if (!menu.contains(e.target)) closeMenu();
+    });
+
+    // Close on Esc
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeMenu();
+    });
+  })();
   </script>
 </body>
 </html>

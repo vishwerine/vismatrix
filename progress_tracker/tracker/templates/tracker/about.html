@@ -1,0 +1,121 @@
+{% extends "tracker/base.html" %}
+
+{% block title %}About VisMatrix.Space{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  <div class="text-center mb-12">
+    <h1 class="text-4xl font-bold text-primary mb-4">About VisMatrix.Space</h1>
+    <p class="text-xl text-muted max-w-2xl mx-auto">
+      Building the future of AI-powered personal achievement
+    </p>
+  </div>
+
+  <div class="card bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20 mb-8">
+    <div class="card-body">
+      <h2 class="card-title text-2xl mb-6">Our Mission</h2>
+      <p class="text-lg leading-relaxed mb-6">
+        At VisMatrix.Space, we're building your personal growth space that utilizes AI agents that can help you achieve any of your goals.
+        Our agentic AI model provides step-by-step specific feedback to accomplish your health,
+        study, or work tasks. Whether you're looking to get fit, excel academically, or advance professionally,
+        VisMatrix.Space is here to guide you every step of the way.
+      </p>
+
+      <div class="grid md:grid-cols-3 gap-6 mt-8">
+        <div class="text-center">
+          <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="bi bi-heart-pulse text-2xl text-primary-content"></i>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Health Goals</h3>
+          <p class="text-sm text-muted">
+            Personalized AI guidance for fitness, nutrition, and wellness objectives
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="bi bi-book text-2xl text-primary-content"></i>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Study Goals</h3>
+          <p class="text-sm text-muted">
+            Intelligent learning assistants that adapt to your study patterns and needs
+          </p>
+        </div>
+
+        <div class="text-center">
+          <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4">
+            <i class="bi bi-briefcase text-2xl text-primary-content"></i>
+          </div>
+          <h3 class="font-semibold text-lg mb-2">Work Goals</h3>
+          <p class="text-sm text-muted">
+            Professional development AI that helps you advance in your career
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid md:grid-cols-2 gap-8">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="card-title text-xl mb-4">
+          <i class="bi bi-robot text-primary mr-2"></i>
+          Agentic AI Technology
+        </h3>
+        <p class="mb-4">
+          Our advanced AI agents go beyond simple recommendations. They actively guide you
+          through complex goal achievement with personalized, actionable steps.
+        </p>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start">
+            <i class="bi bi-check-circle text-success mr-2 mt-0.5"></i>
+            Real-time progress tracking and adjustment
+          </li>
+          <li class="flex items-start">
+            <i class="bi bi-check-circle text-success mr-2 mt-0.5"></i>
+            Context-aware feedback and suggestions
+          </li>
+          <li class="flex items-start">
+            <i class="bi bi-check-circle text-success mr-2 mt-0.5"></i>
+            Adaptive learning from your behavior patterns
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <h3 class="card-title text-xl mb-4">
+          <i class="bi bi-graph-up text-primary mr-2"></i>
+          Data-Driven Insights
+        </h3>
+        <p class="mb-4">
+          We combine cutting-edge AI with comprehensive progress tracking to provide
+          insights that actually help you succeed.
+        </p>
+        <ul class="space-y-2 text-sm">
+          <li class="flex items-start">
+            <i class="bi bi-check-circle text-success mr-2 mt-0.5"></i>
+            Visual progress analytics and trends
+          </li>
+          <li class="flex items-start">
+            <i class="bi bi-check-circle text-success mr-2 mt-0.5"></i>
+            Predictive goal completion estimates
+          </li>
+          <li class="flex items-start">
+            <i class="bi bi-check-circle text-success mr-2 mt-0.5"></i>
+            Social accountability through friend networks
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="text-center mt-12">
+    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg gap-2">
+      <i class="bi bi-arrow-right"></i>
+      Start Your Journey
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -4,38 +4,85 @@
 {% block title %}Tasks - VisMatrix.Space{% endblock %}
 
 {% block content %}
+
+<style>
+  /* Page-specific polish (kept minimal; aligns with your base tokens) */
+  .vm-section { border: 1px solid rgb(226 232 240 / 0.85); }
+  .vm-task { transition: 160ms ease; }
+  .vm-task:hover { box-shadow: 0 10px 18px rgb(15 23 42 / 0.06); transform: translateY(-1px); }
+  .vm-chip { background: rgb(15 23 42 / 0.04); border: 1px solid rgb(226 232 240 / 0.9); }
+  .vm-muted { color: rgb(15 23 42 / 0.65); }
+
+  /* Opaque dropdown for task menu */
+  .vm-dropdown-opaque {
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Let dropdown escape the card (prevents clipping) */
+  .vm-task,
+  .vm-task .card-body {
+    overflow: visible !important;
+  }
+
+  /* Ensure dropdown stacks above cards/navs */
+  .task-menu { position: relative; z-index: 1; }
+  .task-menu .dropdown-content {
+    position: absolute;
+    z-index: 100000 !important;
+  }
+
+  /* When a task menu is open, raise the entire card above others */
+  .vm-task.vm-open {
+    position: relative;
+    z-index: 100000 !important;
+  }
+
+  /* Disable hover transform while open (transform creates a stacking context) */
+  .vm-task.vm-open:hover {
+    transform: none !important;
+  }
+</style>
+
 <main class="py-8 sm:py-10">
   <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
 
     <!-- Header -->
-    <header class="card border border-base-200 bg-base-100" role="banner">
+    <header class="card vm-section bg-base-100" role="banner">
       <div class="card-body p-5 sm:p-6">
-        <div class="flex items-start justify-between gap-4">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div class="min-w-0">
             <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content flex items-center gap-2 truncate">
               <i class="bi bi-list-check text-primary" aria-hidden="true"></i>
               <span>Tasks</span>
-            </h1>
-            <p class="text-sm text-base-content/70 mt-1">
-              Manage and track your tasks
               {% if tasks %}
-                <span class="ml-2 text-xs text-base-content/60">({{ tasks|length }} total)</span>
+                <span class="badge vm-chip text-xs font-bold ml-2">
+                  {{ tasks|length }} total
+                </span>
               {% endif %}
+            </h1>
+            <p class="text-sm vm-muted mt-1">
+              Manage and track your tasks. Stay consistent — small wins compound.
             </p>
           </div>
 
-          <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm gap-2" aria-label="Create a new task">
-            <i class="bi bi-plus-square" aria-hidden="true"></i>
-            <span>New task</span>
-          </a>
+          <div class="flex items-center gap-2">
+            <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm gap-2" aria-label="Create a new task">
+              <i class="bi bi-plus-square" aria-hidden="true"></i>
+              <span>New task</span>
+            </a>
+          </div>
         </div>
       </div>
     </header>
 
     <!-- Filters -->
-    <section class="card border border-base-200 bg-base-100" aria-label="Task filters">
+    <section class="card vm-section bg-base-100" aria-label="Task filters">
       <div class="card-body p-5 sm:p-6">
-        <div class="flex flex-col lg:flex-row gap-3 lg:items-end lg:justify-between">
+        <div class="flex flex-col lg:flex-row gap-4 lg:items-end lg:justify-between">
+
           <!-- Search -->
           <form method="get" class="w-full lg:max-w-md">
             <label class="label font-semibold">
@@ -44,6 +91,7 @@
                 Search
               </span>
             </label>
+
             <div class="join w-full">
               <input
                 type="text"
@@ -58,7 +106,7 @@
               </button>
             </div>
 
-            {# Preserve filters when searching (optional) #}
+            <!-- Preserve filters when searching -->
             {% if request.GET.priority %}
               <input type="hidden" name="priority" value="{{ request.GET.priority }}">
             {% endif %}
@@ -94,6 +142,7 @@
             </a>
           </div>
           {% endwith %}
+
         </div>
       </div>
     </section>
@@ -102,7 +151,7 @@
     <section class="space-y-3" aria-label="Task list">
       {% if tasks %}
         {% for task in tasks %}
-        <article class="card border border-base-200 bg-base-100">
+        <article class="card vm-section bg-base-100 vm-task">
           <div class="card-body p-4 sm:p-5">
             <div class="flex items-start gap-3">
 
@@ -120,6 +169,7 @@
               <!-- Content -->
               <div class="flex-1 min-w-0">
                 <div class="flex items-start justify-between gap-3">
+
                   <div class="min-w-0">
                     <h3 class="font-semibold text-base-content truncate {% if task.status == 'completed' %}line-through text-base-content/50{% endif %}">
                       {{ task.title }}
@@ -146,11 +196,24 @@
                   </div>
 
                   <!-- Mobile actions -->
-                  <div class="dropdown dropdown-end md:hidden flex-shrink-0">
-                    <button tabindex="0" class="btn btn-ghost btn-sm" aria-label="Task actions">
+                  <div class="dropdown dropdown-end md:hidden flex-shrink-0 task-menu" id="taskMenu-{{ task.id }}">
+                    <button
+                      id="taskMenuBtn-{{ task.id }}"
+                      type="button"
+                      class="btn btn-ghost btn-sm"
+                      aria-label="Task actions"
+                      aria-haspopup="true"
+                      aria-expanded="false"
+                    >
                       <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
                     </button>
-                    <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-50 shadow-lg border border-base-200 w-44">
+
+                    <ul
+                      id="taskMenuDd-{{ task.id }}"
+                      class="dropdown-content menu vm-dropdown-opaque rounded-box shadow-lg border border-base-200 w-44 hidden"
+                      style="z-index: 100000;"
+                      role="menu"
+                    >
                       <li>
                         <a href="{% url 'task_update' task.id %}">
                           <i class="bi bi-pencil-square" aria-hidden="true"></i>
@@ -171,6 +234,7 @@
                       </li>
                     </ul>
                   </div>
+
                 </div>
 
                 <!-- Meta -->
@@ -207,7 +271,7 @@
         </article>
         {% endfor %}
       {% else %}
-        <div class="card border border-base-200 bg-base-100">
+        <div class="card vm-section bg-base-100">
           <div class="card-body p-8 sm:p-10 text-center">
             <div class="text-4xl mb-3">🎯</div>
             <h2 class="text-lg font-bold">No tasks found</h2>
@@ -239,10 +303,19 @@
 </main>
 
 <script>
+  function getCSRFToken() {
+    const name = 'csrftoken=';
+    const parts = document.cookie.split(';').map(s => s.trim());
+    for (const p of parts) {
+      if (p.startsWith(name)) return decodeURIComponent(p.substring(name.length));
+    }
+    return '{{ csrf_token }}';
+  }
+
   function completeTask(taskId) {
     fetch(`/tasks/${taskId}/complete/`, {
       method: 'POST',
-      headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+      headers: { 'X-CSRFToken': getCSRFToken() }
     })
     .then(function (r) {
       if (!r.ok) throw new Error('Request failed');
@@ -252,5 +325,72 @@
       alert('Error completing task. Please try again.');
     });
   }
+
+  // Mobile task menu: toggle, close on outside click / Esc, only one open at a time
+  (function () {
+    const menus = Array.from(document.querySelectorAll('.task-menu'));
+    if (!menus.length) return;
+
+    const closeAll = () => {
+      menus.forEach((menu) => {
+        const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
+        const dd  = menu.querySelector('ul[id^="taskMenuDd-"]');
+        if (!btn || !dd) return;
+
+        dd.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+
+        const card = menu.closest('.vm-task');
+        if (card) card.classList.remove('vm-open');
+      });
+    };
+
+    const toggleOne = (menu) => {
+      const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
+      const dd  = menu.querySelector('ul[id^="taskMenuDd-"]');
+      if (!btn || !dd) return;
+
+      const isHidden = dd.classList.contains('hidden');
+      closeAll();
+
+      if (isHidden) {
+        dd.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+
+        const card = menu.closest('.vm-task');
+        if (card) card.classList.add('vm-open');
+      }
+    };
+
+    menus.forEach((menu) => {
+      const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
+      if (!btn) return;
+
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleOne(menu);
+      });
+
+      // Close when clicking a menu action (better UX on mobile)
+      const dd = menu.querySelector('ul[id^="taskMenuDd-"]');
+      if (dd) {
+        dd.addEventListener('click', () => closeAll());
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      const clickedInsideAny = menus.some((menu) => menu.contains(e.target));
+      if (!clickedInsideAny) closeAll();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAll();
+    });
+
+    // Also close on scroll (prevents floating menus while scrolling list)
+    document.addEventListener('scroll', closeAll, { passive: true });
+  })();
 </script>
+
 {% endblock %}

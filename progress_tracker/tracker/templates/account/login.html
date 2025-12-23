@@ -1,17 +1,21 @@
 {% load socialaccount %}
 {% load static %}
 {% load widget_tweaks %}
+
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="description" content="Sign in to VisMatrix.Space - Track your progress with friends">
+  <meta name="description" content="VisMatrix.Space — AI-powered personal achievement. Track progress, stay accountable, and achieve goals with agentic AI.">
   <meta name="theme-color" content="#1d4ed8">
-  <title>Login - VisMatrix.Space</title>
+  <title>Welcome — VisMatrix.Space</title>
 
-  <!-- App Icons -->
+  <!-- App Icons (browser tab / PWA) -->
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'branding/vismatrixicon.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'branding/vismatrixicon.png' %}">
+  <meta name="application-name" content="VisMatrix">
+  <meta name="apple-mobile-web-app-title" content="VisMatrix">
 
   <!-- Tailwind + DaisyUI + Bootstrap Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -19,142 +23,403 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
   <style>
-    /* Login page specific styles - matches base.html design system */
-    .login-hero {
-      background: linear-gradient(135deg, rgb(248 250 252 / 0.9) 0%, rgb(241 245 249 / 0.7) 100%);
-      backdrop-filter: blur(20px);
+    :root{
+      --border: rgba(226,232,240,.9);
+      --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 20px 40px rgb(15 23 42 / 0.10);
+      --focus: 0 0 0 3px rgb(29 78 216 / 0.25);
     }
-    
-    .login-card {
-      background: rgb(255 255 255 / 0.98);
-      border: 1px solid rgb(226 232 240 / 0.8);
-      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.1);
+    body{
+      background:
+        radial-gradient(1000px 600px at 20% 12%, rgba(29,78,216,.14) 0%, rgba(29,78,216,0) 60%),
+        radial-gradient(800px 500px at 90% 10%, rgba(16,185,129,.12) 0%, rgba(16,185,129,0) 55%),
+        radial-gradient(900px 600px at 55% 95%, rgba(99,102,241,.10) 0%, rgba(99,102,241,0) 60%),
+        #f8fafc;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      -webkit-tap-highlight-color: transparent;
     }
-    
-    .login-header {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-    }
-    
-    /* Animations matching base.html */
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
+    :focus-visible { outline: none; box-shadow: var(--focus); border-radius: 12px; }
     @media (prefers-reduced-motion: reduce) {
-      * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+      * { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
     }
-    
-    /* Enhanced focus states for inputs */
-    .input:focus {
-      border-color: rgb(29 78 216);
-      box-shadow: 0 0 0 3px rgb(29 78 216 / 0.25);
+
+    .glass{
+      background: rgba(255,255,255,.92);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+    .solid{
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: var(--shadow);
+    }
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      gap:.5rem;
+      padding:.5rem .75rem;
+      border-radius: 9999px;
+      font-weight: 800;
+      font-size: .82rem;
+      border: 1px solid rgba(29,78,216,.18);
+      background: rgba(29,78,216,.08);
+      color: #0f172a;
+      white-space: nowrap;
+    }
+    .brandmark{
+      width: 44px; height: 44px;
+      border-radius: 14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background: rgba(29,78,216,.10);
+      border: 1px solid rgba(29,78,216,.18);
+      flex-shrink: 0;
+    }
+    .feature{
+      border: 1px solid rgba(226,232,240,.9);
+      border-radius: 16px;
+      background: rgba(255,255,255,.86);
+    }
+    .input:focus { border-color: rgb(29 78 216); box-shadow: var(--focus); }
+
+    /* Subtle section divider */
+    .soft-divider{
+      height: 1px;
+      background: linear-gradient(to right, transparent, rgba(226,232,240,.9), transparent);
     }
   </style>
 </head>
 
-<body class="min-h-screen flex items-center justify-center p-4 lg:p-8 login-hero">
-  
+<body>
+  <a href="#signin" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 bg-slate-900 text-white px-3 py-2 rounded-xl">
+    Skip to sign in
+  </a>
 
-  <main id="main-login" class="w-full max-w-md login-card rounded-3xl overflow-hidden animate-slideUp" role="main" aria-labelledby="login-title">
-    
-    <!-- Header -->
-    <div class="login-header text-white p-8 lg:p-12 text-center relative overflow-hidden">
-      <div class="w-20 h-20 lg:w-24 lg:h-24 mx-auto mb-8 bg-white/20 rounded-2xl flex items-center justify-center shadow-2xl ring-2 ring-white/30">
-        <i class="bi bi-graph-up-arrow text-3xl lg:text-4xl" aria-hidden="true"></i>
-      </div>
-      <h1 id="login-title" class="text-3xl lg:text-4xl font-black tracking-tight mb-4">
-        Welcome Back!
-      </h1>
-      <p class="text-xl font-semibold text-slate-200 mb-6 opacity-90">
-        Sign in to your VisMatrix.Space account
-      </p>
-      <div class="inline-block bg-emerald-400/90 text-emerald-900 px-6 py-3 rounded-2xl font-bold text-sm shadow-lg border border-emerald-300/50 tracking-wide">
-        Agentic AI arrives March 2026
-      </div>
-    </div>
+  <!-- Top bar -->
+  <header class="sticky top-0 z-40 bg-white/70 backdrop-blur border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-3 hover:opacity-90 transition">
+        <img
+          src="{% static 'branding/vismatrixicon.png' %}"
+          alt="VisMatrix icon"
+          class="w-9 h-9 rounded-xl ring-1 ring-slate-200 bg-white p-1 object-contain"
+          loading="eager"
+        />
+        <div class="leading-tight">
+          <div class="text-base sm:text-lg font-black tracking-tight">
+            VisMatrix<span class="text-primary">.space</span>
+          </div>
+          <div class="text-xs text-slate-600 hidden sm:block">AI-powered personal achievement</div>
+        </div>
+      </a>
 
-    <div class="p-8 lg:p-10 space-y-6">
-      <!-- Social Login -->
-      {% get_providers as socialaccount_providers %}
-      {% if socialaccount_providers %}
-      <div class="card-compact p-0">
-        <a href="{% provider_login_url 'google' %}"
-           class="btn btn-outline w-full gap-3 normal-case h-14 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-md transition-all duration-200 text-base font-semibold"
-           role="button" aria-label="Continue with Google account">
-          <i class="bi bi-google text-xl" aria-hidden="true"></i>
-          <span>Continue with Google</span>
+      <div class="flex items-center gap-2">
+        <span class="tag hidden sm:inline-flex">
+          <i class="bi bi-stars" aria-hidden="true"></i>
+          Agentic AI arriving March 2026
+        </span>
+        <a href="{% url 'about' %}" class="btn btn-ghost btn-sm">About</a>
+        <a href="#signin" class="btn btn-primary btn-sm gap-2">
+          <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+          Sign in
         </a>
       </div>
+    </div>
+  </header>
 
-      <div class="divider text-sm text-slate-500 before:bg-slate-200 after:bg-slate-200">or use email</div>
+  <!-- HERO + SIGN IN (clean layout, mobile-first) -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-10 space-y-6">
+
+    <!-- HERO -->
+    <section class="glass p-6 sm:p-10" id="signin">
+      <div class="flex flex-col gap-6">
+
+        <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6">
+          <div class="min-w-0">
+
+
+
+            <h1 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+              VisMatrix<span class="text-primary">.space</span> Your personal growth space — powered by AI agents.
+            </h1>
+
+            <p class="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
+              Turn goals into daily actions. Track health, study, and work progress, see trends, and stay accountable with friends.
+            </p>
+
+            <div class="mt-5 flex flex-col sm:flex-row gap-3">
+              <a href="#signin" class="btn btn-primary gap-2">
+                <i class="bi bi-rocket-takeoff" aria-hidden="true"></i>
+                Get started
+              </a>
+              <a href="{% url 'about' %}" class="btn btn-outline gap-2">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                Learn more
+              </a>
+              <span class="tag hidden lg:inline-flex">
+                <i class="bi bi-stars" aria-hidden="true"></i>
+                Agentic AI arriving March 2026
+              </span>
+            </div>
+          </div>
+
+          <!-- A compact “trust / proof” panel -->
+          <div class="solid p-5 sm:p-6 w-full lg:max-w-sm">
+            <div class="flex items-start gap-3">
+              <div class="brandmark">
+                <i class="bi bi-shield-check text-primary text-xl" aria-hidden="true"></i>
+              </div>
+              <div>
+                <div class="font-extrabold text-slate-900">Built for consistency</div>
+                <p class="text-sm text-slate-600 mt-1">
+                  Lightweight tracking, clear analytics, and social accountability to help you finish what you start.
+                </p>
+              </div>
+            </div>
+
+            <div class="mt-4 space-y-2 text-sm">
+              <div class="flex items-start gap-2">
+                <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+                <span>Track tasks + time logs effortlessly</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+                <span>Visual analytics to spot trends</span>
+              </div>
+              <div class="flex items-start gap-2">
+                <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+                <span>Friends keep you accountable</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="soft-divider"></div>
+
+
+
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm flex items-center justify-center">
+            <img src="{% static 'branding/vismatrixicon.png' %}" alt="VisMatrix icon" class="w-8 h-8 object-contain">
+          </div>
+          <div>
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight">Sign in</h2>
+            <p class="text-sm text-slate-600">Continue to your VisMatrix.Space account.</p>
+          </div>
+        </div>
+        <a href="{% url 'about' %}" class="btn btn-ghost btn-sm hidden sm:inline-flex">Read more</a>
+      </div>
+
+      {% get_providers as socialaccount_providers %}
+      {% if socialaccount_providers %}
+      <div class="mt-6">
+        <a href="{% provider_login_url 'google' %}"
+           class="btn btn-outline w-full gap-3 normal-case h-12 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-md transition-all duration-200 text-base font-semibold"
+           role="button" aria-label="Continue with Google account">
+          <i class="bi bi-google text-lg" aria-hidden="true"></i>
+          <span>Continue with Google</span>
+        </a>
+        <div class="divider text-sm text-slate-500 before:bg-slate-200 after:bg-slate-200 mt-5">
+          or sign in with email
+        </div>
+      </div>
       {% endif %}
 
-      <!-- Error alerts -->
       {% if form.non_field_errors %}
-      <div class="alert alert-error shadow-lg">
-        <i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+      <div class="alert alert-error shadow-sm mt-4">
+        <i class="bi bi-exclamation-triangle-fill flex-shrink-0" aria-hidden="true"></i>
         <span>{% for error in form.non_field_errors %}{{ error }}{% endfor %}</span>
       </div>
       {% endif %}
 
-      <!-- Login Form -->
-      <form method="post" class="space-y-6" novalidate role="form">
+      <form method="post" class="mt-5 space-y-5" novalidate role="form">
         {% csrf_token %}
-        
-        <!-- Username/Email Field -->
-        <div class="form-control w-full">
-          <label for="{{ form.login.id_for_label }}" class="label">
-            <span class="label-text font-semibold text-base">Email or Username</span>
-          </label>
-          {% render_field form.login class="input input-bordered w-full h-14 text-base leading-relaxed lg:input-lg" placeholder="Enter email or username" autocomplete="username email" %}
-          {% if form.login.errors %}
-          <label class="label">
-            <span class="label-text-alt text-error">{{ form.login.errors|first }}</span>
-          </label>
-          {% endif %}
+
+        <div class="grid lg:grid-cols-2 gap-4">
+          <div class="form-control w-full">
+            <label for="{{ form.login.id_for_label }}" class="label">
+              <span class="label-text font-semibold">Email or Username</span>
+            </label>
+            {% render_field form.login class="input input-bordered w-full h-12 text-base" placeholder="Enter email or username" autocomplete="username email" %}
+            {% if form.login.errors %}
+            <label class="label">
+              <span class="label-text-alt text-error">{{ form.login.errors|first }}</span>
+            </label>
+            {% endif %}
+          </div>
+
+          <div class="form-control w-full">
+            <label for="{{ form.password.id_for_label }}" class="label flex justify-between items-center">
+              <span class="label-text font-semibold">Password</span>
+              <a href="#" class="text-sm link link-hover text-slate-700 hover:text-primary font-semibold">Forgot?</a>
+            </label>
+            {% render_field form.password class="input input-bordered w-full h-12 text-base" placeholder="Enter your password" autocomplete="current-password" %}
+            {% if form.password.errors %}
+            <label class="label">
+              <span class="label-text-alt text-error">{{ form.password.errors|first }}</span>
+            </label>
+            {% endif %}
+          </div>
         </div>
 
-        <!-- Password Field -->
-        <div class="form-control w-full">
-          <label for="{{ form.password.id_for_label }}" class="label">
-            <span class="label-text font-semibold text-base">Password</span>
-          </label>
-          {% render_field form.password class="input input-bordered w-full h-14 text-base leading-relaxed lg:input-lg" placeholder="Enter your password" autocomplete="current-password" %}
-          {% if form.password.errors %}
-          <label class="label">
-            <span class="label-text-alt text-error">{{ form.password.errors|first }}</span>
-          </label>
-          {% endif %}
-        </div>
-
-        <!-- Submit Button -->
-        <button type="submit" class="btn btn-primary w-full h-14 text-lg font-bold shadow-lg hover:shadow-xl gap-3 lg:btn-lg">
+        <button type="submit" class="btn btn-primary w-full h-12 text-base font-extrabold shadow-lg hover:shadow-xl gap-2">
           <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-          <span>Sign In</span>
+          <span>Sign in</span>
         </button>
       </form>
 
-      <!-- Help links -->
-      <div class="text-center space-y-3 pt-6 border-t border-slate-200">
+      <div class="mt-6 pt-6 border-t border-slate-200 text-center space-y-2">
         <p class="text-sm text-slate-600">
-          <a href="#" class="link link-hover font-semibold text-slate-900 hover:text-primary">Forgot password?</a>
+          New here?
+          <a href="{% url 'account_signup' %}" class="link link-hover font-extrabold text-primary">Create an account</a>
         </p>
-        <p class="text-sm text-slate-600">
-          Don't have an account? 
-          <a href="{% url 'account_signup' %}" class="link link-hover font-bold text-primary">Create one now</a>
+        <p class="text-xs text-slate-500">
+          Built for clarity, momentum, and accountability.
         </p>
       </div>
-    </div>
+    </section>
+
+    <!-- WHY / PILLARS -->
+    <section class="glass p-6 sm:p-8">
+      <h2 class="text-2xl sm:text-3xl font-black tracking-tight">What makes VisMatrix different</h2>
+      <p class="mt-2 text-slate-600 max-w-3xl">
+        Not just tracking — guided execution. AI agents help you break down goals into actionable steps and adjust as you progress.
+      </p>
+
+      <div class="mt-6 grid lg:grid-cols-2 gap-3">
+        <div class="feature p-5">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-robot text-primary text-lg" aria-hidden="true"></i>
+            <div class="font-extrabold">Agentic AI Technology</div>
+          </div>
+          <ul class="mt-3 space-y-2 text-sm">
+            <li class="flex items-start gap-2">
+              <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+              <span>Real-time progress tracking and adjustment</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+              <span>Context-aware feedback and suggestions</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+              <span>Adaptive learning from behavior patterns</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="feature p-5">
+          <div class="flex items-center gap-2">
+            <i class="bi bi-graph-up text-primary text-lg" aria-hidden="true"></i>
+            <div class="font-extrabold">Data-Driven Insights</div>
+          </div>
+          <ul class="mt-3 space-y-2 text-sm">
+            <li class="flex items-start gap-2">
+              <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+              <span>Visual analytics and trends</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+              <span>Predictive goal completion estimates</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
+              <span>Social accountability through friend networks</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+              <!-- Highlights -->
+        <div class="grid sm:grid-cols-3 gap-3">
+          <div class="feature p-4">
+            <div class="flex items-center gap-3">
+              <div class="brandmark"><i class="bi bi-heart-pulse text-primary text-xl" aria-hidden="true"></i></div>
+              <div>
+                <div class="font-extrabold">Health goals</div>
+                <div class="text-sm text-slate-600">Create habits and track your progress.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="feature p-4">
+            <div class="flex items-center gap-3">
+              <div class="brandmark"><i class="bi bi-book text-primary text-xl" aria-hidden="true"></i></div>
+              <div>
+                <div class="font-extrabold">Study goals</div>
+                <div class="text-sm text-slate-600">Daily plans and learning consistency.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="feature p-4">
+            <div class="flex items-center gap-3">
+              <div class="brandmark"><i class="bi bi-briefcase text-primary text-xl" aria-hidden="true"></i></div>
+              <div>
+                <div class="font-extrabold">Work goals</div>
+                <div class="text-sm text-slate-600">Execution focus and measurable wins.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="glass p-6 sm:p-8">
+      <h2 class="text-xl sm:text-2xl font-black tracking-tight">How it works</h2>
+      <div class="mt-5 grid sm:grid-cols-3 gap-3">
+        <div class="feature p-5">
+          <div class="text-xs font-black text-slate-500">STEP 1</div>
+          <div class="mt-1 font-extrabold">Create goals (Tasks)</div>
+          <p class="mt-2 text-sm text-slate-600">Choose health, study, or work objectives and define milestones.</p>
+        </div>
+        <div class="feature p-5">
+          <div class="text-xs font-black text-slate-500">STEP 2</div>
+          <div class="mt-1 font-extrabold">Track progress</div>
+          <p class="mt-2 text-sm text-slate-600">Log activity daily and view trends and patterns.</p>
+        </div>
+        <div class="feature p-5">
+          <div class="text-xs font-black text-slate-500">STEP 3</div>
+          <div class="mt-1 font-extrabold">Stay accountable</div>
+          <p class="mt-2 text-sm text-slate-600">Use friends + insights to keep momentum and finish goals.</p>
+        </div>
+      </div>
+
+      <div class="mt-6 flex justify-center">
+        <a href="#signin" class="btn btn-primary gap-2">
+          <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+          Sign in to get started
+        </a>
+      </div>
+    </section>
+
   </main>
 
+  <footer class="border-t border-slate-200 bg-white/60 backdrop-blur">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div class="text-sm text-slate-600">
+        © {% now "Y" %} VisMatrix.Space · AI-powered personal achievement
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a href="{% url 'about' %}" class="btn btn-ghost btn-sm">About</a>
+        <a href="#signin" class="btn btn-ghost btn-sm">Sign in</a>
+      </div>
+    </div>
+  </footer>
+
   <script>
-    // Auto-focus first field and enhance accessibility
     document.addEventListener('DOMContentLoaded', () => {
       const firstField = document.querySelector('input[type="text"], input[type="email"]');
       if (firstField) firstField.focus();
-      
-      // Auto-dismiss alerts after 8s
+
       setTimeout(() => {
         const alerts = document.querySelectorAll('.alert');
         alerts.forEach(alert => {
