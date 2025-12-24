@@ -21,30 +21,22 @@
   <!-- Bootstrap Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
+  <!-- Apply theme BEFORE paint (prevents flash + makes it site-wide) -->
+  <script>
+    (function () {
+      const STORAGE_KEY = 'vm_theme';
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = (saved === 'light' || saved === 'dark') ? saved : (systemPrefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
   <style>
     /* ============================================================
-       Simplified, accessible design tokens (high contrast, calm)
+       Design tokens used throughout your UI (MUST switch with theme)
        ============================================================ */
     :root {
-      /* Core */
-      --bg: #ffffff;
-      --surface: #ffffff;
-      --surface-2: #f8fafc;     /* slate-50 */
-      --border: #e2e8f0;        /* slate-200 */
-      --text: #0f172a;          /* slate-900 */
-      --muted: #475569;         /* slate-600 */
-
-      /* Brand (blue) */
-      --primary: #1d4ed8;       /* blue-700 */
-      --primary-hover: #1e40af; /* blue-800 */
-      --primary-ink: #ffffff;
-
-      /* Status (kept readable) */
-      --success: #15803d;       /* green-700 */
-      --warning: #a16207;       /* amber-700 */
-      --error: #b91c1c;         /* red-700 */
-      --info: #1d4ed8;
-
       /* Layout */
       --radius: 14px;
       --radius-sm: 10px;
@@ -53,7 +45,7 @@
       /* Type */
       --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-      /* Focus ring (highly visible) */
+      /* Focus ring */
       --focus: 0 0 0 3px rgb(29 78 216 / 0.25);
     }
 
@@ -69,19 +61,16 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* Prefer reduced motion */
     @media (prefers-reduced-motion: reduce) {
       * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
     }
 
-    /* Focus visibility */
     :focus-visible {
       outline: none;
       box-shadow: var(--focus);
       border-radius: 10px;
     }
 
-    /* Skip link */
     .skip-link {
       position: absolute;
       top: -48px;
@@ -96,15 +85,33 @@
     .skip-link:focus { top: 12px; }
 
     /* ============================================================
-       Make DaisyUI defaults align to our tokens (no heavy overrides)
+       LIGHT THEME (DaisyUI tokens + your custom tokens)
        ============================================================ */
     [data-theme="light"] {
-      --p: 220 85% 47%; /* primary */
+      /* Your tokens */
+      --bg: #ffffff;
+      --surface: #ffffff;
+      --surface-2: #f8fafc;     /* slate-50 */
+      --border: #e2e8f0;        /* slate-200 */
+      --text: #0f172a;          /* slate-900 */
+      --muted: #475569;         /* slate-600 */
+
+      --primary: #1d4ed8;       /* blue-700 */
+      --primary-hover: #1e40af; /* blue-800 */
+      --primary-ink: #ffffff;
+
+      --success: #15803d;
+      --warning: #a16207;
+      --error: #b91c1c;
+      --info: #1d4ed8;
+
+      /* DaisyUI tokens */
+      --p: 220 85% 47%;
       --pc: 0 0% 100%;
-      --b1: 0 0% 100%;  /* base-100 */
-      --b2: 210 40% 98%;/* base-200 */
-      --b3: 214 32% 91%;/* base-300 */
-      --bc: 222 47% 11%;/* base-content */
+      --b1: 0 0% 100%;
+      --b2: 210 40% 98%;
+      --b3: 214 32% 91%;
+      --bc: 222 47% 11%;
       --er: 0 74% 42%;
       --su: 142 72% 29%;
       --wa: 45 93% 34%;
@@ -115,27 +122,61 @@
     }
 
     /* ============================================================
-       Intuitive + simpler UI primitives
+       DARK THEME (DaisyUI tokens + your custom tokens)
        ============================================================ */
-    /* Buttons: keep them simple and consistent */
+    [data-theme="dark"] {
+      /* Your tokens */
+      --bg: #0b1220;            /* deep slate */
+      --surface: #0f172a;       /* slate-900 */
+      --surface-2: #111c33;     /* slightly lighter */
+      --border: rgb(148 163 184 / 0.22); /* slate-400/22 */
+      --text: #e5e7eb;          /* gray-200 */
+      --muted: #94a3b8;         /* slate-400 */
+
+      --primary: #60a5fa;       /* blue-400 */
+      --primary-hover: #3b82f6; /* blue-500 */
+      --primary-ink: #0b1220;
+
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --info: #60a5fa;
+
+      /* DaisyUI tokens */
+      --p: 220 85% 60%;
+      --pc: 222 47% 11%;
+      --b1: 222 47% 11%;
+      --b2: 222 47% 9%;
+      --b3: 222 47% 7%;
+      --bc: 210 40% 98%;
+      --er: 0 74% 58%;
+      --su: 142 72% 45%;
+      --wa: 45 93% 55%;
+      --in: 220 85% 60%;
+      --rounded-box: 14px;
+      --rounded-btn: 12px;
+      --rounded-badge: 9999px;
+    }
+
+    /* ============================================================
+       UI primitives
+       ============================================================ */
     .btn {
-      min-height: 44px;            /* touch target */
+      min-height: 44px;
       border-radius: 12px;
       font-weight: 600;
       letter-spacing: 0.2px;
     }
     .btn:focus-visible { box-shadow: var(--focus); }
-
-    /* Make ghost buttons clearly interactive */
     .btn-ghost:hover { background: var(--surface-2); }
 
-    /* Inputs: clearer border + focus ring */
     .input, .select, .textarea {
       border-radius: 12px;
       border-width: 1px;
       border-color: var(--border);
       background: var(--surface);
       min-height: 44px;
+      color: var(--text);
     }
     .input:focus, .select:focus, .textarea:focus {
       outline: none;
@@ -143,28 +184,26 @@
       box-shadow: var(--focus);
     }
 
-    /* Cards: calmer surface */
     .card {
       border: 1px solid var(--border);
       border-radius: var(--radius);
       box-shadow: none;
       background: var(--surface);
+      color: var(--text);
     }
 
-    /* Navbar: solid, no blur (better readability) */
     .vm-navbar {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
     }
 
-    /* Active nav: simple pill */
     .vm-nav-active {
       background: rgb(29 78 216 / 0.10);
       color: var(--primary) !important;
       font-weight: 700;
     }
 
-    /* Toasts: better contrast and spacing */
+    /* Toasts */
     .toast .alert {
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
@@ -175,14 +214,12 @@
     .alert-warning { background: rgb(161 98 7 / 0.10); color: var(--text); border-color: rgb(161 98 7 / 0.25); }
     .alert-error { background: rgb(185 28 28 / 0.08); color: var(--text); border-color: rgb(185 28 28 / 0.25); }
 
-    /* Mobile bottom nav: simplified, consistent icons */
+    /* Bottom nav */
     .vm-bottomnav {
       background: var(--surface);
       border-top: 1px solid var(--border);
     }
-    .vm-bottomnav a {
-      min-height: 64px;
-    }
+    .vm-bottomnav a { min-height: 64px; }
     .vm-bottomnav .vm-fab {
       width: 48px;
       height: 48px;
@@ -197,13 +234,20 @@
       font-weight: 700;
     }
 
-    /* Improved dropdown menu */
+    /* Dropdown */
     .vm-dropdown {
       border: 1px solid rgb(226 232 240 / 0.8);
       border-radius: var(--radius);
       box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
       backdrop-filter: blur(10px);
       background: rgb(255 255 255 / 0.95);
+      color: var(--text);
+    }
+
+    [data-theme="dark"] .vm-dropdown {
+      border: 1px solid rgb(148 163 184 / 0.25);
+      background: rgb(15 23 42 / 0.92);
+      color: rgb(226 232 240);
     }
 
     .vm-dropdown .menu-title {
@@ -215,7 +259,13 @@
       margin: 0;
     }
 
-    .vm-dropdown li > a {
+    [data-theme="dark"] .vm-dropdown .menu-title {
+      color: rgb(226 232 240);
+      border-bottom: 1px solid rgb(148 163 184 / 0.2);
+    }
+
+    .vm-dropdown li > a,
+    .vm-dropdown li > button {
       padding: 0.75rem 1rem;
       border-radius: 10px;
       margin: 0.125rem 0;
@@ -224,17 +274,30 @@
       align-items: center;
       gap: 0.75rem;
       font-weight: 500;
+      width: 100%;
+      text-align: left;
+      color: inherit;
     }
 
-    .vm-dropdown li > a:hover {
+    .vm-dropdown li > a:hover,
+    .vm-dropdown li > button:hover {
       background: rgb(29 78 216 / 0.08);
       color: var(--primary);
       transform: translateX(2px);
     }
 
+    [data-theme="dark"] .vm-dropdown li > a:hover,
+    [data-theme="dark"] .vm-dropdown li > button:hover {
+      background: rgb(59 130 246 / 0.14);
+      color: rgb(226 232 240);
+    }
+
     .vm-dropdown .divider {
       margin: 0.5rem 0;
       border-color: rgb(226 232 240 / 0.5);
+    }
+    [data-theme="dark"] .vm-dropdown .divider {
+      border-color: rgb(148 163 184 / 0.2);
     }
 
     .vm-dropdown li > a.text-error:hover {
@@ -242,7 +305,6 @@
       color: var(--error);
     }
 
-    /* Keep safe-area utility */
     .safe-area-pt { padding-top: env(safe-area-inset-top); }
     .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
   </style>
@@ -255,7 +317,6 @@
   <nav class="navbar vm-navbar sticky top-0 z-50 safe-area-pt" role="navigation" aria-label="Main navigation">
     <div class="flex-1">
       <a href="{% url 'dashboard' %}" class="flex items-center gap-3 hover:opacity-90 transition">
-        <!-- Startup Icon + (optional) wordmark/logo on larger screens -->
         <div class="flex items-center gap-2">
           <img
             src="{% static 'branding/vismatrixicon.png' %}"
@@ -274,7 +335,7 @@
       </a>
     </div>
 
-    <!-- Desktop nav (simpler: fewer effects, clearer active state) -->
+    <!-- Desktop nav -->
     <div class="hidden lg:flex items-center gap-1 px-2">
       <a href="{% url 'dashboard' %}"
          class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'dashboard' %}vm-nav-active{% endif %}">
@@ -316,64 +377,74 @@
     <!-- User / Auth -->
     <div class="flex-none gap-2 pr-2">
       {% if user.is_authenticated %}
-<div class="dropdown dropdown-end" id="userMenu">
-  <div
-    id="userMenuButton"
-    tabindex="0"
-    role="button"
-    class="btn btn-ghost btn-circle avatar w-10 h-10 bg-base-200 hover:bg-base-300 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.05]"
-    aria-label="User menu"
-    aria-haspopup="true"
-    aria-expanded="false"
-  >
-    <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm shadow-md ring-1 ring-white/20">
-      {{ user.username|first|upper }}
-    </div>
-  </div>
+      <div class="dropdown dropdown-end" id="userMenu">
+        <div
+          id="userMenuButton"
+          tabindex="0"
+          role="button"
+          class="btn btn-ghost btn-circle avatar w-10 h-10 bg-base-200 hover:bg-base-300 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.05]"
+          aria-label="User menu"
+          aria-haspopup="true"
+          aria-expanded="false"
+        >
+          <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm shadow-md ring-1 ring-white/20">
+            {{ user.username|first|upper }}
+          </div>
+        </div>
 
-  <ul
-    id="userMenuDropdown"
-    class="vm-dropdown dropdown-content z-[1] menu p-0 mt-2 w-64 hidden"
-    role="menu"
-  >
-    <li class="menu-title">Hi, {{ user.username }}</li>
+        <ul
+          id="userMenuDropdown"
+          class="vm-dropdown dropdown-content z-[1] menu p-0 mt-2 w-64 hidden"
+          role="menu"
+        >
+          <li class="menu-title">Hi, {{ user.username }}</li>
 
-    <li><a href="{% url 'analytics' %}">
-      <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
-      Analytics
-    </a></li>
+          <li><a href="{% url 'analytics' %}">
+            <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
+            Analytics
+          </a></li>
 
-    <li><a href="{% url 'notifications' %}">
-      <i class="bi bi-bell text-lg opacity-80" aria-hidden="true"></i>
-      Notifications
-    </a></li>
+          <li><a href="{% url 'notifications' %}">
+            <i class="bi bi-bell text-lg opacity-80" aria-hidden="true"></i>
+            Notifications
+          </a></li>
 
-    <li><a href="{% url 'category_list' %}">
-      <i class="bi bi-tags text-lg opacity-80" aria-hidden="true"></i>
-      Categories
-    </a></li>
+          <li><a href="{% url 'category_list' %}">
+            <i class="bi bi-tags text-lg opacity-80" aria-hidden="true"></i>
+            Categories
+          </a></li>
 
-    <li><a href="{% url 'friends_list' %}">
-      <i class="bi bi-person-plus text-lg opacity-80" aria-hidden="true"></i>
-      Friends
-    </a></li>
+          <li><a href="{% url 'friends_list' %}">
+            <i class="bi bi-person-plus text-lg opacity-80" aria-hidden="true"></i>
+            Friends
+          </a></li>
 
-    <div class="divider mx-4 my-2"></div>
+          <!-- Dark mode toggle -->
+          <li>
+            <button type="button" id="themeToggleBtn" class="w-full text-left" role="menuitem">
+              <i id="themeToggleIcon" class="bi bi-moon-stars text-lg opacity-80" aria-hidden="true"></i>
+              <span id="themeToggleText">Dark mode</span>
+              <span class="ml-auto flex items-center gap-2">
+                <span id="themeToggleBadge" class="badge badge-outline">Off</span>
+              </span>
+            </button>
+          </li>
 
-    <li><a href="{% url 'about' %}">
-      <i class="bi bi-info-circle text-lg opacity-80" aria-hidden="true"></i>
-      About VisMatrix
-    </a></li>
+          <div class="divider mx-4 my-2"></div>
 
-    <li>
-      <a href="/accounts/logout/" class="text-error hover:text-error font-medium">
-        <i class="bi bi-box-arrow-right text-lg opacity-90" aria-hidden="true"></i>
-        Sign out
-      </a>
-    </li>
-  </ul>
-</div>
+          <li><a href="{% url 'about' %}">
+            <i class="bi bi-info-circle text-lg opacity-80" aria-hidden="true"></i>
+            About VisMatrix
+          </a></li>
 
+          <li>
+            <a href="/accounts/logout/" class="text-error hover:text-error font-medium">
+              <i class="bi bi-box-arrow-right text-lg opacity-90" aria-hidden="true"></i>
+              Sign out
+            </a>
+          </li>
+        </ul>
+      </div>
       {% else %}
       <a href="/accounts/login/" class="btn btn-primary btn-sm gap-2">
         <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
@@ -401,7 +472,7 @@
   </main>
 
   {% if user.is_authenticated %}
-  <!-- Mobile bottom nav (intuitive: 4 primary actions + clear Add) -->
+  <!-- Mobile bottom nav -->
   <nav class="lg:hidden fixed bottom-0 left-0 right-0 vm-bottomnav safe-area-pb z-40"
        aria-label="Primary navigation">
     <div class="grid grid-cols-4 h-16 text-xs">
@@ -443,40 +514,82 @@
       toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
       setTimeout(() => toast.remove(), 550);
     }, 4000);
-      (function () {
-    const menu = document.getElementById('userMenu');
-    const btn = document.getElementById('userMenuButton');
-    const dropdown = document.getElementById('userMenuDropdown');
-    if (!menu || !btn || !dropdown) return;
 
-    const openMenu = () => {
-      dropdown.classList.remove('hidden');
-      btn.setAttribute('aria-expanded', 'true');
-    };
+    (function () {
+      const menu = document.getElementById('userMenu');
+      const btn = document.getElementById('userMenuButton');
+      const dropdown = document.getElementById('userMenuDropdown');
+      if (!menu || !btn || !dropdown) return;
 
-    const closeMenu = () => {
-      dropdown.classList.add('hidden');
-      btn.setAttribute('aria-expanded', 'false');
-    };
+      const openMenu = () => {
+        dropdown.classList.remove('hidden');
+        btn.setAttribute('aria-expanded', 'true');
+      };
 
-    const toggleMenu = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      dropdown.classList.contains('hidden') ? openMenu() : closeMenu();
-    };
+      const closeMenu = () => {
+        dropdown.classList.add('hidden');
+        btn.setAttribute('aria-expanded', 'false');
+      };
 
-    btn.addEventListener('click', toggleMenu);
+      const toggleMenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropdown.classList.contains('hidden') ? openMenu() : closeMenu();
+      };
 
-    // Close on click outside
-    document.addEventListener('click', (e) => {
-      if (!menu.contains(e.target)) closeMenu();
-    });
+      btn.addEventListener('click', toggleMenu);
 
-    // Close on Esc
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeMenu();
-    });
-  })();
+      document.addEventListener('click', (e) => {
+        if (!menu.contains(e.target)) closeMenu();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeMenu();
+      });
+
+      // ----------------------------
+      // Dark mode toggle (site-wide)
+      // ----------------------------
+      const htmlEl = document.documentElement;
+      const toggleBtn = document.getElementById('themeToggleBtn');
+      const toggleText = document.getElementById('themeToggleText');
+      const toggleIcon = document.getElementById('themeToggleIcon');
+      const toggleBadge = document.getElementById('themeToggleBadge');
+
+      const STORAGE_KEY = 'vm_theme';
+
+      const applyTheme = (theme) => {
+        htmlEl.setAttribute('data-theme', theme);
+
+        const isDark = theme === 'dark';
+        if (toggleText) toggleText.textContent = isDark ? 'Light mode' : 'Dark mode';
+        if (toggleBadge) toggleBadge.textContent = isDark ? 'On' : 'Off';
+
+        if (toggleIcon) {
+          toggleIcon.classList.remove('bi-moon-stars', 'bi-sun');
+          toggleIcon.classList.add(isDark ? 'bi-sun' : 'bi-moon-stars');
+        }
+
+        // Optional: update browser theme color for nicer mobile UI
+        const metaTheme = document.querySelector('meta[name="theme-color"]');
+        if (metaTheme) metaTheme.setAttribute('content', isDark ? '#0b1220' : '#1d4ed8');
+      };
+
+      // Init UI state from whatever head script applied
+      applyTheme(htmlEl.getAttribute('data-theme') || 'light');
+
+      // Toggle on click (keep dropdown open)
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const next = htmlEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+          localStorage.setItem(STORAGE_KEY, next);
+          applyTheme(next);
+        });
+      }
+    })();
   </script>
 </body>
 </html>

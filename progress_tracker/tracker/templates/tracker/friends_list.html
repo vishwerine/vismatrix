@@ -3,17 +3,21 @@
 {% block title %}Friends - VisMatrix.Space{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 pb-24 md:pb-8 px-3 sm:px-4 lg:px-8">
+<!-- Use theme-aware surfaces instead of fixed light gradients -->
+<div class="min-h-screen pb-24 md:pb-8 px-3 sm:px-4 lg:px-8"
+     style="background: var(--bg); color: var(--text);">
 
   <!-- Header -->
   <header class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
       <div class="min-w-0">
-        <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 mb-1 md:mb-2 flex items-center gap-2">
-          <i class="bi bi-people-fill text-slate-700" aria-hidden="true"></i>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-1 md:mb-2 flex items-center gap-2"
+            style="color: var(--text);">
+          <i class="bi bi-people-fill" aria-hidden="true" style="color: var(--muted);"></i>
           <span>My Friends</span>
         </h1>
-        <p class="text-sm md:text-lg text-slate-600 flex items-center gap-1">
+
+        <p class="text-sm md:text-lg flex items-center gap-1" style="color: var(--muted);">
           <i class="bi bi-person-badge" aria-hidden="true"></i>
           <span>
             <span id="friend-count-number" data-count="{{ friends_data|length|default:0 }}">
@@ -23,8 +27,10 @@
           </span>
         </p>
       </div>
+
       <a href="{% url 'user_list' %}"
-         class="btn btn-outline btn-sm md:btn-md gap-2 w-fit border-slate-300 text-slate-700 hover:border-slate-500 hover:bg-slate-50"
+         class="btn btn-outline btn-sm md:btn-md gap-2 w-fit"
+         style="border-color: var(--border); color: var(--text); background: transparent;"
          aria-label="Find new friends">
         <i class="bi bi-person-plus" aria-hidden="true"></i>
         Find Friends<span class="hidden sm:inline">to Add</span>
@@ -38,23 +44,27 @@
       <div id="friends-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {% for item in friends_data %}
         <article
-          class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-4 md:p-6 shadow-lg md:shadow-xl border border-slate-200/50 hover:shadow-xl md:hover:-translate-y-1 transition-all flex flex-col"
+          class="rounded-2xl md:rounded-3xl p-4 md:p-6 border hover:shadow-xl md:hover:-translate-y-1 transition-all flex flex-col"
           id="friend-{{ item.friendship.id }}"
           aria-label="Friend card for {{ item.friend.get_full_name|default:item.friend.username }}"
+          style="background: var(--surface); border-color: var(--border); box-shadow: var(--shadow);"
         >
           <!-- Friend Header -->
           <div class="flex items-start justify-between mb-3 md:mb-4">
             <div class="min-w-0">
-              <h3 class="font-bold text-slate-900 text-sm md:text-base truncate flex items-center gap-1">
-                <i class="bi bi-person-circle text-slate-600" aria-hidden="true"></i>
+              <h3 class="font-bold text-sm md:text-base truncate flex items-center gap-1"
+                  style="color: var(--text);">
+                <i class="bi bi-person-circle" aria-hidden="true" style="color: var(--muted);"></i>
                 <span>{{ item.friend.get_full_name|default:item.friend.username }}</span>
               </h3>
-              <p class="text-xs md:text-sm text-slate-600 truncate flex items-center gap-1">
+              <p class="text-xs md:text-sm truncate flex items-center gap-1" style="color: var(--muted);">
                 <i class="bi bi-at" aria-hidden="true"></i>
                 <span>@{{ item.friend.username }}</span>
               </p>
             </div>
-            <div class="w-10 h-10 md:w-12 md:h-12 bg-slate-800 rounded-lg md:rounded-xl flex-shrink-0 flex items-center justify-center text-white text-base md:text-lg">
+
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-lg md:rounded-xl flex-shrink-0 flex items-center justify-center text-base md:text-lg"
+                 style="background: var(--text); color: var(--bg);">
               <i class="bi bi-person-fill" aria-hidden="true"></i>
             </div>
           </div>
@@ -62,21 +72,23 @@
           <!-- Week Stats -->
           <div class="space-y-2 md:space-y-3 flex-1 mb-4 text-xs md:text-sm">
             <div class="flex items-center justify-between">
-              <span class="text-slate-600 flex items-center gap-1">
+              <span class="flex items-center gap-1" style="color: var(--muted);">
                 <i class="bi bi-clipboard-check" aria-hidden="true"></i>
                 <span>Completed This Week</span>
               </span>
-              <span class="font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded">
+              <span class="font-semibold px-2 py-1 rounded"
+                    style="color: var(--text); background: var(--surface-2);">
                 {{ item.completed_tasks|default:"0" }}
               </span>
             </div>
 
             <div class="flex items-center justify-between">
-              <span class="text-slate-600 flex items-center gap-1">
+              <span class="flex items-center gap-1" style="color: var(--muted);">
                 <i class="bi bi-stopwatch" aria-hidden="true"></i>
                 <span>Time Logged (7d)</span>
               </span>
-              <span class="font-semibold text-slate-900 bg-slate-100 px-2 py-1 rounded">
+              <span class="font-semibold px-2 py-1 rounded"
+                    style="color: var(--text); background: var(--surface-2);">
                 {{ item.total_time|default:"0" }}m
               </span>
             </div>
@@ -85,48 +97,49 @@
           <!-- Progress Bar -->
           <div class="mb-4">
             <div class="flex items-center justify-between mb-2">
-              <span class="text-xs text-slate-600 flex items-center gap-1">
+              <span class="text-xs flex items-center gap-1" style="color: var(--muted);">
                 <i class="bi bi-activity" aria-hidden="true"></i>
                 <span>Weekly Activity</span>
               </span>
-              <span class="text-xs font-semibold text-slate-900 flex items-center gap-1">
+              <span class="text-xs font-semibold flex items-center gap-1" style="color: var(--text);">
                 <i class="bi bi-list-check" aria-hidden="true"></i>
                 <span>{{ item.completed_tasks|default:"0" }} tasks</span>
               </span>
             </div>
-            <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden" aria-hidden="true">
-              {# Expect item.activity_percent in [0,100] from the view, fallback to 0 #}
+
+            <div class="w-full rounded-full h-2 overflow-hidden" aria-hidden="true"
+                 style="background: var(--border);">
               <div
-                class="bg-slate-700 h-2 rounded-full transition-all duration-300"
-                style="width: {{ item.activity_percent|default:'0' }}%;">
+                class="h-2 rounded-full transition-all duration-300"
+                style="width: {{ item.activity_percent|default:'0' }}%; background: var(--primary);">
               </div>
             </div>
           </div>
 
           <!-- Actions -->
-<div class="flex gap-2 mt-auto">
+          <div class="flex gap-2 mt-auto">
+            <a href="{% url 'view_friend_profile' item.friendship.id %}"
+               class="btn btn-xs md:btn-sm flex-1 flex-col py-2 border text-center"
+               style="border-color: var(--border); background: var(--surface); color: var(--text);"
+               aria-label="View profile of {{ item.friend.username }}">
+              <i class="bi bi-person-badge text-lg" aria-hidden="true"></i>
+              <span class="text-[10px] md:text-xs font-medium mt-1">View Profile</span>
+            </a>
 
-  <!-- View Profile Button -->
-  <a href="{% url 'view_friend_profile' item.friendship.id %}"
-     class="btn btn-xs md:btn-sm flex-1 flex-col py-2 border border-slate-300 bg-white text-slate-800 hover:bg-slate-50 text-center"
-     aria-label="View profile of {{ item.friend.username }}">
-    <i class="bi bi-person-badge text-lg" aria-hidden="true"></i>
-    <span class="text-[10px] md:text-xs font-medium mt-1">View Profile</span>
-  </a>
-
-  <!-- Remove Friend Button -->
-  <button
-    type="button"
-    onclick="removeFriend('{{ item.friendship.id }}', 'friend-{{ item.friendship.id }}', '{% url 'remove_friend' item.friendship.id %}')"
-    class="btn btn-xs md:btn-sm flex-1 flex-col py-2 border border-slate-300 bg-white text-slate-800 hover:bg-red-50 hover:text-red-700 text-center"
-    id="remove-btn-{{ item.friendship.id }}"
-    aria-label="Remove {{ item.friend.username }} from your friends list"
-  >
-    <i class="bi bi-person-x text-lg" aria-hidden="true"></i>
-    <span class="text-[10px] md:text-xs font-medium mt-1">Remove Friend</span>
-  </button>
-
-</div>
+            <button
+              type="button"
+              onclick="removeFriend('{{ item.friendship.id }}', 'friend-{{ item.friendship.id }}', '{% url 'remove_friend' item.friendship.id %}')"
+              class="btn btn-xs md:btn-sm flex-1 flex-col py-2 border text-center"
+              style="border-color: var(--border); background: var(--surface); color: var(--text);"
+              id="remove-btn-{{ item.friendship.id }}"
+              aria-label="Remove {{ item.friend.username }} from your friends list"
+              onmouseover="this.style.background='rgb(239 68 68 / 0.10)'; this.style.color='var(--error)';"
+              onmouseout="this.style.background='var(--surface)'; this.style.color='var(--text)';"
+            >
+              <i class="bi bi-person-x text-lg" aria-hidden="true"></i>
+              <span class="text-[10px] md:text-xs font-medium mt-1">Remove Friend</span>
+            </button>
+          </div>
         </article>
         {% endfor %}
       </div>
@@ -134,14 +147,16 @@
     {% else %}
       <!-- Empty State -->
       <div id="empty-state" class="text-center py-12 md:py-16">
-        <div class="text-4xl md:text-5xl mb-3 md:mb-4 text-slate-500">
+        <div class="text-4xl md:text-5xl mb-3 md:mb-4" style="color: var(--muted);">
           <i class="bi bi-people" aria-hidden="true"></i>
         </div>
-        <h3 class="text-base md:text-lg font-bold text-slate-700 mb-2">No friends yet</h3>
-        <p class="text-sm text-slate-600 mb-6">
+        <h3 class="text-base md:text-lg font-bold mb-2" style="color: var(--text);">No friends yet</h3>
+        <p class="text-sm mb-6" style="color: var(--muted);">
           Find and connect with other users to see their progress.
         </p>
-        <a href="{% url 'user_list' %}" class="btn btn-outline btn-sm gap-2 border-slate-300 text-slate-700 hover:border-slate-500 hover:bg-slate-50">
+        <a href="{% url 'user_list' %}"
+           class="btn btn-outline btn-sm gap-2"
+           style="border-color: var(--border); color: var(--text); background: transparent;">
           <i class="bi bi-search" aria-hidden="true"></i>
           <span>Explore Users</span>
         </a>
@@ -149,31 +164,9 @@
     {% endif %}
   </main>
 
-  <!-- Mobile Bottom Navigation -->
-  <nav class="fixed bottom-0 left-0 right-0 md:hidden bg-white border-t border-slate-200 shadow-2xl z-40" aria-label="Bottom navigation">
-    <div class="flex justify-around items-center h-16 px-2">
-      <a href="{% url 'task_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-list-check text-lg" aria-hidden="true"></i>
-        <span class="text-xs mt-0.5">Tasks</span>
-      </a>
-      <a href="{% url 'friends_list' %}" class="flex flex-col items-center justify-center w-full h-full bg-slate-50">
-        <i class="bi bi-people-fill text-lg" aria-hidden="true"></i>
-        <span class="text-xs mt-0.5 font-medium">Friends</span>
-      </a>
-      <a href="{% url 'notifications' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-bell text-lg" aria-hidden="true"></i>
-        <span class="text-xs mt-0.5">Notifications</span>
-      </a>
-      <a href="{% url 'user_list' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-search text-lg" aria-hidden="true"></i>
-        <span class="text-xs mt-0.5">Find</span>
-      </a>
-      <a href="{% url 'dashboard' %}" class="flex flex-col items-center justify-center w-full h-full hover:bg-slate-50 transition">
-        <i class="bi bi-house-door text-lg" aria-hidden="true"></i>
-        <span class="text-xs mt-0.5">Home</span>
-      </a>
-    </div>
-  </nav>
+  <!-- NOTE: Remove the page-level bottom nav here, because base.html already provides the mobile nav.
+       Keeping both results in two stacked nav bars on mobile. -->
+
 </div>
 
 <script>
@@ -253,12 +246,14 @@
       emptyDiv.id = 'empty-state';
       emptyDiv.className = 'text-center py-12 md:py-16';
       emptyDiv.innerHTML = `
-        <div class="text-4xl md:text-5xl mb-3 md:mb-4 text-slate-500">
+        <div class="text-4xl md:text-5xl mb-3 md:mb-4" style="color: var(--muted);">
           <i class="bi bi-people" aria-hidden="true"></i>
         </div>
-        <h3 class="text-base md:text-lg font-bold text-slate-700 mb-2">No friends yet</h3>
-        <p class="text-sm text-slate-600 mb-6">Find and connect with other users to see their progress.</p>
-        <a href="{% url 'user_list' %}" class="btn btn-outline btn-sm gap-2 border-slate-300 text-slate-700 hover:border-slate-500 hover:bg-slate-50">
+        <h3 class="text-base md:text-lg font-bold mb-2" style="color: var(--text);">No friends yet</h3>
+        <p class="text-sm mb-6" style="color: var(--muted);">Find and connect with other users to see their progress.</p>
+        <a href="{% url 'user_list' %}"
+           class="btn btn-outline btn-sm gap-2"
+           style="border-color: var(--border); color: var(--text); background: transparent;">
           <i class="bi bi-search" aria-hidden="true"></i>
           <span>Explore Users</span>
         </a>

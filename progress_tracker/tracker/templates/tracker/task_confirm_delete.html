@@ -4,33 +4,53 @@
 {% block title %}Confirm Delete{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 pb-24 md:pb-8 px-3 sm:px-4 lg:px-8 flex items-center justify-center">
+<!-- Theme-aware wrapper -->
+<div class="min-h-screen pb-24 md:pb-8 px-3 sm:px-4 lg:px-8 flex items-center justify-center"
+     style="background: var(--bg); color: var(--text);">
+
   <div class="w-full max-w-md">
-    <div class="bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-3xl p-6 md:p-8 shadow-lg md:shadow-xl border border-slate-200/50">
+    <div class="rounded-2xl md:rounded-3xl p-6 md:p-8 border"
+         style="background: var(--surface); border-color: var(--border); box-shadow: var(--shadow);">
+
       <div class="text-center mb-6">
-        <div class="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-error/10 rounded-full mb-4">
-          <i class="bi bi-exclamation-triangle text-2xl md:text-3xl text-error"></i>
+        <div class="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full mb-4"
+             style="background: rgb(239 68 68 / 0.12);">
+          <i class="bi bi-exclamation-triangle text-2xl md:text-3xl"
+             aria-hidden="true"
+             style="color: var(--error);"></i>
         </div>
-        <h2 class="text-lg md:text-2xl font-black text-slate-900 mb-2">Delete Confirmation</h2>
-        <p class="text-sm md:text-base text-slate-600">This action cannot be undone.</p>
+
+        <h2 class="text-lg md:text-2xl font-black mb-2" style="color: var(--text);">
+          Delete Confirmation
+        </h2>
+        <p class="text-sm md:text-base" style="color: var(--muted);">
+          This action cannot be undone.
+        </p>
       </div>
 
       <form method="POST" class="space-y-4">
         {% csrf_token %}
-        <p class="text-sm md:text-base text-slate-700 bg-error/10 p-3 md:p-4 rounded-lg text-center">
+
+        <p class="text-sm md:text-base p-3 md:p-4 rounded-lg text-center"
+           style="background: rgb(239 68 68 / 0.10); color: var(--text); border: 1px solid rgb(239 68 68 / 0.18);">
           Are you sure you want to delete this item?
         </p>
 
         <div class="flex gap-3 flex-col sm:flex-row">
-          <a href="{{ request.META.HTTP_REFERER|default:'/' }}" class="btn btn-outline btn-sm md:btn-md flex-1 order-2 sm:order-1">
+          <a href="{{ request.META.HTTP_REFERER|default:'/' }}"
+             class="btn btn-outline btn-sm md:btn-md flex-1 order-2 sm:order-1"
+             style="border-color: var(--border); color: var(--text); background: transparent;">
             Cancel
           </a>
+
           <button type="submit" class="btn btn-error btn-sm md:btn-md flex-1 order-1 sm:order-2">
             Delete
           </button>
         </div>
       </form>
+
     </div>
   </div>
+
 </div>
 {% endblock %}
