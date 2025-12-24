@@ -161,3 +161,91 @@ class ActivityReaction(models.Model):
         activity_type = "task" if self.task else "log"
         activity_id = self.task.id if self.task else self.daily_log.id
         return f"{self.user.username} starred {activity_type} {activity_id}"
+
+from django.db import models
+from django.utils import timezone
+from django.contrib.auth.models import User
+from django.db.models import Q
+
+class Conversation(models.Model):
+    """
+    1-to-1 conversation between two users.
+    Enforced unique pair via unique_together on (user1, user2) with ordering.
+    """
+    user1 = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversations_as_user1")
+    user2 = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversations_as_user2")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["user1", "user2"], name="unique_conversation_pair"),
+            models.CheckConstraint(check=~Q(user1=models.F("user2")), name="conversation_users_must_differ"),
+        ]
+        ordering = ["-updated_at"]
+
+    def __str__(self):
+        return f"Chat: {self.user1.username} ↔ {self.user2.username}"
+
+    @staticmethod
+    def normalize_pair(a: User, b: User) -> tuple[User, User]:
+        """Store pairs in deterministic order so uniqueness works reliably."""
+        return (a, b) if a.id < b.id else (b, a)
+
+    @classmethod
+    def get_or_create_between(cls, a: User, b: User):
+        u1, u2 = cls.normalize_pair(a, b)
+        return cls.objects.get_or_create(user1=u1, user2=u2)
+
+    def other_user(self, me: User) -> User:
+        return self.user2 if self.user1_id == me.id else self.user1
+
+    def last_message(self):
+        return self.messages.order_by("-created_at").first()
+
+
+class ConversationMember(models.Model):
+    """
+    Per-user state for a conversation (unread counts, last read pointer).
+    """
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="memberships")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="conversation_memberships")
+
+    last_read_at = models.DateTimeField(null=True, blank=True)
+    last_read_message = models.ForeignKey(
+        "Message", on_delete=models.SET_NULL, null=True, blank=True, related_name="+"
+    )
+
+    class Meta:
+        unique_together = ("conversation", "user")
+
+    def __str__(self):
+        return f"{self.user.username} in {self.conversation_id}"
+
+    def unread_count(self) -> int:
+        qs = self.conversation.messages.all()
+        if self.last_read_message_id:
+            qs = qs.filter(id__gt=self.last_read_message_id)
+        elif self.last_read_at:
+            qs = qs.filter(created_at__gt=self.last_read_at)
+        return qs.exclude(sender=self.user).count()
+
+
+class Message(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_messages")
+    body = models.TextField(max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Optional: allow soft-delete per side
+    deleted_for_sender = models.BooleanField(default=False)
+    deleted_for_recipient = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"Msg {self.id} in conv {self.conversation_id} by {self.sender.username}"
+
+
+

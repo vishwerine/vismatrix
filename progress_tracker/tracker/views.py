@@ -1571,7 +1571,7 @@ def daily_summary(request, year, month, day):
 
 @login_required
 def notifications(request):
-    """View notifications for stars received on user's activities"""
+    """View notifications for stars received and new messages from friends"""
     
     # Get all stars received by the current user
     # Stars on tasks
@@ -1611,9 +1611,49 @@ def notifications(request):
     # Get total star count
     total_stars = len(all_stars)
     
+    # Get unread messages from conversations
+    from .models import Conversation, ConversationMember, Message
+    unread_messages = []
+    
+    me = request.user
+    # Get all conversations for the current user
+    conversations = Conversation.objects.filter(
+        Q(user1=me) | Q(user2=me)
+    ).select_related('user1', 'user2').order_by('-updated_at')
+    
+    for conv in conversations:
+        # Get the other user
+        other = conv.user2 if conv.user1 == me else conv.user1
+        
+        # Get the membership record
+        try:
+            membership = ConversationMember.objects.get(conversation=conv, user=me)
+            # Count unread messages
+            unread_qs = conv.messages.all()
+            if membership.last_read_message_id:
+                unread_qs = unread_qs.filter(id__gt=membership.last_read_message_id)
+            
+            unread_count = unread_qs.count()
+            
+            if unread_count > 0:
+                # Get the latest unread message
+                latest_msg = unread_qs.order_by('-created_at').first()
+                if latest_msg:
+                    unread_messages.append({
+                        'conversation_id': conv.id,
+                        'other_user': other,
+                        'unread_count': unread_count,
+                        'latest_message': latest_msg.body,
+                        'latest_timestamp': latest_msg.created_at,
+                    })
+        except ConversationMember.DoesNotExist:
+            pass
+    
     context = {
         'stars': all_stars,
         'total_stars': total_stars,
+        'unread_messages': unread_messages,
+        'total_unread_messages': len(unread_messages),
     }
     
     return render(request, 'tracker/notifications.html', context)
@@ -1622,3 +1662,236 @@ def notifications(request):
 def about(request):
     """About page for VisMatrix company information."""
     return render(request, 'tracker/about.html')
+
+
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.http import Http404
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+
+from .models import Conversation, ConversationMember, Message, Friendship
+from .services import are_friends
+
+@login_required
+def inbox(request):
+    me = request.user
+    conversations = Conversation.objects.filter(Q(user1=me) | Q(user2=me)).order_by("-updated_at")
+
+    memberships = {m.conversation_id: m for m in ConversationMember.objects.filter(user=me, conversation__in=conversations)}
+
+    items = []
+    for c in conversations:
+        m = memberships.get(c.id)
+        other = c.other_user(me)
+        last = c.last_message()
+        items.append({
+            "conversation": c,
+            "other": other,
+            "last": last,
+            "unread": m.unread_count() if m else 0,
+        })
+
+    return render(request, "messaging/inbox.html", {"items": items})
+
+
+@login_required
+def start_chat(request, username):
+    me = request.user
+    other = get_object_or_404(User, username=username)
+
+    if other == me:
+        raise Http404("Cannot message yourself.")
+
+    if not are_friends(me, other):
+        raise Http404("You can only message friends.")
+
+    conv, created = Conversation.get_or_create_between(me, other)
+
+    # Ensure member rows exist
+    ConversationMember.objects.get_or_create(conversation=conv, user=conv.user1)
+    ConversationMember.objects.get_or_create(conversation=conv, user=conv.user2)
+
+    return redirect("conversation_detail", conversation_id=conv.id)
+
+
+@login_required
+def conversation_detail(request, conversation_id):
+    me = request.user
+    conv = get_object_or_404(
+        Conversation.objects.select_related("user1", "user2"),
+        id=conversation_id
+    )
+
+    if me.id not in (conv.user1_id, conv.user2_id):
+        raise Http404("Not your conversation.")
+
+    # membership exists
+    membership, _ = ConversationMember.objects.get_or_create(conversation=conv, user=me)
+
+    # Handle send
+    if request.method == "POST":
+        body = (request.POST.get("body") or "").strip()
+        if body:
+            Message.objects.create(conversation=conv, sender=me, body=body)
+            conv.updated_at = timezone.now()
+            conv.save(update_fields=["updated_at"])
+
+        return redirect("conversation_detail", conversation_id=conv.id)
+
+    # Mark as read (set last read to latest message)
+    latest = conv.messages.order_by("-created_at").first()
+    if latest:
+        membership.last_read_message = latest
+        membership.last_read_at = timezone.now()
+        membership.save(update_fields=["last_read_message", "last_read_at"])
+
+    # Fetch messages
+    # (optional soft-delete filtering)
+    qs = conv.messages.all()
+    if conv.user1_id == me.id:
+        qs = qs.exclude(deleted_for_sender=True, sender=me)
+    else:
+        qs = qs.exclude(deleted_for_sender=True, sender=me)
+
+    return render(
+        request,
+        "messaging/conversation_detail.html",
+        {
+            "conversation": conv,
+            "other": conv.other_user(me),
+            "messages": qs,
+            "unread": membership.unread_count(),
+        },
+    )
+
+
+
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, Http404
+from django.shortcuts import get_object_or_404
+from django.utils import timezone
+
+from .models import Conversation, ConversationMember, Message, Friendship
+from django.contrib.auth.models import User
+from .services import are_friends
+
+@login_required
+def mini_chat_friends(request):
+    """
+    Returns a friends list + unread counts for the mini widget.
+    """
+    me = request.user
+
+    # all friends (bidirectional friendship already stored in your model)
+    friends = User.objects.filter(friends_of__user=me).distinct().order_by("username")
+
+    # fetch conversations for unread counts
+    convs = Conversation.objects.filter(user1=me) | Conversation.objects.filter(user2=me)
+    convs = convs.distinct()
+
+    memberships = {
+        m.conversation_id: m
+        for m in ConversationMember.objects.filter(user=me, conversation__in=convs)
+    }
+
+    # map other_user_id -> conv_id
+    conv_map = {}
+    for c in convs:
+        other = c.other_user(me)
+        conv_map[other.id] = c.id
+
+    payload = []
+    for f in friends:
+        conv_id = conv_map.get(f.id)
+        unread = 0
+        if conv_id and conv_id in memberships:
+            unread = memberships[conv_id].unread_count()
+
+        payload.append({
+            "id": f.id,
+            "username": f.username,
+            "conversation_id": conv_id,  # may be null if never chatted
+            "unread": unread,
+        })
+
+    return JsonResponse({"friends": payload})
+
+
+@login_required
+def mini_chat_messages(request, conversation_id):
+    """
+    Returns the last N messages for a conversation and marks as read.
+    """
+    me = request.user
+    conv = get_object_or_404(Conversation.objects.select_related("user1", "user2"), id=conversation_id)
+
+    if me.id not in (conv.user1_id, conv.user2_id):
+        raise Http404("Not your conversation.")
+
+    # last 30 messages
+    msgs = list(conv.messages.order_by("-created_at")[:30])[::-1]
+
+    # mark read (set pointer to latest)
+    membership, _ = ConversationMember.objects.get_or_create(conversation=conv, user=me)
+    latest = msgs[-1] if msgs else None
+    if latest:
+        membership.last_read_message = latest
+        membership.last_read_at = timezone.now()
+        membership.save(update_fields=["last_read_message", "last_read_at"])
+
+    return JsonResponse({
+        "conversation": conv.id,
+        "other": conv.other_user(me).username,
+        "messages": [
+            {
+                "id": m.id,
+                "sender": m.sender.username,
+                "is_me": (m.sender_id == me.id),
+                "body": m.body,
+                "created_at": m.created_at.strftime("%b %d, %I:%M %p"),
+            } for m in msgs
+        ]
+    })
+
+
+@login_required
+def mini_chat_send(request, conversation_id):
+    """
+    POST JSON: { "body": "..." }
+    Creates a message.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    me = request.user
+    conv = get_object_or_404(Conversation.objects.select_related("user1", "user2"), id=conversation_id)
+
+    if me.id not in (conv.user1_id, conv.user2_id):
+        raise Http404("Not your conversation.")
+
+    # Basic JSON parsing
+    import json
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    body = (data.get("body") or "").strip()
+    if not body:
+        return JsonResponse({"error": "Empty message"}, status=400)
+
+    msg = Message.objects.create(conversation=conv, sender=me, body=body)
+    conv.updated_at = timezone.now()
+    conv.save(update_fields=["updated_at"])
+
+    return JsonResponse({
+        "ok": True,
+        "message": {
+            "id": msg.id,
+            "sender": msg.sender.username,
+            "is_me": True,
+            "body": msg.body,
+            "created_at": msg.created_at.strftime("%b %d, %I:%M %p"),
+        }
+    })

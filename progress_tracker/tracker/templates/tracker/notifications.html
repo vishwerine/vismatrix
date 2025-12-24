@@ -11,18 +11,70 @@
             <i class="bi bi-bell" aria-hidden="true"></i>
             <span>Notifications</span>
         </h1>
-        <div class="flex flex-wrap items-center gap-2 text-sm md:text-base text-base-content/70">
-            <p>Stars and appreciation from your friends</p>
+        <div class="flex flex-wrap items-center gap-3 text-sm md:text-base text-base-content/70">
+            <p>Updates from friends</p>
             {% if total_stars > 0 %}
             <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-warning/10 text-warning">
                 <i class="bi bi-star-fill" aria-hidden="true"></i>
                 <span>{{ total_stars }} star{{ total_stars|pluralize }}</span>
             </span>
             {% endif %}
+            {% if total_unread_messages > 0 %}
+            <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-info/10 text-info">
+                <i class="bi bi-chat-dots" aria-hidden="true"></i>
+                <span>{{ total_unread_messages }} new message{{ total_unread_messages|pluralize }}</span>
+            </span>
+            {% endif %}
         </div>
     </header>
 
-    <!-- Stars Received -->
+    <!-- New Messages -->
+    {% if unread_messages %}
+    <section class="card bg-base-100 shadow-md border border-base-200" aria-label="New messages">
+        <div class="card-body p-4 md:p-6">
+            <h2 class="card-title text-lg flex items-center gap-2">
+                <i class="bi bi-chat-dots text-info" aria-hidden="true"></i>
+                <span>New Messages</span>
+            </h2>
+
+            <div class="space-y-4 mt-4">
+                {% for msg in unread_messages %}
+                <a href="{% url 'conversation_detail' msg.conversation_id %}" class="flex gap-3 relative pb-4 last:pb-0 border-l border-base-300 ml-2 pl-4 hover:bg-base-200/50 p-2 -m-2 rounded-lg transition">
+                    <div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-info ring-2 ring-base-100"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <div class="avatar placeholder">
+                                <div class="bg-neutral-focus text-neutral-content rounded-full w-8 h-8">
+                                    <span class="text-sm">
+                                        {{ msg.other_user.username|first|upper }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <span class="font-medium">{{ msg.other_user.username }}</span>
+                                <span class="text-sm text-base-content/60 ml-1">sent you</span>
+                                {% if msg.unread_count == 1 %}
+                                <span class="badge badge-info badge-xs">1 message</span>
+                                {% else %}
+                                <span class="badge badge-info badge-xs">{{ msg.unread_count }} messages</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="text-sm font-medium mb-1 text-base-content/80 line-clamp-2">
+                            "{{ msg.latest_message }}"
+                        </p>
+                        <p class="text-xs text-base-content/60 flex items-center gap-1">
+                            <i class="bi bi-clock" aria-hidden="true"></i>
+                            <span>{{ msg.latest_timestamp|timesince }} ago</span>
+                        </p>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+    {% endif %}
+
     <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Stars received">
         <div class="card-body p-4 md:p-6">
             <h2 class="card-title text-lg flex items-center gap-2">

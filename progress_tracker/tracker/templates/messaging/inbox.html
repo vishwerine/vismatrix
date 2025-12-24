@@ -1,0 +1,141 @@
+{% extends "tracker/base.html" %}
+{% block title %}Inbox - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="max-w-5xl mx-auto space-y-6">
+
+  <!-- Header -->
+  <header class="card border border-base-200 bg-base-100">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content truncate flex items-center gap-2">
+            <i class="bi bi-chat-dots" aria-hidden="true"></i>
+            <span>Inbox</span>
+          </h1>
+          <p class="text-sm text-base-content/70 mt-1">Your conversations with friends.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <a href="{% url 'friends_list' %}" class="btn btn-outline btn-sm gap-2">
+            <i class="bi bi-people" aria-hidden="true"></i>
+            <span>Friends</span>
+          </a>
+          <a href="{% url 'dashboard' %}" class="btn btn-primary btn-sm gap-2">
+            <i class="bi bi-house" aria-hidden="true"></i>
+            <span>Dashboard</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Search (optional UI only) -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-4 sm:p-5">
+      <label class="input input-bordered flex items-center gap-2">
+        <i class="bi bi-search opacity-70" aria-hidden="true"></i>
+        <input id="inboxSearch" type="text" class="grow" placeholder="Search by username…" autocomplete="off" />
+      </label>
+      <p class="mt-2 text-xs text-base-content/60">Tip: start typing to filter conversations.</p>
+    </div>
+  </section>
+
+  <!-- Conversations -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-0">
+
+      {% if items %}
+        <ul id="inboxList" class="divide-y divide-base-200">
+          {% for item in items %}
+            <li class="p-4 sm:p-5 hover:bg-base-200/40 transition">
+              <a href="{% url 'conversation_detail' item.conversation.id %}"
+                 class="flex items-center gap-3">
+
+                <!-- Avatar -->
+                <div class="avatar placeholder flex-shrink-0">
+                  <div class="bg-neutral text-neutral-content rounded-full w-11">
+                    <span class="text-sm font-bold">
+                      {{ item.other.username|first|upper }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Main -->
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="font-semibold text-base-content truncate inbox-username">
+                        {{ item.other.username }}
+                      </p>
+                      <p class="text-sm text-base-content/70 truncate">
+                        {% if item.last %}
+                          {{ item.last.body|truncatechars:80 }}
+                        {% else %}
+                          No messages yet. Say hello 👋
+                        {% endif %}
+                      </p>
+                    </div>
+
+                    <!-- Right meta -->
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                      {% if item.unread %}
+                        <span class="badge badge-warning badge-sm" aria-label="{{ item.unread }} unread messages">
+                          {{ item.unread }}
+                        </span>
+                      {% endif %}
+                      <span class="btn btn-ghost btn-sm" aria-hidden="true">
+                        <i class="bi bi-chevron-right"></i>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+              </a>
+            </li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <div class="p-8 sm:p-10 text-center">
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-base-200 mb-3">
+            <i class="bi bi-envelope-plus text-2xl" aria-hidden="true"></i>
+          </div>
+          <h2 class="text-lg font-bold">No conversations yet</h2>
+          <p class="mt-1 text-sm text-base-content/70">
+            Start a chat from your friends list.
+          </p>
+          <div class="mt-4 flex items-center justify-center gap-2">
+            <a href="{% url 'friends_list' %}" class="btn btn-primary gap-2">
+              <i class="bi bi-people" aria-hidden="true"></i>
+              <span>Find Friends</span>
+            </a>
+            <a href="{% url 'dashboard' %}" class="btn btn-outline gap-2">
+              <i class="bi bi-house" aria-hidden="true"></i>
+              <span>Back</span>
+            </a>
+          </div>
+        </div>
+      {% endif %}
+
+    </div>
+  </section>
+
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const search = document.getElementById('inboxSearch');
+  const list = document.getElementById('inboxList');
+  if (!search || !list) return;
+
+  search.addEventListener('input', () => {
+    const q = (search.value || '').toLowerCase().trim();
+    list.querySelectorAll('li').forEach(li => {
+      const nameEl = li.querySelector('.inbox-username');
+      const name = (nameEl?.textContent || '').toLowerCase();
+      li.style.display = (!q || name.includes(q)) ? '' : 'none';
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -458,6 +458,7 @@
   <main id="main-content"
         class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8"
         role="main">
+    {% block toast %}
     {% if messages %}
     <div class="toast toast-top toast-center z-50 w-full max-w-md top-16 px-4">
       {% for message in messages %}
@@ -467,9 +468,84 @@
       {% endfor %}
     </div>
     {% endif %}
+    {% endblock %}
 
     {% block content %}{% endblock %}
   </main>
+
+  {% if user.is_authenticated %}
+  <!-- Desktop Mini Chat Dock (hidden on mobile) -->
+  <div id="miniChat" class="hidden lg:block fixed bottom-5 right-5 z-[60] w-[380px]">
+    <div class="card border border-base-200 bg-base-100 shadow-xl">
+      <div class="card-body p-3">
+
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2 font-bold">
+            <i class="bi bi-chat-dots" aria-hidden="true"></i>
+            <span>Messages</span>
+            <span id="miniChatUnreadBadge" class="badge badge-warning hidden">0</span>
+          </div>
+
+          <div class="flex items-center gap-1">
+            <a href="{% url 'inbox' %}" class="btn btn-ghost btn-xs" aria-label="Open inbox">
+              <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+            </a>
+            <button id="miniChatMinimise" class="btn btn-ghost btn-xs" aria-label="Minimise chat">
+              <i class="bi bi-dash-lg" aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        <div id="miniChatBody" class="mt-3 grid grid-cols-5 gap-3">
+          <!-- Friends list -->
+          <div class="col-span-2">
+            <div class="text-xs font-semibold text-base-content/60 mb-2">Friends</div>
+            <div id="miniChatFriends" class="max-h-72 overflow-auto rounded-xl border border-base-200">
+              <div class="p-3 text-sm text-base-content/70">Loading friends…</div>
+            </div>
+          </div>
+
+          <!-- Conversation -->
+          <div class="col-span-3">
+            <div id="miniChatEmpty"
+                 class="h-full rounded-xl border border-base-200 p-3 flex items-center justify-center text-sm text-base-content/70">
+              Select a friend to start chatting.
+            </div>
+
+            <div id="miniChatConversation" class="hidden">
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="text-xs text-base-content/60">Chatting with</div>
+                  <div class="font-bold truncate" id="miniChatWith"></div>
+                </div>
+                <a id="miniChatOpenFull" href="#" class="btn btn-ghost btn-xs" aria-label="Open full chat">
+                  <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+                </a>
+              </div>
+
+              <div id="miniChatMessages"
+                   class="mt-2 h-56 overflow-auto rounded-xl border border-base-200 bg-base-100 p-2 space-y-2">
+              </div>
+
+              <form id="miniChatForm" class="mt-2 flex gap-2">
+                {% csrf_token %}
+                <input id="miniChatInput"
+                       type="text"
+                       class="input input-bordered input-sm w-full"
+                       placeholder="Type a message…"
+                       maxlength="2000" />
+                <button class="btn btn-primary btn-sm" type="submit" aria-label="Send">
+                  <i class="bi bi-send" aria-hidden="true"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   {% if user.is_authenticated %}
   <!-- Mobile bottom nav -->
@@ -490,7 +566,7 @@
         <span>Tasks</span>
       </a>
 
-      <a href="{% url 'log_create' %}" class="flex flex-col items-center justify-center" aria-label="Add log">
+      <a href="{% url 'inbox' %}" class="flex flex-col items-center justify-center" aria-label="Add log">
         <div class="vm-fab flex items-center justify-center -translate-y-4">
           <i class="bi bi-plus-lg text-2xl" aria-hidden="true"></i>
         </div>
@@ -591,5 +667,207 @@
       }
     })();
   </script>
+
+  {% if user.is_authenticated %}
+  <!-- Desktop mini chat script (global) -->
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const friendsEl = document.getElementById('miniChatFriends');
+    const unreadBadge = document.getElementById('miniChatUnreadBadge');
+    const minimiseBtn = document.getElementById('miniChatMinimise');
+    const bodyEl = document.getElementById('miniChatBody');
+
+    const emptyEl = document.getElementById('miniChatEmpty');
+    const convEl = document.getElementById('miniChatConversation');
+    const msgsEl = document.getElementById('miniChatMessages');
+    const withEl = document.getElementById('miniChatWith');
+    const openFullEl = document.getElementById('miniChatOpenFull');
+
+    const formEl = document.getElementById('miniChatForm');
+    const inputEl = document.getElementById('miniChatInput');
+
+    if (!friendsEl) return; // mobile -> dock hidden
+
+    const CSRF_TOKEN = '{{ csrf_token }}';
+    const MINI_CHAT_MINIMISED_KEY = 'miniChatMinimised';
+    let currentConvId = null;
+    let pollTimer = null;
+    let minimised = localStorage.getItem(MINI_CHAT_MINIMISED_KEY) === 'true';
+
+    function escapeHtml(str) {
+      return (str || "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderMessage(m) {
+      const side = m.is_me ? "chat-end" : "chat-start";
+      const bubble = m.is_me ? "chat-bubble chat-bubble-primary" : "chat-bubble";
+      return `
+        <div class="chat ${side}">
+          <div class="chat-header text-xs opacity-70">
+            ${m.is_me ? "You" : escapeHtml(m.sender)}
+            <time class="ml-2">${escapeHtml(m.created_at)}</time>
+          </div>
+          <div class="${bubble} text-sm whitespace-pre-wrap">${escapeHtml(m.body)}</div>
+        </div>
+      `;
+    }
+
+    async function loadFriends(showLoading=true) {
+      if (showLoading) {
+        friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">Loading friends…</div>`;
+      }
+
+      const res = await fetch('{% url "mini_chat_friends" %}');
+      if (!res.ok) {
+        friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Could not load friends.</div>`;
+        return;
+      }
+      const data = await res.json();
+
+      const totalUnread = (data.friends || []).reduce((acc, f) => acc + (f.unread || 0), 0);
+      if (totalUnread > 0) {
+        unreadBadge.textContent = totalUnread;
+        unreadBadge.classList.remove('hidden');
+      } else {
+        unreadBadge.classList.add('hidden');
+      }
+
+      if (!data.friends || data.friends.length === 0) {
+        friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">No friends yet.</div>`;
+        return;
+      }
+
+      friendsEl.innerHTML = data.friends.map(f => {
+        const badge = f.unread > 0 ? `<span class="badge badge-warning badge-sm">${f.unread}</span>` : ``;
+        const disabled = !f.conversation_id;
+
+        return `
+          <button type="button"
+                  class="w-full text-left p-3 hover:bg-base-200/40 transition flex items-center justify-between gap-3 ${disabled ? 'opacity-60' : ''}"
+                  ${disabled ? `data-open-inbox="1"` : `data-conv="${f.conversation_id}" data-user="${f.username}"`}>
+            <span class="flex items-center gap-2 min-w-0">
+              <span class="avatar placeholder">
+                <span class="bg-neutral text-neutral-content rounded-full w-8 h-8 flex items-center justify-center">
+                  <span class="text-xs">${(f.username || '?').slice(0,1).toUpperCase()}</span>
+                </span>
+              </span>
+              <span class="text-sm font-semibold truncate">${f.username}</span>
+            </span>
+            ${badge}
+          </button>
+        `;
+      }).join('');
+
+      friendsEl.querySelectorAll('button[data-conv]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const convId = btn.getAttribute('data-conv');
+          const uname = btn.getAttribute('data-user');
+          openConversation(convId, uname);
+        });
+      });
+
+      friendsEl.querySelectorAll('button[data-open-inbox]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          window.location.href = "{% url 'inbox' %}";
+        });
+      });
+    }
+
+    async function loadMessages(conversationId, scrollToBottom=true) {
+      const res = await fetch(`/api/mini-chat/${conversationId}/messages/`);
+      if (!res.ok) {
+        msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Could not load messages.</div>`;
+        return;
+      }
+      const data = await res.json();
+
+      msgsEl.innerHTML = (data.messages || []).map(renderMessage).join('')
+        || `<div class="p-2 text-sm text-base-content/70">No messages yet.</div>`;
+
+      if (scrollToBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+      loadFriends(false);
+    }
+
+    async function openConversation(conversationId, username) {
+      currentConvId = conversationId;
+      withEl.textContent = username;
+      openFullEl.href = `/messages/${conversationId}/`;
+
+      emptyEl.classList.add('hidden');
+      convEl.classList.remove('hidden');
+
+      await loadMessages(conversationId, true);
+      inputEl.focus();
+    }
+
+    function startPolling() {
+      stopPolling();
+      pollTimer = setInterval(() => {
+        loadFriends(false);
+        if (currentConvId) loadMessages(currentConvId, false);
+      }, 7000);
+    }
+
+    function stopPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = null;
+    }
+
+    minimiseBtn.addEventListener('click', () => {
+      minimised = !minimised;
+      bodyEl.classList.toggle('hidden', minimised);
+      minimiseBtn.innerHTML = minimised
+        ? '<i class="bi bi-plus-lg" aria-hidden="true"></i>'
+        : '<i class="bi bi-dash-lg" aria-hidden="true"></i>';
+      localStorage.setItem(MINI_CHAT_MINIMISED_KEY, minimised);
+    });
+
+    // Apply initial minimized state on page load
+    if (minimised) {
+      bodyEl.classList.add('hidden');
+      minimiseBtn.innerHTML = '<i class="bi bi-plus-lg" aria-hidden="true"></i>';
+    }
+
+    formEl.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentConvId) return;
+
+      const body = (inputEl.value || "").trim();
+      if (!body) return;
+
+      inputEl.value = "";
+      msgsEl.insertAdjacentHTML('beforeend', renderMessage({
+        sender: "{{ user.username }}",
+        is_me: true,
+        body,
+        created_at: "now"
+      }));
+      msgsEl.scrollTop = msgsEl.scrollHeight;
+
+      const res = await fetch(`/api/mini-chat/${currentConvId}/send/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ body })
+      });
+
+      if (!res.ok) {
+        await loadMessages(currentConvId, true);
+        return;
+      }
+      await loadMessages(currentConvId, true);
+    });
+
+    loadFriends(true);
+    startPolling();
+  });
+  </script>
+  {% endif %}
+</body>
+</html>
 </body>
 </html>

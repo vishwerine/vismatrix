@@ -2,10 +2,15 @@
 
 {% block title %}Dashboard - VisMatrix{% endblock %}
 
+{# Mobile FAB: redirect to Messages (Inbox) instead of Log Time #}
+{% block mobile_fab_href %}{% url 'inbox' %}{% endblock %}
+{% block mobile_fab_aria %}Open messages{% endblock %}
+{% block mobile_fab_icon %}bi-chat-dots{% endblock %}
+
 {% block content %}
 <main class="space-y-6">
 
-  <!-- Header (simple, high-contrast, no gradients) -->
+  <!-- Header -->
   <header class="card border border-base-200 bg-base-100" role="banner">
     <div class="card-body p-5 sm:p-6">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -24,7 +29,7 @@
         </div>
       </div>
 
-      <!-- Quick actions (kept minimal and consistent) -->
+      <!-- Quick actions -->
       <div class="mt-4 flex flex-col sm:flex-row gap-2">
         <a href="{% url 'task_create' %}" class="btn btn-outline gap-2">
           <i class="bi bi-plus-square" aria-hidden="true"></i>
@@ -43,7 +48,7 @@
   </header>
 
   {% if star_notifications_count > 0 %}
-  <!-- Notifications (calm, readable) -->
+  <!-- Notifications -->
   <section class="alert alert-warning" role="alert" aria-live="polite">
     <div class="flex items-start gap-3 w-full">
       <i class="bi bi-star-fill text-xl" aria-hidden="true"></i>
@@ -64,7 +69,7 @@
   <!-- Main layout -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    <!-- Left: Friends -->
+    <!-- Left: Friends Feed -->
     {% if friends_timeline %}
     <section class="card border border-base-200 bg-base-100 lg:col-span-2" aria-label="Friends activity">
       <div class="card-body p-5 sm:p-6">
@@ -87,7 +92,7 @@
 
             <div class="flex-1 min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <a href="{% url 'view_friend_profile' item.friendship_id %}" 
+                <a href="{% url 'view_friend_profile' item.friendship_id %}"
                    class="font-semibold text-sm link link-primary hover:underline">
                   {{ item.user.username }}
                 </a>
@@ -126,7 +131,7 @@
               </p>
             </div>
 
-            <!-- Star action (clear target + aria) -->
+            <!-- Star action -->
             <button
               class="star-btn btn btn-ghost btn-sm gap-2"
               data-activity-type="{{ item.type }}"
@@ -251,10 +256,27 @@
         </div>
       </section>
 
+      <!-- Optional: Messages quick link (nice on desktop, harmless on mobile) -->
+      <section class="card border border-base-200 bg-base-100" aria-label="Messages shortcut">
+        <div class="card-body p-5">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold flex items-center gap-2">
+              <i class="bi bi-chat-dots" aria-hidden="true"></i>
+              <span>Messages</span>
+            </h2>
+            <a href="{% url 'inbox' %}" class="link link-primary text-sm">Open Inbox</a>
+          </div>
+          <p class="mt-2 text-sm text-base-content/70">
+            Chat with friends and keep your streak going.
+          </p>
+        </div>
+      </section>
+
     </aside>
   </div>
 </main>
 
+<!-- Star toggle script -->
 <script>
 document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('.star-btn').forEach(button => {
@@ -278,12 +300,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (response.ok) {
           const starred = !!data.starred;
-
-          // icon + emphasis (avoid relying on colour only by using filled/outline)
           starIcon.classList.toggle('bi-star-fill', starred);
           starIcon.classList.toggle('bi-star', !starred);
           starIcon.classList.toggle('text-warning', starred);
-
           this.setAttribute('aria-label', starred ? 'Unstar this activity' : 'Star this activity');
           starCount.textContent = data.star_count;
         } else {
@@ -296,5 +315,6 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 });
 </script>
+
 
 {% endblock %}

@@ -49,4 +49,12 @@ urlpatterns = [
     # About page
     path("about/", views.about, name="about"),
 
+    path("messages/", views.inbox, name="inbox"),
+    path("messages/start/<str:username>/", views.start_chat, name="start_chat"),
+    path("messages/<int:conversation_id>/", views.conversation_detail, name="conversation_detail"),
+        # mini chat json endpoints
+    path("api/mini-chat/friends/", views.mini_chat_friends, name="mini_chat_friends"),
+    path("api/mini-chat/<int:conversation_id>/messages/", views.mini_chat_messages, name="mini_chat_messages"),
+    path("api/mini-chat/<int:conversation_id>/send/", views.mini_chat_send, name="mini_chat_send"),
+
 ]

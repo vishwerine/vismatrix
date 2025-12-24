@@ -311,6 +311,10 @@
   </section>
 
   <div class="flex flex-col gap-3 pt-4">
+    <a href="{% url 'start_chat' friend.username %}" class="btn btn-primary btn-block" aria-label="Message {{ friend.username }}">
+      <i class="bi bi-chat-dots" aria-hidden="true"></i>
+      <span>Message {{ friend.username }}</span>
+    </a>
     <a href="{% url 'friends_list' %}" class="btn btn-outline btn-block">Back to Friends</a>
   </div>
 </main>
