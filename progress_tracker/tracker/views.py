@@ -263,6 +263,24 @@ def dashboard(request):
         Q(task__user=request.user) | Q(daily_log__user=request.user)
     ).count()
 
+    # --- Unread message count ---
+    from .models import Conversation, ConversationMember, Message
+    me = request.user
+    conversations = Conversation.objects.filter(
+        Q(user1=me) | Q(user2=me)
+    ).select_related('user1', 'user2')
+    
+    unread_message_count = 0
+    for conv in conversations:
+        try:
+            membership = ConversationMember.objects.get(conversation=conv, user=me)
+            unread_qs = conv.messages.all()
+            if membership.last_read_message_id:
+                unread_qs = unread_qs.filter(id__gt=membership.last_read_message_id)
+            unread_message_count += unread_qs.count()
+        except ConversationMember.DoesNotExist:
+            pass
+
     context = {
         "today": today,
         "pending_tasks": pending_tasks,
@@ -273,6 +291,7 @@ def dashboard(request):
         "suggested_users": suggested_users,
         "pending_friend_requests": pending_friend_requests,
         "star_notifications_count": star_notifications_count,
+        "unread_message_count": unread_message_count,
     }
     return render(request, "tracker/dashboard.html", context)
 

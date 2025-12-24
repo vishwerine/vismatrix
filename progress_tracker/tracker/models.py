@@ -180,7 +180,7 @@ class Conversation(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(fields=["user1", "user2"], name="unique_conversation_pair"),
-            models.CheckConstraint(check=~Q(user1=models.F("user2")), name="conversation_users_must_differ"),
+            models.CheckConstraint(condition=~Q(user1=models.F("user2")), name="conversation_users_must_differ"),
         ]
         ordering = ["-updated_at"]
 
