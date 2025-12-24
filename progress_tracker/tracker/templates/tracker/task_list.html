@@ -304,25 +304,41 @@
 
 <script>
   function getCSRFToken() {
+    // Try meta tag first (works on production with HTTPS)
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag && metaTag.content) return metaTag.content;
+    
+    // Fallback to cookie
     const name = 'csrftoken=';
     const parts = document.cookie.split(';').map(s => s.trim());
     for (const p of parts) {
       if (p.startsWith(name)) return decodeURIComponent(p.substring(name.length));
     }
+    
+    // Last resort
     return '{{ csrf_token }}';
   }
 
   function completeTask(taskId) {
+    const csrfToken = getCSRFToken();
+    console.log('Completing task', taskId, '| CSRF Token present:', !!csrfToken);
+    
     fetch(`/tasks/${taskId}/complete/`, {
       method: 'POST',
-      headers: { 'X-CSRFToken': getCSRFToken() }
+      headers: { 'X-CSRFToken': csrfToken }
     })
     .then(function (r) {
-      if (!r.ok) throw new Error('Request failed');
+      console.log('Response status:', r.status);
+      if (!r.ok) {
+        return r.text().then(text => {
+          throw new Error(`HTTP ${r.status}: ${text.substring(0, 200)}`);
+        });
+      }
       window.location.reload();
     })
-    .catch(function () {
-      alert('Error completing task. Please try again.');
+    .catch(function (err) {
+      console.error('Task completion error:', err);
+      alert('Error completing task: ' + (err.message || 'Unknown error. Check browser console.'));
     });
   }
 
