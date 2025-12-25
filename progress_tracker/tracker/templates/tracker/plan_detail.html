@@ -240,7 +240,8 @@
         </h2>
         <div class="space-y-3">
           {% for node in nodes %}
-            <div class="flex items-center gap-4 p-4 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
+            <div class="flex items-center gap-4 p-4 bg-base-200 rounded-lg hover:bg-base-300 transition-colors cursor-pointer"
+                 onclick="window.location.href='{% url 'task_update' node.task.pk %}'">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1 flex-wrap">
                   <h3 class="font-semibold">{{ node.task.title }}</h3>
@@ -282,7 +283,7 @@
                 {% endif %}
               </div>
 
-              <div class="flex gap-2">
+              <div class="flex gap-2" onclick="event.stopPropagation()">
                 <a href="{% url 'task_update' node.task.pk %}" class="btn btn-ghost btn-sm" title="Edit task">
                   <i class="bi bi-pencil"></i>
                 </a>

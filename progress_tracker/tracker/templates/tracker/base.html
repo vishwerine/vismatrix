@@ -411,9 +411,9 @@
             Analytics
           </a></li>
 
-          <li><a href="{% url 'plan_list' %}">
+          <li><a href="{% url 'task_list' %}">
             <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
-            Plans
+            Tasks
           </a></li>
 
           <li><a href="{% url 'notifications' %}">
@@ -571,11 +571,11 @@
         <span>Home</span>
       </a>
 
-      <a href="{% url 'task_list' %}"
+      <a href="{% url 'plan_list' %}"
          class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/60 transition
-                {% if 'task' in request.resolver_match.url_name %}vm-active{% endif %}">
+                {% if 'plan' in request.resolver_match.url_name %}vm-active{% endif %}">
         <i class="bi bi-check2-square text-xl" aria-hidden="true"></i>
-        <span>Tasks</span>
+        <span>Plans</span>
       </a>
 
       <a href="{% url 'inbox' %}" class="flex flex-col items-center justify-center" aria-label="Add log">

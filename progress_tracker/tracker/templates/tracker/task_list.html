@@ -11,6 +11,8 @@
   .vm-task { 
     transition: all 160ms ease;
     cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .vm-task:hover { 
     box-shadow: 0 10px 18px rgb(15 23 42 / 0.06); 
@@ -188,11 +190,12 @@
         <div class="flex flex-col lg:flex-row gap-4 lg:items-end lg:justify-between">
 
           <!-- Search -->
-          <form method="get" class="w-full lg:max-w-md">
+          <form method="get" class="w-full lg:max-w-md" id="searchForm">
             <label class="label font-semibold">
               <span class="label-text flex items-center gap-2">
                 <i class="bi bi-search text-primary" aria-hidden="true"></i>
                 Search
+                <span id="searchResultsCount" class="text-xs vm-muted hidden"></span>
               </span>
             </label>
 
@@ -200,13 +203,15 @@
               <input
                 type="text"
                 name="search"
+                id="taskSearchInput"
                 value="{{ request.GET.search|default:'' }}"
                 placeholder="Search tasks..."
                 class="input input-bordered join-item w-full"
                 aria-label="Search tasks"
+                autocomplete="off"
               >
-              <button class="btn btn-outline join-item" type="submit" aria-label="Apply search">
-                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+              <button class="btn btn-outline join-item" type="button" id="clearSearchBtn" aria-label="Clear search">
+                <i class="bi bi-x-lg" aria-hidden="true"></i>
               </button>
             </div>
 
@@ -261,7 +266,18 @@
     </section>
 
     <!-- Task list -->
-    <section class="space-y-3" aria-label="Task list">
+    <section class="space-y-3" aria-label="Task list" id="taskListSection">
+      <!-- No search results message (initially hidden) -->
+      <div id="noSearchResults" class="card vm-section bg-base-100 hidden">
+        <div class="card-body p-8 sm:p-10 text-center">
+          <div class="text-4xl mb-3">🔍</div>
+          <h2 class="text-lg font-bold">No matching tasks</h2>
+          <p class="text-sm text-base-content/70 mt-1">
+            Try a different search term.
+          </p>
+        </div>
+      </div>
+
       {% if tasks %}
         {% for task in tasks %}
         {% load tz %}
@@ -573,6 +589,137 @@
     });
 
     document.addEventListener('click', (e) => {
+
+  // Instant search functionality
+  (function () {
+    const searchInput = document.getElementById('taskSearchInput');
+    const clearBtn = document.getElementById('clearSearchBtn');
+    const resultsCount = document.getElementById('searchResultsCount');
+    const noResultsMsg = document.getElementById('noSearchResults');
+    const taskCards = Array.from(document.querySelectorAll('.vm-task'));
+    const emptyState = document.querySelector('.card.vm-section .card-body > .text-4xl')?.closest('.card.vm-section');
+
+    if (!searchInput || taskCards.length === 0) return;
+
+    function performSearch() {
+      const query = searchInput.value.trim().toLowerCase();
+      let visibleCount = 0;
+
+      if (!query) {
+        // Show all tasks
+        taskCards.forEach(card => {
+          card.style.display = '';
+        });
+        if (resultsCount) resultsCount.classList.add('hidden');
+        if (noResultsMsg) noResultsMsg.classList.add('hidden');
+        if (emptyState) emptyState.style.display = '';
+        return;
+      }
+
+      // Hide the original empty state when searching
+      if (emptyState) emptyState.style.display = 'none';
+
+      // Filter tasks
+      taskCards.forEach(card => {
+        const title = card.querySelector('h3')?.textContent?.toLowerCase() || '';
+        const description = card.querySelector('p.text-sm')?.textContent?.toLowerCase() || '';
+        const category = card.querySelector('.bi-tag')?.parentElement?.textContent?.toLowerCase() || '';
+        const priority = card.querySelector('.badge-priority-high, .badge-priority-medium, .badge-priority-low')?.textContent?.toLowerCase() || '';
+
+        const searchableText = `${title} ${description} ${category} ${priority}`;
+        const matches = searchableText.includes(query);
+
+        if (matches) {
+          card.style.display = '';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      // Update UI
+      if (visibleCount === 0) {
+        if (noResultsMsg) noResultsMsg.classList.remove('hidden');
+        if (resultsCount) {
+          resultsCount.textContent = '0 results';
+          resultsCount.classList.remove('hidden');
+        }
+      } else {
+        if (noResultsMsg) noResultsMsg.classList.add('hidden');
+        if (resultsCount) {
+          resultsCount.textContent = `${visibleCount} result${visibleCount !== 1 ? 's' : ''}`;
+          resultsCount.classList.remove('hidden');
+        }
+      }
+    }
+
+    // Debounce function for better performance
+    function debounce(func, wait) {
+      let timeout;
+      return function executedFunction(...args) {
+        const later = () => {
+          clearTimeout(timeout);
+          func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+      };
+    }
+
+    // Instant search with slight debounce
+    const debouncedSearch = debounce(performSearch, 150);
+    searchInput.addEventListener('input', debouncedSearch);
+
+    // Clear button
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        performSearch();
+        searchInput.focus();
+      });
+    }
+
+    // Perform initial search if there's a query parameter
+    if (searchInput.value.trim()) {
+      performSearch();
+    }
+  })();
+
+  // Click to edit task
+  (function () {
+    const taskCards = document.querySelectorAll('.vm-task');
+    
+    taskCards.forEach(card => {
+      card.addEventListener('click', (e) => {
+        // Don't navigate if clicking on interactive elements
+        const target = e.target;
+        const isInteractive = target.closest('input, button, a, .dropdown, .task-menu');
+        
+        if (isInteractive) {
+          return; // Let the interactive element handle its own action
+        }
+        
+        // Get task ID and navigate to edit page
+        const taskId = card.dataset.taskId;
+        if (taskId) {
+          window.location.href = `/tasks/${taskId}/edit/`;
+        }
+      });
+
+      // Visual feedback on touch/press
+      card.addEventListener('touchstart', () => {
+        card.style.opacity = '0.7';
+      }, { passive: true });
+
+      card.addEventListener('touchend', () => {
+        card.style.opacity = '';
+      }, { passive: true });
+
+      card.addEventListener('touchcancel', () => {
+        card.style.opacity = '';
+      }, { passive: true });
+    });
+  })();
       const clickedInsideAny = menus.some((menu) => menu.contains(e.target));
       if (!clickedInsideAny) closeAll();
     });

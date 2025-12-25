@@ -59,6 +59,11 @@ class DailyLogForm(forms.ModelForm):
             initial['date'] = timezone.localdate()
             kwargs['initial'] = initial
         
+        # ✅ Default duration to 10 minutes if not already set
+        if 'duration' not in initial:
+            initial['duration'] = 10
+            kwargs['initial'] = initial
+        
         super().__init__(*args, **kwargs)
     
         if user:
