@@ -1,0 +1,74 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ action }} Plan - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<div class="container mx-auto px-4 py-6 max-w-2xl">
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title text-2xl mb-4">
+        <i class="bi bi-diagram-3 mr-2"></i>{{ action }} Plan
+      </h2>
+
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        
+        <div class="form-control">
+          <label class="label" for="{{ form.title.id_for_label }}">
+            <span class="label-text font-semibold">Title</span>
+          </label>
+          {{ form.title }}
+          {% if form.title.errors %}
+            <label class="label">
+              <span class="label-text-alt text-error">{{ form.title.errors.0 }}</span>
+            </label>
+          {% endif %}
+        </div>
+
+        <div class="form-control">
+          <label class="label" for="{{ form.description.id_for_label }}">
+            <span class="label-text font-semibold">Description</span>
+          </label>
+          {{ form.description }}
+          {% if form.description.errors %}
+            <label class="label">
+              <span class="label-text-alt text-error">{{ form.description.errors.0 }}</span>
+            </label>
+          {% endif %}
+        </div>
+
+        <div class="form-control">
+          <label class="label cursor-pointer justify-start gap-4">
+            <input type="checkbox" name="is_active" id="id_is_active" 
+                   class="toggle toggle-primary" 
+                   {% if form.is_active.value %}checked{% endif %}>
+            <span class="label-text">
+              <span class="font-semibold">Active Plan</span>
+              <span class="block text-xs text-base-content/60 mt-1">
+                Inactive plans are archived and won't appear in dashboard or analytics
+              </span>
+            </span>
+          </label>
+          {% if form.is_active.errors %}
+            <label class="label">
+              <span class="label-text-alt text-error">{{ form.is_active.errors.0 }}</span>
+            </label>
+          {% endif %}
+        </div>
+
+        <div class="card-actions justify-end gap-2 mt-6">
+          <a href="{% if plan %}{% url 'plan_detail' plan.pk %}{% else %}{% url 'plan_list' %}{% endif %}" 
+             class="btn btn-ghost">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg mr-2"></i>{{ action }} Plan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

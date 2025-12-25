@@ -1,6 +1,6 @@
 from django import forms
 from django.db import models
-from .models import Task, DailyLog, Category, DailySummary
+from .models import Task, DailyLog, Category, DailySummary, Plan, PlanNode
 
 class TaskForm(forms.ModelForm):
     class Meta:
@@ -100,3 +100,65 @@ class DailySummaryForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
             'productivity_rating': forms.Select(attrs={'class': 'form-select'}),
         }
+
+
+class PlanForm(forms.ModelForm):
+    class Meta:
+        model = Plan
+        fields = ['title', 'description', 'is_active']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'Enter plan title...'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'textarea textarea-bordered w-full',
+                'rows': 3,
+                'placeholder': 'Describe your plan...'
+            }),
+            'is_active': forms.CheckboxInput(attrs={
+                'class': 'checkbox checkbox-primary'
+            }),
+        }
+        labels = {
+            'is_active': 'Active Plan',
+        }
+        help_texts = {
+            'is_active': 'Uncheck to archive this plan (it will be hidden from dashboard and analytics)',
+        }
+
+
+class PlanNodeForm(forms.ModelForm):
+    class Meta:
+        model = PlanNode
+        fields = ['task', 'dependencies', 'order']
+        widgets = {
+            'task': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'dependencies': forms.SelectMultiple(attrs={
+                'class': 'select select-bordered w-full',
+                'size': '5'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '0'
+            }),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        plan = kwargs.pop('plan', None)
+        super(PlanNodeForm, self).__init__(*args, **kwargs)
+        
+        if user:
+            # Only show user's tasks
+            self.fields['task'].queryset = Task.objects.filter(user=user)
+        
+        if plan:
+            # Only show nodes from the same plan as dependencies
+            self.fields['dependencies'].queryset = PlanNode.objects.filter(plan=plan)
+            # Exclude self from dependencies if editing
+            if self.instance.pk:
+                self.fields['dependencies'].queryset = self.fields['dependencies'].queryset.exclude(pk=self.instance.pk)
+

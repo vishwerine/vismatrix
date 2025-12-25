@@ -1,0 +1,60 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Remove Task from Plan - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<div class="container mx-auto px-4 py-6 max-w-2xl">
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h2 class="card-title text-2xl text-error mb-4">
+        <i class="bi bi-exclamation-triangle mr-2"></i>Remove Task from Plan
+      </h2>
+
+      <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div>
+          <p class="font-semibold">Are you sure you want to remove this task from the plan?</p>
+          <p class="text-sm">The task itself will not be deleted, only its association with this plan.</p>
+        </div>
+      </div>
+
+      <div class="my-4">
+        <p class="text-sm text-base-content/60 mb-2">Plan: {{ plan.title }}</p>
+        <p class="text-lg font-semibold">{{ node.task.title }}</p>
+        {% if node.dependencies.exists %}
+          <p class="text-sm text-base-content/70 mt-2">
+            <i class="bi bi-arrow-return-right mr-1"></i>
+            Dependencies: 
+            {% for dep in node.dependencies.all %}
+              {{ dep.task.title }}{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+          </p>
+        {% endif %}
+        {% if node.dependents.exists %}
+          <div class="alert alert-info mt-3">
+            <i class="bi bi-info-circle"></i>
+            <span class="text-sm">
+              Warning: {{ node.dependents.count }} other task(s) depend on this one. They may become unblocked after removal.
+            </span>
+          </div>
+        {% endif %}
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="card-actions justify-end gap-2 mt-6">
+          <a href="{% url 'plan_detail' plan.pk %}" 
+             class="btn btn-ghost">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-error">
+            <i class="bi bi-trash mr-2"></i>Remove from Plan
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

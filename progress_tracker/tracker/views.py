@@ -3,11 +3,12 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Sum, Count, Q, Case, When, Value
+from django.db.models import Sum, Count, Q, Case, When, Value, F, DateField
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse
-from datetime import timedelta
-from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction
-from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm
+from datetime import timedelta, date
+from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode
+from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm
 from django.views.decorators.http import require_http_methods
 
 import json
@@ -37,13 +38,22 @@ def dashboard(request):
     today_logs = DailyLog.objects.filter(user=request.user, date=today)
     today_time = today_logs.aggregate(total=Sum("duration"))["total"] or 0
 
-    # --- Pending tasks (for "Today’s tasks" card) ---
+    # --- Pending tasks (for "Today's tasks" card) ---
+    # Order by: tasks with due dates first (earliest first), then by priority
     pending_tasks = (
         Task.objects.filter(
             user=request.user,
             status__in=["pending", "in_progress"],
         )
-        .order_by("priority", "due_date")
+        .annotate(
+            # Treat null due_dates as far future (9999-12-31) so they appear last
+            effective_due_date=Coalesce(
+                F('due_date'), 
+                Value(date(9999, 12, 31)), 
+                output_field=DateField()
+            )
+        )
+        .order_by("effective_due_date", "priority")
     )
 
     # --- Recent activities ---
@@ -281,6 +291,19 @@ def dashboard(request):
         except ConversationMember.DoesNotExist:
             pass
 
+    # --- Active plans with progress ---
+    active_plans = Plan.objects.filter(user=request.user, is_active=True).order_by('-updated_at')
+    
+    # Annotate each plan with task counts
+    plans_with_stats = []
+    for plan in active_plans[:5]:  # Limit to 5 most recent
+        total_tasks = plan.nodes.count()
+        completed_tasks = plan.nodes.filter(task__status='completed').count()
+        
+        plan.total_tasks = total_tasks
+        plan.completed_tasks = completed_tasks
+        plans_with_stats.append(plan)
+
     context = {
         "today": today,
         "pending_tasks": pending_tasks,
@@ -292,6 +315,7 @@ def dashboard(request):
         "pending_friend_requests": pending_friend_requests,
         "star_notifications_count": star_notifications_count,
         "unread_message_count": unread_message_count,
+        "active_plans": plans_with_stats,
     }
     return render(request, "tracker/dashboard.html", context)
 
@@ -439,6 +463,30 @@ def analytics(request):
         for label, value in zip(task_labels, task_values)
     ]
 
+    # --- Plan statistics ---
+    total_plans = Plan.objects.filter(user=request.user).count()
+    active_plans = Plan.objects.filter(user=request.user, is_active=True).count()
+    
+    # Get plan progress data
+    plan_stats = []
+    plans = Plan.objects.filter(user=request.user, is_active=True).order_by('-updated_at')[:5]
+    
+    for plan in plans:
+        total_tasks = plan.nodes.count()
+        completed_tasks = plan.nodes.filter(task__status='completed').count()
+        in_progress_tasks = plan.nodes.filter(task__status='in_progress').count()
+        
+        completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+        
+        plan_stats.append({
+            'id': plan.pk,
+            'title': plan.title,
+            'total_tasks': total_tasks,
+            'completed_tasks': completed_tasks,
+            'in_progress_tasks': in_progress_tasks,
+            'completion_rate': int(completion_rate),
+        })
+
     # Handle AJAX requests for calendar updates
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({
@@ -474,6 +522,9 @@ def analytics(request):
         "prev_year": year if month > 1 else year - 1,
         "next_month": month + 1 if month < 12 else 1,
         "next_year": year if month < 12 else year + 1,
+        "total_plans": total_plans,
+        "active_plans": active_plans,
+        "plan_stats": plan_stats,
     }
     return render(request, "tracker/analytics.html", context)
 
@@ -532,7 +583,42 @@ def task_create(request):
             task = form.save(commit=False)
             task.user = request.user
             task.save()
+            
+            # Check if this is from a plan (AJAX request with plan_id)
+            plan_id = request.POST.get('plan_id')
+            if plan_id and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                try:
+                    plan = Plan.objects.get(pk=plan_id, user=request.user)
+                    
+                    # Get position from form data
+                    position_x = int(request.POST.get('position_x', 0))
+                    position_y = int(request.POST.get('position_y', 0))
+                    
+                    # Create PlanNode with position
+                    node = PlanNode.objects.create(
+                        plan=plan,
+                        task=task,
+                        position_x=position_x,
+                        position_y=position_y,
+                        order=plan.nodes.count()
+                    )
+                    return JsonResponse({
+                        'ok': True,
+                        'task_id': task.pk,
+                        'node_id': node.pk,
+                        'message': 'Task created and added to plan'
+                    })
+                except Plan.DoesNotExist:
+                    return JsonResponse({'ok': False, 'error': 'Plan not found'}, status=404)
+            
             return redirect('task_list')
+        else:
+            # Return form errors for AJAX requests
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'ok': False,
+                    'errors': form.errors
+                }, status=400)
     else:
         form = TaskForm(user=request.user)
     
@@ -564,8 +650,15 @@ def task_complete(request, pk):
 def task_delete(request, pk):
     """Delete a task"""
     task = get_object_or_404(Task, pk=pk, user=request.user)
+    
+    # Prevent deletion of the default task
+    if task.title == 'General Activity':
+        messages.error(request, "Cannot delete the default 'General Activity' task. It's required for time tracking.")
+        return redirect('task_list')
+    
     if request.method == 'POST':
         task.delete()
+        messages.success(request, f"Task '{task.title}' has been deleted.")
         return redirect('task_list')
     return render(request, 'tracker/task_confirm_delete.html', {'task': task})
 
@@ -630,15 +723,27 @@ def log_create(request):
         # Check for task parameter to pre-select
         initial_data = {}
         task_id = request.GET.get('task')
+        
         if task_id:
             try:
                 task = Task.objects.get(id=task_id, user=request.user)
-                initial_data['task'] = task.id  # Use the ID, not the object
+                initial_data['task'] = task.id
                 # Also pre-fill category if task has one
                 if task.category:
-                    initial_data['category'] = task.category.id  # Use the ID, not the object
+                    initial_data['category'] = task.category.id
             except Task.DoesNotExist:
-                pass  # Ignore invalid task IDs
+                pass
+        else:
+            # If no task specified, use default task
+            default_task = Task.objects.filter(
+                user=request.user, 
+                title='General Activity'
+            ).first()
+            
+            if default_task:
+                initial_data['task'] = default_task.id
+                if default_task.category:
+                    initial_data['category'] = default_task.category.id
         
         form = DailyLogForm(user=request.user, initial=initial_data)
     return render(request, "tracker/log_form.html", {"form": form})
@@ -1023,11 +1128,22 @@ def friends_list(request):
             date__gte=week_ago
         ).aggregate(total=Sum('duration'))['total'] or 0
         
+        # Calculate activity percentage based on logs in the past week
+        # Assuming target is at least 1 log per day = 7 logs per week
+        logs_count = DailyLog.objects.filter(
+            user=friend,
+            date__gte=week_ago
+        ).count()
+        
+        # Calculate percentage: logs_count / 7 days * 100, capped at 100%
+        activity_percent = min(100, int((logs_count / 7) * 100)) if logs_count > 0 else 0
+        
         friends_data.append({
             'friend': friend,
             'friendship': friendship,
             'completed_tasks': completed_tasks,
             'total_time': total_time,
+            'activity_percent': activity_percent,
         })
     
     context = {'friends_data': friends_data}
@@ -1914,3 +2030,322 @@ def mini_chat_send(request, conversation_id):
             "created_at": msg.created_at.strftime("%b %d, %I:%M %p"),
         }
     })
+
+
+@login_required
+def mini_chat_start(request, friend_id):
+    """
+    POST JSON: { "body": "..." }
+    Creates a conversation (if needed) with friend_id and sends the first message.
+    Returns the conversation_id and message data.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    me = request.user
+    friend = get_object_or_404(User, id=friend_id)
+
+    # Verify they're actually friends
+    if not are_friends(me, friend):
+        return JsonResponse({"error": "Not friends"}, status=403)
+
+    # Get or create conversation
+    conv, created = Conversation.get_or_create_between(me, friend)
+
+    # Basic JSON parsing
+    import json
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    body = (data.get("body") or "").strip()
+    if not body:
+        return JsonResponse({"error": "Empty message"}, status=400)
+
+    msg = Message.objects.create(conversation=conv, sender=me, body=body)
+    conv.updated_at = timezone.now()
+    conv.save(update_fields=["updated_at"])
+
+    return JsonResponse({
+        "ok": True,
+        "conversation_id": conv.id,
+        "message": {
+            "id": msg.id,
+            "sender": msg.sender.username,
+            "is_me": True,
+            "body": msg.body,
+            "created_at": msg.created_at.strftime("%b %d, %I:%M %p"),
+        }
+    })
+
+
+# ===== PLAN VIEWS =====
+
+@login_required
+def plan_list(request):
+    """Display all plans for the logged-in user"""
+    plans = Plan.objects.filter(user=request.user).prefetch_related('nodes__task')
+    
+    # Add completion statistics to each plan
+    plans_with_stats = []
+    for plan in plans:
+        total_nodes = plan.nodes.count()
+        completed_nodes = plan.nodes.filter(task__status='completed').count()
+        plan.total_tasks = total_nodes
+        plan.completed_tasks = completed_nodes
+        plans_with_stats.append(plan)
+    
+    return render(request, 'tracker/plan_list.html', {'plans': plans_with_stats})
+
+
+@login_required
+def plan_create(request):
+    """Create a new plan"""
+    if request.method == 'POST':
+        form = PlanForm(request.POST)
+        if form.is_valid():
+            plan = form.save(commit=False)
+            plan.user = request.user
+            plan.save()
+            messages.success(request, f'Plan created successfully! (Active: {plan.is_active})')
+            return redirect('plan_detail', pk=plan.pk)
+    else:
+        form = PlanForm(initial={'is_active': True})
+    return render(request, 'tracker/plan_form.html', {'form': form, 'action': 'Create'})
+
+
+@login_required
+def plan_detail(request, pk):
+    """Display plan details with DAG visualization"""
+    plan = get_object_or_404(Plan, pk=pk, user=request.user)
+    nodes = plan.nodes.all().select_related('task').prefetch_related('dependencies', 'dependents')
+    
+    # Calculate statistics
+    total_nodes = nodes.count()
+    completed_nodes = nodes.filter(task__status='completed').count()
+    in_progress_nodes = nodes.filter(task__status='in_progress').count()
+    pending_nodes = nodes.filter(task__status='pending').count()
+    
+    # Prepare node data for visualization
+    nodes_data = []
+    for node in nodes:
+        nodes_data.append({
+            'id': node.id,
+            'task_id': node.task.id,
+            'task_title': node.task.title,
+            'task_description': node.task.description[:100] if node.task.description else '',
+            'task_status': node.task.status,
+            'task_priority': node.task.priority,
+            'can_start': node.can_start(),
+            'position_x': node.position_x,
+            'position_y': node.position_y,
+            'dependencies': [dep.id for dep in node.dependencies.all()],
+            'dependents': [dep.id for dep in node.dependents.all()],
+        })
+    
+    # Get user's categories for the modal
+    categories = Category.objects.filter(user=request.user).order_by('name')
+    
+    context = {
+        'plan': plan,
+        'nodes': nodes,
+        'nodes_data': json.dumps(nodes_data),
+        'total_nodes': total_nodes,
+        'completed_nodes': completed_nodes,
+        'in_progress_nodes': in_progress_nodes,
+        'pending_nodes': pending_nodes,
+        'categories': categories
+    }
+    return render(request, 'tracker/plan_detail.html', context)
+
+
+@login_required
+def plan_update(request, pk):
+    """Update plan details"""
+    plan = get_object_or_404(Plan, pk=pk, user=request.user)
+    if request.method == 'POST':
+        form = PlanForm(request.POST, instance=plan)
+        if form.is_valid():
+            updated_plan = form.save()
+            status_msg = 'active' if updated_plan.is_active else 'inactive'
+            messages.success(request, f'Plan updated successfully! (Status: {status_msg})')
+            return redirect('plan_detail', pk=plan.pk)
+    else:
+        form = PlanForm(instance=plan)
+    return render(request, 'tracker/plan_form.html', {'form': form, 'action': 'Update', 'plan': plan})
+
+
+@login_required
+def plan_delete(request, pk):
+    """Delete a plan"""
+    plan = get_object_or_404(Plan, pk=pk, user=request.user)
+    if request.method == 'POST':
+        plan.delete()
+        messages.success(request, 'Plan deleted successfully!')
+        return redirect('plan_list')
+    return render(request, 'tracker/plan_confirm_delete.html', {'plan': plan})
+
+
+@login_required
+def plan_node_add(request, plan_pk):
+    """Add a task node to a plan"""
+    plan = get_object_or_404(Plan, pk=plan_pk, user=request.user)
+    
+    if request.method == 'POST':
+        form = PlanNodeForm(request.POST, user=request.user, plan=plan)
+        if form.is_valid():
+            node = form.save(commit=False)
+            node.plan = plan
+            
+            # Check if task already in plan
+            if PlanNode.objects.filter(plan=plan, task=node.task).exists():
+                messages.error(request, 'This task is already in the plan!')
+                return render(request, 'tracker/plan_node_form.html', {
+                    'form': form,
+                    'plan': plan,
+                    'action': 'Add'
+                })
+            
+            node.save()
+            form.save_m2m()  # Save dependencies
+            
+            # Validate DAG after adding
+            if not plan.validate_dag():
+                node.delete()
+                messages.error(request, 'Adding this node would create a cycle! Please adjust dependencies.')
+                return render(request, 'tracker/plan_node_form.html', {
+                    'form': form,
+                    'plan': plan,
+                    'action': 'Add'
+                })
+            
+            messages.success(request, f'Task "{node.task.title}" added to plan!')
+            return redirect('plan_detail', pk=plan.pk)
+    else:
+        form = PlanNodeForm(user=request.user, plan=plan)
+    
+    return render(request, 'tracker/plan_node_form.html', {
+        'form': form,
+        'plan': plan,
+        'action': 'Add'
+    })
+
+
+@login_required
+def plan_node_update(request, pk):
+    """Update a plan node's dependencies"""
+    node = get_object_or_404(PlanNode, pk=pk, plan__user=request.user)
+    plan = node.plan
+    
+    if request.method == 'POST':
+        form = PlanNodeForm(request.POST, instance=node, user=request.user, plan=plan)
+        if form.is_valid():
+            # Save current dependencies for rollback
+            old_deps = list(node.dependencies.all())
+            
+            form.save()
+            
+            # Validate DAG after update
+            if not plan.validate_dag():
+                # Rollback
+                node.dependencies.set(old_deps)
+                messages.error(request, 'This change would create a cycle! Please adjust dependencies.')
+                return render(request, 'tracker/plan_node_form.html', {
+                    'form': form,
+                    'plan': plan,
+                    'node': node,
+                    'action': 'Update'
+                })
+            
+            messages.success(request, 'Node updated successfully!')
+            return redirect('plan_detail', pk=plan.pk)
+    else:
+        form = PlanNodeForm(instance=node, user=request.user, plan=plan)
+    
+    return render(request, 'tracker/plan_node_form.html', {
+        'form': form,
+        'plan': plan,
+        'node': node,
+        'action': 'Update'
+    })
+
+
+@login_required
+def plan_node_delete(request, pk):
+    """Remove a node from a plan"""
+    node = get_object_or_404(PlanNode, pk=pk, plan__user=request.user)
+    plan = node.plan
+    
+    if request.method == 'POST':
+        node.delete()
+        messages.success(request, 'Task removed from plan!')
+        return redirect('plan_detail', pk=plan.pk)
+    
+    return render(request, 'tracker/plan_node_confirm_delete.html', {'node': node, 'plan': plan})
+
+
+@login_required
+def plan_node_add_dependency(request, pk):
+    """AJAX endpoint to add a dependency between nodes"""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Method not allowed'}, status=405)
+    
+    node = get_object_or_404(PlanNode, pk=pk, plan__user=request.user)
+    plan = node.plan
+    
+    try:
+        import json
+        data = json.loads(request.body)
+        dependency_id = data.get('dependency_id')
+        
+        if not dependency_id:
+            return JsonResponse({'ok': False, 'error': 'dependency_id required'})
+        
+        # Get the dependency node and ensure it's in the same plan
+        dep_node = get_object_or_404(PlanNode, pk=dependency_id, plan=plan)
+        
+        # Check if dependency already exists
+        if node.dependencies.filter(pk=dep_node.pk).exists():
+            return JsonResponse({'ok': False, 'error': 'Dependency already exists'})
+        
+        # Check if adding would create a cycle
+        if dep_node.dependencies.filter(pk=node.pk).exists():
+            return JsonResponse({'ok': False, 'error': 'This would create a circular dependency'})
+        
+        # Save old dependencies for rollback
+        old_deps = list(node.dependencies.all())
+        
+        # Add the dependency
+        node.dependencies.add(dep_node)
+        
+        # Validate DAG
+        if not plan.validate_dag():
+            # Rollback
+            node.dependencies.set(old_deps)
+            return JsonResponse({'ok': False, 'error': 'This would create a cycle in the plan'})
+        
+        return JsonResponse({'ok': True, 'message': 'Dependency added successfully'})
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def plan_node_update_position(request, pk):
+    """Update node position for visualization (AJAX)"""
+    node = get_object_or_404(PlanNode, pk=pk, plan__user=request.user)
+    
+    try:
+        data = json.loads(request.body)
+        node.position_x = data.get('x', node.position_x)
+        node.position_y = data.get('y', node.position_y)
+        node.save(update_fields=['position_x', 'position_y'])
+        
+        return JsonResponse({'ok': True})
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+

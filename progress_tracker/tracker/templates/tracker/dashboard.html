@@ -275,6 +275,62 @@
         </div>
       </section>
 
+      <!-- Plans -->
+      <section class="card border border-base-200 bg-base-100" aria-label="Active plans">
+        <div class="card-body p-5">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold flex items-center gap-2">
+              <i class="bi bi-diagram-3" aria-hidden="true"></i>
+              <span>Plans</span>
+            </h2>
+            <a href="{% url 'plan_list' %}" class="link link-primary text-sm">View all</a>
+          </div>
+
+          {% if active_plans %}
+          <div class="mt-3 space-y-3">
+            {% for plan in active_plans|slice:":3" %}
+            <a href="{% url 'plan_detail' plan.pk %}" 
+               class="block p-3 rounded-xl border border-base-200 bg-base-100 hover:bg-base-200/40 transition">
+              <div class="flex items-start justify-between gap-2">
+                <div class="min-w-0 flex-1">
+                  <p class="text-sm font-semibold truncate">{{ plan.title }}</p>
+                  <p class="mt-1 text-xs text-base-content/70 flex items-center gap-2">
+                    <span class="inline-flex items-center gap-1">
+                      <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                      {{ plan.total_tasks|default:0 }} task{{ plan.total_tasks|default:0|pluralize }}
+                    </span>
+                    {% if plan.total_tasks > 0 %}
+                    <span class="inline-flex items-center gap-1">
+                      <i class="bi bi-check-circle" aria-hidden="true"></i>
+                      {{ plan.completed_tasks|default:0 }}/{{ plan.total_tasks }}
+                    </span>
+                    {% endif %}
+                  </p>
+                </div>
+                {% if plan.total_tasks > 0 %}
+                <div class="radial-progress text-xs" 
+                     style="--value:{% widthratio plan.completed_tasks plan.total_tasks 100 %}; --size:2.5rem; --thickness:3px;"
+                     role="progressbar"
+                     aria-label="Plan progress">
+                  <span class="text-[10px]">{% widthratio plan.completed_tasks plan.total_tasks 100 %}%</span>
+                </div>
+                {% endif %}
+              </div>
+            </a>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="mt-4 p-4 rounded-xl bg-base-200/50 text-center">
+            <p class="text-sm text-base-content/70">No active plans.</p>
+            <a href="{% url 'plan_create' %}" class="btn btn-outline btn-sm mt-2 gap-2">
+              <i class="bi bi-plus-lg" aria-hidden="true"></i>
+              <span>Create Plan</span>
+            </a>
+          </div>
+          {% endif %}
+        </div>
+      </section>
+
       <!-- Optional: Messages quick link (nice on desktop, harmless on mobile) -->
       <section class="card border border-base-200 bg-base-100" aria-label="Messages shortcut">
         <div class="card-body p-5">

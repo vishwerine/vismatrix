@@ -1,0 +1,100 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ action }} Task to Plan - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<div class="container mx-auto px-4 py-6 max-w-2xl">
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <div class="flex items-center gap-3 mb-4">
+        <a href="{% url 'plan_detail' plan.pk %}" class="btn btn-ghost btn-sm btn-circle">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <h2 class="card-title text-2xl">
+          <i class="bi bi-diagram-3 mr-2"></i>{{ action }} Task
+        </h2>
+      </div>
+
+      <div class="alert alert-info mb-4">
+        <i class="bi bi-info-circle"></i>
+        <div>
+          <p class="font-semibold">Plan: {{ plan.title }}</p>
+          <p class="text-sm">Select a task and specify dependencies to build your workflow.</p>
+        </div>
+      </div>
+
+      <form method="post" class="space-y-4">
+        {% csrf_token %}
+        
+        <div class="form-control">
+          <label class="label" for="{{ form.task.id_for_label }}">
+            <span class="label-text font-semibold">Task</span>
+          </label>
+          {{ form.task }}
+          {% if form.task.errors %}
+            <label class="label">
+              <span class="label-text-alt text-error">{{ form.task.errors.0 }}</span>
+            </label>
+          {% endif %}
+          <label class="label">
+            <span class="label-text-alt">
+              <a href="{% url 'task_create' %}" class="link link-primary" target="_blank">
+                Create a new task <i class="bi bi-box-arrow-up-right"></i>
+              </a>
+            </span>
+          </label>
+        </div>
+
+        <div class="form-control">
+          <label class="label" for="{{ form.dependencies.id_for_label }}">
+            <span class="label-text font-semibold">Dependencies</span>
+          </label>
+          {{ form.dependencies }}
+          {% if form.dependencies.errors %}
+            <label class="label">
+              <span class="label-text-alt text-error">{{ form.dependencies.errors.0 }}</span>
+            </label>
+          {% endif %}
+          <label class="label">
+            <span class="label-text-alt">Select tasks that must be completed before this one. Hold Ctrl/Cmd to select multiple.</span>
+          </label>
+        </div>
+
+        <div class="form-control">
+          <label class="label" for="{{ form.order.id_for_label }}">
+            <span class="label-text font-semibold">Order</span>
+          </label>
+          {{ form.order }}
+          {% if form.order.errors %}
+            <label class="label">
+              <span class="label-text-alt text-error">{{ form.order.errors.0 }}</span>
+            </label>
+          {% endif %}
+          <label class="label">
+            <span class="label-text-alt">Optional: specify display order (lower numbers appear first)</span>
+          </label>
+        </div>
+
+        {% if node %}
+          <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>Changing dependencies may affect the DAG structure. Cycles are not allowed.</span>
+          </div>
+        {% endif %}
+
+        <div class="card-actions justify-end gap-2 mt-6">
+          <a href="{% url 'plan_detail' plan.pk %}" 
+             class="btn btn-ghost">
+            Cancel
+          </a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg mr-2"></i>{{ action }} Task
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

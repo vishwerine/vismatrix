@@ -9,7 +9,7 @@
 
   <!-- Header -->
   <header class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6 mb-4">
       <div class="min-w-0">
         <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-1 md:mb-2 flex items-center gap-2"
             style="color: var(--text);">
@@ -20,10 +20,12 @@
         <p class="text-sm md:text-lg flex items-center gap-1" style="color: var(--muted);">
           <i class="bi bi-person-badge" aria-hidden="true"></i>
           <span>
-            <span id="friend-count-number" data-count="{{ friends_data|length|default:0 }}">
-              {{ friends_data|length|default:0 }}
+            <span id="friend-count-display">
+              <span id="friend-count-visible">{{ friends_data|length|default:0 }}</span>
+              <span id="friend-count-separator"> of </span>
+              <span id="friend-count-total" data-count="{{ friends_data|length|default:0 }}">{{ friends_data|length|default:0 }}</span>
             </span>
-            friend{% if friends_data|length != 1 %}s{% endif %}
+            friend<span id="friend-plural">{% if friends_data|length != 1 %}s{% endif %}</span>
           </span>
         </p>
       </div>
@@ -36,6 +38,37 @@
         Find Friends<span class="hidden sm:inline">to Add</span>
       </a>
     </div>
+
+    <!-- Search Bar -->
+    {% if friends_data %}
+    <div class="max-w-2xl">
+      <div class="relative">
+        <input
+          type="text"
+          id="friend-search"
+          placeholder="Search friends by name or username..."
+          class="input input-bordered w-full pl-10 pr-10"
+          style="background: var(--surface); border-color: var(--border); color: var(--text);"
+          aria-label="Search friends"
+        >
+        <i class="bi bi-search absolute left-3 top-1/2 -translate-y-1/2 text-lg" style="color: var(--muted);" aria-hidden="true"></i>
+        <button
+          id="clear-search"
+          class="absolute right-3 top-1/2 -translate-y-1/2 hidden hover:opacity-70 transition-opacity"
+          style="color: var(--muted);"
+          aria-label="Clear search"
+          title="Clear search"
+        >
+          <i class="bi bi-x-circle-fill text-lg" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div id="no-results" class="hidden mt-4 p-4 rounded-lg text-center" style="background: var(--surface); border: 1px solid var(--border);">
+        <i class="bi bi-search text-2xl mb-2" style="color: var(--muted);" aria-hidden="true"></i>
+        <p class="text-sm font-medium mb-1" style="color: var(--text);">No friends found</p>
+        <p class="text-xs" style="color: var(--muted);">Try a different search term</p>
+      </div>
+    </div>
+    {% endif %}
   </header>
 
   <!-- Friends Grid -->
@@ -44,8 +77,10 @@
       <div id="friends-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {% for item in friends_data %}
         <article
-          class="rounded-2xl p-5 md:p-6 border hover:shadow-lg transition-all flex flex-col"
+          class="rounded-2xl p-5 md:p-6 border hover:shadow-lg transition-all flex flex-col friend-card"
           id="friend-{{ item.friendship.id }}"
+          data-friend-name="{{ item.friend.get_full_name|default:item.friend.username|lower }}"
+          data-friend-username="{{ item.friend.username|lower }}"
           aria-label="Friend card for {{ item.friend.get_full_name|default:item.friend.username }}"
           style="background: var(--surface); border-color: var(--border);"
         >
@@ -163,6 +198,94 @@
 </div>
 
 <script>
+  // Search functionality
+  (function() {
+    const searchInput = document.getElementById('friend-search');
+    const clearBtn = document.getElementById('clear-search');
+    const friendCards = document.querySelectorAll('.friend-card');
+    const noResults = document.getElementById('no-results');
+    const friendsGrid = document.getElementById('friends-grid');
+    const visibleCount = document.getElementById('friend-count-visible');
+    const countSeparator = document.getElementById('friend-count-separator');
+    const totalCount = document.getElementById('friend-count-total');
+    const pluralSpan = document.getElementById('friend-plural');
+
+    if (!searchInput) return;
+
+    function updateVisibleCount() {
+      const visible = Array.from(friendCards).filter(card => !card.classList.contains('hidden')).length;
+      const total = friendCards.length;
+
+      if (visibleCount) visibleCount.textContent = visible;
+      
+      if (visible === total) {
+        if (countSeparator) countSeparator.classList.add('hidden');
+        if (totalCount) totalCount.classList.add('hidden');
+      } else {
+        if (countSeparator) countSeparator.classList.remove('hidden');
+        if (totalCount) totalCount.classList.remove('hidden');
+      }
+
+      if (pluralSpan) {
+        pluralSpan.textContent = visible === 1 ? '' : 's';
+      }
+
+      // Show/hide no results message
+      if (noResults) {
+        if (visible === 0 && searchInput.value.trim() !== '') {
+          noResults.classList.remove('hidden');
+          if (friendsGrid) friendsGrid.classList.add('hidden');
+        } else {
+          noResults.classList.add('hidden');
+          if (friendsGrid) friendsGrid.classList.remove('hidden');
+        }
+      }
+    }
+
+    function filterFriends() {
+      const query = searchInput.value.toLowerCase().trim();
+
+      // Show/hide clear button
+      if (clearBtn) {
+        clearBtn.classList.toggle('hidden', query === '');
+      }
+
+      if (query === '') {
+        friendCards.forEach(card => card.classList.remove('hidden'));
+        updateVisibleCount();
+        return;
+      }
+
+      friendCards.forEach(card => {
+        const name = card.dataset.friendName || '';
+        const username = card.dataset.friendUsername || '';
+        const matches = name.includes(query) || username.includes(query);
+        card.classList.toggle('hidden', !matches);
+      });
+
+      updateVisibleCount();
+    }
+
+    searchInput.addEventListener('input', filterFriends);
+    searchInput.addEventListener('search', filterFriends);
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        searchInput.value = '';
+        filterFriends();
+        searchInput.focus();
+      });
+    }
+
+    // Keyboard shortcut: Ctrl/Cmd + K to focus search
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInput.focus();
+      }
+    });
+  })();
+
   function removeFriend(friendshipId, containerId, url) {
     if (!confirm('Remove this friend? You can add them back later.')) return;
 
@@ -209,22 +332,32 @@
   }
 
   function updateFriendCount() {
-    const countEl = document.getElementById('friend-count-number');
-    if (!countEl) return;
+    const visibleCount = document.getElementById('friend-count-visible');
+    const totalCount = document.getElementById('friend-count-total');
+    const countSeparator = document.getElementById('friend-count-separator');
+    
+    if (!totalCount) return;
 
-    const current = parseInt(countEl.dataset.count || '0', 10);
+    const current = parseInt(totalCount.dataset.count || '0', 10);
     const next = Math.max(current - 1, 0);
 
-    countEl.dataset.count = next.toString();
-    countEl.textContent = next.toString();
+    totalCount.dataset.count = next.toString();
+    totalCount.textContent = next.toString();
+    
+    if (visibleCount) {
+      visibleCount.textContent = next.toString();
+    }
 
-    const labelParent = countEl.parentElement;
-    if (!labelParent) return;
+    // Hide separator if all friends are visible
+    if (countSeparator && next === parseInt(visibleCount?.textContent || '0', 10)) {
+      countSeparator.classList.add('hidden');
+      totalCount.classList.add('hidden');
+    }
 
-    const suffix = next === 1 ? ' friend' : ' friends';
-    labelParent.innerHTML =
-      `<i class="bi bi-person-badge" aria-hidden="true"></i> ` +
-      `<span><span id="friend-count-number" data-count="${next}">${next}</span>${suffix}</span>`;
+    const pluralSpan = document.getElementById('friend-plural');
+    if (pluralSpan) {
+      pluralSpan.textContent = next === 1 ? '' : 's';
+    }
   }
 
   function ensureEmptyState() {

@@ -368,6 +368,98 @@
   </section>
   {% endif %}
 
+  <!-- Plan Analytics -->
+  <section class="card border border-base-200 bg-base-100" aria-label="Plan analytics">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <i class="bi bi-diagram-3" aria-hidden="true"></i>
+            <span>Plan Progress</span>
+          </h2>
+          <p class="text-sm text-base-content/70 mt-1">Track your structured workflows.</p>
+        </div>
+        <a href="{% url 'plan_list' %}" class="link link-primary text-sm">View all plans</a>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <i class="bi bi-diagram-3 text-primary" aria-hidden="true"></i>
+              <span class="font-semibold text-sm">Total Plans</span>
+            </div>
+            <span class="text-2xl font-bold tabular-nums">{{ total_plans|default:0 }}</span>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-2">
+              <i class="bi bi-check-circle text-primary" aria-hidden="true"></i>
+              <span class="font-semibold text-sm">Active Plans</span>
+            </div>
+            <span class="text-2xl font-bold tabular-nums">{{ active_plans|default:0 }}</span>
+          </div>
+        </div>
+      </div>
+
+      {% if plan_stats %}
+      <div class="mt-4 space-y-3">
+        {% for plan in plan_stats %}
+        <a href="{% url 'plan_detail' plan.id %}" 
+           class="block p-4 rounded-2xl border border-base-200 bg-base-100 hover:bg-base-200/40 transition">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1 min-w-0">
+              <h3 class="font-semibold text-sm truncate mb-2">{{ plan.title }}</h3>
+              
+              <div class="flex items-center gap-4 text-xs text-base-content/70 mb-2">
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-diagram-3" aria-hidden="true"></i>
+                  {{ plan.total_tasks }} task{{ plan.total_tasks|pluralize }}
+                </span>
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-check-circle" aria-hidden="true"></i>
+                  {{ plan.completed_tasks }} completed
+                </span>
+                {% if plan.in_progress_tasks > 0 %}
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-hourglass-split" aria-hidden="true"></i>
+                  {{ plan.in_progress_tasks }} in progress
+                </span>
+                {% endif %}
+              </div>
+
+              <div class="flex items-center gap-2">
+                <progress class="progress progress-primary w-full h-2" 
+                          value="{{ plan.completion_rate }}" 
+                          max="100"></progress>
+                <span class="text-xs font-semibold tabular-nums whitespace-nowrap">{{ plan.completion_rate }}%</span>
+              </div>
+            </div>
+
+            <div class="radial-progress text-xs" 
+                 style="--value:{{ plan.completion_rate }}; --size:3rem; --thickness:4px;"
+                 role="progressbar"
+                 aria-label="Plan progress {{ plan.completion_rate }}%">
+              <span class="text-[10px] font-bold">{{ plan.completion_rate }}%</span>
+            </div>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="mt-4 p-6 rounded-2xl border border-base-200 bg-base-200/40 text-center">
+        <p class="text-sm text-base-content/70 mb-3">No active plans to track.</p>
+        <a href="{% url 'plan_create' %}" class="btn btn-primary btn-sm gap-2">
+          <i class="bi bi-plus-lg" aria-hidden="true"></i>
+          <span>Create Plan</span>
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

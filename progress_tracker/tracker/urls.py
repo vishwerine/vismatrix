@@ -49,6 +49,18 @@ urlpatterns = [
     # About page
     path("about/", views.about, name="about"),
 
+    # Plans
+    path("plans/", views.plan_list, name="plan_list"),
+    path("plans/new/", views.plan_create, name="plan_create"),
+    path("plans/<int:pk>/", views.plan_detail, name="plan_detail"),
+    path("plans/<int:pk>/edit/", views.plan_update, name="plan_update"),
+    path("plans/<int:pk>/delete/", views.plan_delete, name="plan_delete"),
+    path("plans/<int:plan_pk>/add_task/", views.plan_node_add, name="plan_node_add"),
+    path("plans/nodes/<int:pk>/edit/", views.plan_node_update, name="plan_node_update"),
+    path("plans/nodes/<int:pk>/delete/", views.plan_node_delete, name="plan_node_delete"),
+    path("plans/nodes/<int:pk>/add-dependency/", views.plan_node_add_dependency, name="plan_node_add_dependency"),
+    path("plans/nodes/<int:pk>/update_position/", views.plan_node_update_position, name="plan_node_update_position"),
+
     path("messages/", views.inbox, name="inbox"),
     path("messages/start/<str:username>/", views.start_chat, name="start_chat"),
     path("messages/<int:conversation_id>/", views.conversation_detail, name="conversation_detail"),
@@ -56,5 +68,6 @@ urlpatterns = [
     path("api/mini-chat/friends/", views.mini_chat_friends, name="mini_chat_friends"),
     path("api/mini-chat/<int:conversation_id>/messages/", views.mini_chat_messages, name="mini_chat_messages"),
     path("api/mini-chat/<int:conversation_id>/send/", views.mini_chat_send, name="mini_chat_send"),
+    path("api/mini-chat/start/<int:friend_id>/", views.mini_chat_start, name="mini_chat_start"),
 
 ]

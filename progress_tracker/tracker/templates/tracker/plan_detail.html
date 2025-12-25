@@ -1,0 +1,1451 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ plan.title }} - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<div class="container mx-auto px-4 py-6 max-w-7xl">
+  <!-- Header -->
+  <div class="flex justify-between items-start mb-6">
+    <div>
+      <div class="flex items-center gap-3 mb-2">
+        <a href="{% url 'plan_list' %}" class="btn btn-ghost btn-sm btn-circle">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <h1 class="text-3xl font-bold text-slate-800">
+          {{ plan.title }}
+          {% if not plan.is_active %}
+            <span class="badge badge-ghost ml-2">Inactive</span>
+          {% endif %}
+        </h1>
+      </div>
+      {% if plan.description %}
+        <p class="text-slate-600 ml-14">{{ plan.description }}</p>
+      {% endif %}
+    </div>
+    <div class="flex gap-2">
+      <button onclick="openTaskModalAtCenter()" class="btn btn-primary btn-sm gap-2">
+        <i class="bi bi-plus-lg"></i>
+        Add Task
+      </button>
+      <div class="dropdown dropdown-end">
+        <label tabindex="0" class="btn btn-ghost btn-sm">
+          <i class="bi bi-three-dots-vertical"></i>
+        </label>
+        <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10">
+          <li><a href="{% url 'plan_update' plan.pk %}"><i class="bi bi-pencil mr-2"></i>Edit Plan</a></li>
+          <li><a href="{% url 'plan_delete' plan.pk %}" class="text-error"><i class="bi bi-trash mr-2"></i>Delete Plan</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats shadow mb-6 w-full">
+    <div class="stat">
+      <div class="stat-figure text-primary">
+        <i class="bi bi-diagram-3 text-3xl"></i>
+      </div>
+      <div class="stat-title">Total Tasks</div>
+      <div class="stat-value text-primary">{{ total_nodes }}</div>
+      <div class="stat-desc">Tasks in this plan</div>
+    </div>
+    <div class="stat">
+      <div class="stat-figure text-success">
+        <i class="bi bi-check-circle text-3xl"></i>
+      </div>
+      <div class="stat-title">Completed</div>
+      <div class="stat-value text-success">{{ completed_nodes }}</div>
+      <div class="stat-desc">{% if total_nodes > 0 %}{{ completed_nodes }}/{{ total_nodes }} ({% widthratio completed_nodes total_nodes 100 %}%){% endif %}</div>
+    </div>
+    <div class="stat">
+      <div class="stat-figure text-warning">
+        <i class="bi bi-hourglass-split text-3xl"></i>
+      </div>
+      <div class="stat-title">In Progress</div>
+      <div class="stat-value text-warning">{{ in_progress_nodes }}</div>
+      <div class="stat-desc">Currently working</div>
+    </div>
+    <div class="stat">
+      <div class="stat-figure text-info">
+        <i class="bi bi-clock text-3xl"></i>
+      </div>
+      <div class="stat-title">Pending</div>
+      <div class="stat-value text-info">{{ pending_nodes }}</div>
+      <div class="stat-desc">Not started</div>
+    </div>
+  </div>
+
+  <!-- Debug: Total nodes = {{ total_nodes }}, Nodes count = {{ nodes.count }} -->
+  
+  {% if nodes %}
+    <!-- DAG Visualization -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+      <div class="card-body">
+        <div class="flex justify-between items-center mb-4 flex-wrap gap-3">
+          <h2 class="card-title">
+            <i class="bi bi-diagram-3 mr-2"></i>Interactive Task Flow
+          </h2>
+          <div class="flex gap-2">
+            <button onclick="autoLayout()" class="btn btn-sm btn-outline gap-2">
+              <i class="bi bi-diagram-2"></i>
+              Auto Layout
+            </button>
+            <button onclick="toggleAddTaskForm()" class="btn btn-sm btn-primary gap-2">
+              <i class="bi bi-plus-circle"></i>
+              Quick Add
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Add Task Form (Hidden by default) -->
+        <div id="quick-add-form" class="hidden mb-4 p-4 bg-base-200 rounded-lg">
+          <h3 class="font-semibold mb-3 flex items-center gap-2">
+            <i class="bi bi-plus-circle"></i>
+            Quick Add Task to Plan
+          </h3>
+          <div class="text-sm text-base-content/70 mb-3">
+            <a href="{% url 'task_create' %}?plan={{ plan.pk }}" class="link link-primary">Create a new task</a> first, then return here to add it to the plan.
+          </div>
+          <div class="text-xs text-base-content/60">
+            Or use the "Add Task" button above for full options including dependency setup.
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="flex flex-wrap gap-3 mb-4 text-sm">
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded bg-success/20 border-2 border-success"></div>
+            <span>Completed</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded bg-warning/20 border-2 border-warning"></div>
+            <span>In Progress</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded bg-info/20 border-2 border-info"></div>
+            <span>Ready to Start</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-4 h-4 rounded bg-base-100 border-2 border-base-300"></div>
+            <span>Waiting</span>
+          </div>
+        </div>
+
+        <div id="dag-container"
+             class="border-2 border-base-300 rounded-lg bg-gradient-to-br from-base-200 to-base-300 relative"
+             style="height: 600px; min-width: 100%;">
+
+          <canvas id="dag-canvas" class="absolute inset-0 w-full h-full" style="touch-action: none;"></canvas>
+
+          <!-- Always-visible floating controls -->
+          <div class="absolute top-3 right-3 z-40 flex flex-col gap-2">
+            <button class="btn btn-sm btn-circle btn-primary shadow-lg" onclick="openAddTaskHint()" title="Add Task">
+              <i class="bi bi-plus-lg"></i>
+            </button>
+            <button class="btn btn-sm btn-circle btn-outline shadow-lg" onclick="fitView()" title="Fit to screen">
+              <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+            <button class="btn btn-sm btn-circle btn-outline shadow-lg" onclick="zoomIn()" title="Zoom in">
+              <i class="bi bi-zoom-in"></i>
+            </button>
+            <button class="btn btn-sm btn-circle btn-outline shadow-lg" onclick="zoomOut()" title="Zoom out">
+              <i class="bi bi-zoom-out"></i>
+            </button>
+            <button class="btn btn-sm btn-circle btn-ghost shadow-lg" onclick="toggleHelp()" title="Help">
+              <i class="bi bi-question-lg"></i>
+            </button>
+          </div>
+
+          <!-- Add Node Hint -->
+          <div id="add-node-hint"
+               class="hidden absolute bg-primary text-primary-content px-3 py-2 rounded-lg shadow-lg pointer-events-none z-40 text-sm">
+            <i class="bi bi-plus-circle mr-1"></i>Tap/click to add task
+          </div>
+
+          <!-- Inline Node Editor -->
+          <div id="inline-editor" class="hidden absolute z-50 bg-base-100 border-2 border-primary rounded-lg shadow-xl p-2">
+            <div class="flex gap-2 items-center">
+              <input id="inline-title-input" type="text" class="input input-sm input-bordered" placeholder="Task name..." />
+              <button id="save-inline-title" class="btn btn-sm btn-primary">
+                <i class="bi bi-check-lg"></i>
+              </button>
+              <button id="cancel-inline-title" class="btn btn-sm btn-ghost">
+                <i class="bi bi-x-lg"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Node Quick Actions (appears when selected) -->
+          <div id="node-actions" class="hidden absolute z-50 bg-base-100 border border-base-300 rounded-xl shadow-xl p-2">
+            <div class="flex gap-2">
+              <button class="btn btn-xs btn-outline" id="na-rename" title="Rename"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-xs btn-outline" id="na-link" title="Link"><i class="bi bi-diagram-2"></i></button>
+              <button class="btn btn-xs btn-error" id="na-delete" title="Remove from plan"><i class="bi bi-trash"></i></button>
+            </div>
+          </div>
+
+          <!-- Context Menu (right click / long press) -->
+          <div id="ctx-menu" class="hidden absolute z-50 bg-base-100 border border-base-300 rounded-xl shadow-xl p-2 w-44">
+            <button class="btn btn-ghost btn-sm justify-start w-full" id="ctx-rename"><i class="bi bi-pencil mr-2"></i>Rename</button>
+            <button class="btn btn-ghost btn-sm justify-start w-full" id="ctx-link"><i class="bi bi-diagram-2 mr-2"></i>Link from here</button>
+            <div class="divider my-1"></div>
+            <button class="btn btn-ghost btn-sm justify-start w-full text-error" id="ctx-delete"><i class="bi bi-trash mr-2"></i>Remove</button>
+          </div>
+
+          <!-- Connection Mode Indicator -->
+          <div id="connection-mode"
+               class="hidden absolute top-4 left-1/2 transform -translate-x-1/2 bg-info text-info-content px-4 py-2 rounded-lg shadow-lg z-40 animate-pulse">
+            <i class="bi bi-diagram-2 mr-2"></i>Tap a target task to create a dependency
+            <button onclick="cancelConnectionMode()" class="btn btn-xs btn-ghost ml-3">Cancel</button>
+          </div>
+
+          <!-- Help Overlay -->
+          <div id="help-overlay" class="hidden absolute inset-0 z-50 bg-base-100/90 backdrop-blur-sm">
+            <div class="max-w-xl mx-auto mt-10 bg-base-100 border border-base-300 rounded-2xl shadow-xl p-6">
+              <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-lg">How to use the Task Flow</h3>
+                <button class="btn btn-sm btn-ghost" onclick="toggleHelp()"><i class="bi bi-x-lg"></i></button>
+              </div>
+              <ul class="space-y-2 text-sm text-base-content/80">
+                <li><b>Tap a task</b> to select it (actions appear).</li>
+                <li><b>Drag a task</b> to move it (auto-saves position).</li>
+                <li><b>Drag empty space</b> to pan the canvas.</li>
+                <li><b>Click empty space</b> to add a new task.</li>
+                <li><b>Double tap/click</b> a task to rename.</li>
+                <li><b>Link</b>: select a task → press <i class="bi bi-diagram-2"></i> → tap target.</li>
+                <li><b>Zoom</b>: wheel (desktop) or pinch (mobile).</li>
+                <li><b>Right click / long-press</b> a task for a menu.</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Status Bar -->
+          <div class="absolute bottom-2 left-2 right-2 bg-base-100/90 backdrop-blur-sm border border-base-300 rounded-lg px-3 py-2 text-xs text-base-content/70 z-30">
+            <div class="flex justify-between items-center flex-wrap gap-2">
+              <div id="canvas-status">Select a task to see actions • Drag to move (auto-saves) • Empty space: add task • Shift+drag: pan • Wheel/pinch: zoom</div>
+              <div id="canvas-mode">Mode: Select</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Task List -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title mb-4">
+          <i class="bi bi-list-ul mr-2"></i>Task List
+        </h2>
+        <div class="space-y-3">
+          {% for node in nodes %}
+            <div class="flex items-center gap-4 p-4 bg-base-200 rounded-lg hover:bg-base-300 transition-colors">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1 flex-wrap">
+                  <h3 class="font-semibold">{{ node.task.title }}</h3>
+                  {% if node.task.status == 'completed' %}
+                    <span class="badge badge-success badge-sm">✓ Completed</span>
+                  {% elif node.task.status == 'in_progress' %}
+                    <span class="badge badge-warning badge-sm">In Progress</span>
+                  {% else %}
+                    <span class="badge badge-ghost badge-sm">Not Started</span>
+                  {% endif %}
+
+                  {% if node.task.priority == 'high' %}
+                    <span class="badge badge-error badge-sm">High Priority</span>
+                  {% elif node.task.priority == 'medium' %}
+                    <span class="badge badge-warning badge-sm">Medium</span>
+                  {% endif %}
+                </div>
+
+                {% if node.dependencies.exists %}
+                  <div class="text-sm text-base-content/60">
+                    <i class="bi bi-arrow-return-right mr-1"></i>
+                    Depends on:
+                    {% for dep in node.dependencies.all %}
+                      <span class="badge badge-outline badge-xs">{{ dep.task.title }}</span>{% if not forloop.last %}, {% endif %}
+                    {% endfor %}
+                  </div>
+                {% endif %}
+
+                {% if not node.can_start and node.task.status != 'completed' %}
+                  <div class="text-xs text-warning mt-1">
+                    <i class="bi bi-exclamation-triangle mr-1"></i>
+                    Waiting for dependencies to complete
+                  </div>
+                {% elif node.can_start and node.task.status == 'pending' %}
+                  <div class="text-xs text-success mt-1">
+                    <i class="bi bi-check-circle mr-1"></i>
+                    Ready to start
+                  </div>
+                {% endif %}
+              </div>
+
+              <div class="flex gap-2">
+                <a href="{% url 'task_update' node.task.pk %}" class="btn btn-ghost btn-sm" title="Edit task">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                <a href="{% url 'plan_node_update' node.pk %}" class="btn btn-ghost btn-sm" title="Edit dependencies">
+                  <i class="bi bi-link-45deg"></i>
+                </a>
+                <a href="{% url 'plan_node_delete' node.pk %}" class="btn btn-ghost btn-sm text-error" title="Remove from plan">
+                  <i class="bi bi-trash"></i>
+                </a>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+  {% else %}
+    <!-- Empty State -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body flex flex-col items-center justify-center py-16">
+        <div class="text-6xl mb-4 opacity-20">
+          <i class="bi bi-diagram-3"></i>
+        </div>
+        <h3 class="text-xl font-semibold text-slate-700 mb-2">No tasks in this plan</h3>
+        <p class="text-slate-500 mb-6 text-center max-w-md">
+          Add tasks to build your workflow. You can specify dependencies to create a directed graph.
+        </p>
+        <button onclick="openTaskModalAtCenter()" class="btn btn-primary gap-2">
+          <i class="bi bi-plus-lg"></i>
+          Add First Task
+        </button>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+
+<!-- Create Task Modal (always available) -->
+<dialog id="create-task-modal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg mb-4">
+      <i class="bi bi-plus-circle mr-2"></i>Create New Task
+    </h3>
+    <form id="create-task-form" method="post" action="{% url 'task_create' %}">
+      {% csrf_token %}
+      <input type="hidden" name="plan_id" value="{{ plan.pk }}">
+      <input type="hidden" id="task-position-x" name="position_x" value="0">
+      <input type="hidden" id="task-position-y" name="position_y" value="0">
+
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text font-semibold">Task Title *</span>
+        </label>
+        <input type="text" name="title" class="input input-bordered" placeholder="Enter task title..." required>
+      </div>
+
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text font-semibold">Description</span>
+        </label>
+        <textarea name="description" class="textarea textarea-bordered" rows="3" placeholder="Task description..."></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Priority</span>
+          </label>
+          <select name="priority" class="select select-bordered select-sm">
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+
+        <div class="form-control">
+          <label class="label">
+            <span class="label-text font-semibold">Status</span>
+          </label>
+          <select name="status" class="select select-bordered select-sm">
+            <option value="pending" selected>Pending</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-control mb-4">
+        <label class="label">
+          <span class="label-text font-semibold">Category</span>
+        </label>
+        <select name="category" class="select select-bordered select-sm">
+          <option value="">Select category (optional)</option>
+          {% for category in categories %}
+            <option value="{{ category.pk }}">{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="modal-action">
+        <button type="button" onclick="closeTaskModal()" class="btn btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="bi bi-check-lg mr-2"></i>Create & Add to Plan
+        </button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+  // ================= Task Modal Functions (Always Available) =================
+  // These need to be global and defined FIRST so canvas script can use them
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} fixed top-4 right-4 w-auto shadow-lg z-[9999]`;
+    toast.innerHTML = `<span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2200);
+  }
+
+  function openTaskModal(x, y) {
+    console.log('openTaskModal called with:', x, y);
+    document.getElementById('task-position-x').value = Math.round(x);
+    document.getElementById('task-position-y').value = Math.round(y);
+    console.log('Set form values to:', document.getElementById('task-position-x').value, document.getElementById('task-position-y').value);
+    document.getElementById('create-task-modal').showModal();
+  }
+
+  function openTaskModalAtCenter() {
+    // Default position when no canvas exists or will be overridden by canvas
+    openTaskModal(0, 0);
+  }
+
+  function closeTaskModal() {
+    document.getElementById('create-task-modal').close();
+    document.getElementById('create-task-form').reset();
+  }
+
+  function toggleAddTaskForm() {
+    const elem = document.getElementById('quick-add-form');
+    if (elem) elem.classList.toggle('hidden');
+  }
+
+  // Form submission handler
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('create-task-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(e.target);
+      const csrftoken = getCookie('csrftoken');
+
+      console.log('Form data being sent:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value}`);
+      }
+
+      try {
+        const response = await fetch('{% url "task_create" %}', {
+          method: 'POST',
+          headers: { 'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest' },
+          body: formData
+        });
+
+        const data = await response.json();
+        console.log('Task creation response:', data);
+
+        if (data.ok) {
+          closeTaskModal();
+          showToast('Task created!', 'success');
+          setTimeout(() => location.reload(), 600);
+        } else {
+          showToast(data.error || 'Failed to create task', 'error');
+          console.error('Task creation failed:', data);
+        }
+      } catch (err) {
+        console.error('Task creation error:', err);
+        showToast('Failed to create task', 'error');
+      }
+    });
+  });
+</script>
+
+{% if nodes %}
+<script>
+(() => {
+  // ================= Utilities =================
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const dist2 = (ax, ay, bx, by) => { const dx = ax - bx, dy = ay - by; return dx*dx + dy*dy; };
+  const now = () => performance.now();
+
+  // ================= Canvas Setup =================
+  const canvas = document.getElementById('dag-canvas');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = 1;
+
+  function resize() {
+    DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const rect = canvas.getBoundingClientRect();
+    W = Math.max(1, Math.floor(rect.width));
+    H = Math.max(1, Math.floor(rect.height));
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    requestRender();
+  }
+  window.addEventListener('resize', resize, { passive: true });
+
+  // ================= Data Model =================
+  let nodes = {{ nodes_data|safe }}.map(n => ({
+    ...n,
+    x: (n.position_x ?? 0),
+    y: (n.position_y ?? 0),
+    r: 45,
+  }));
+  console.log('Loaded nodes:', nodes);
+  console.log('Node positions:', nodes.map(n => `${n.task_title}: (${n.x}, ${n.y})`));
+  let nodesById = new Map(nodes.map(n => [n.id, n]));
+
+  // ================= State =================
+  const selected = { nodeId: null };
+  const linking = { active: false, startId: null };
+  let view = { x: 0, y: 0, s: 1.0 };
+
+  function rebuildIndex() { nodesById = new Map(nodes.map(n => [n.id, n])); }
+
+  function worldToScreen(wx, wy) { return { x: wx * view.s + view.x, y: wy * view.s + view.y }; }
+  function screenToWorld(sx, sy) { return { x: (sx - view.x) / view.s, y: (sy - view.y) / view.s }; }
+
+  // ================= UI Elements =================
+  const addNodeHint = document.getElementById('add-node-hint');
+  const connectionModeIndicator = document.getElementById('connection-mode');
+  const canvasStatus = document.getElementById('canvas-status');
+  const canvasMode = document.getElementById('canvas-mode');
+
+  // overlays
+  const nodeActions = document.getElementById('node-actions');
+  const ctxMenu = document.getElementById('ctx-menu');
+  const helpOverlay = document.getElementById('help-overlay');
+
+  // Inline editor
+  const inlineEditor = document.getElementById('inline-editor');
+  const inlineTitleInput = document.getElementById('inline-title-input');
+  const saveInlineTitle = document.getElementById('save-inline-title');
+  const cancelInlineTitle = document.getElementById('cancel-inline-title');
+  let editorNodeId = null;
+
+  // drag save
+  let dragStartPos = null;
+
+  // ======== Cookies / CSRF ========
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // ======== Toast ========
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} fixed top-4 right-4 w-auto shadow-lg z-[9999]`;
+    toast.innerHTML = `<span>${message}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2200);
+  }
+
+  // ======== Mode text ========
+  function updateModeText() {
+    if (linking.active) canvasMode.textContent = linking.startId ? "Mode: Linking (choose target)" : "Mode: Linking (choose start)";
+    else if (selected.nodeId) canvasMode.textContent = "Mode: Selected";
+    else canvasMode.textContent = "Mode: Select/Move";
+  }
+
+  // ======== Node actions / context menu ========
+  function hideCtxMenu(){ ctxMenu.classList.add('hidden'); }
+  function hideNodeActions(){ nodeActions.classList.add('hidden'); }
+
+  function showNodeActionsFor(nodeId) {
+    const n = nodesById.get(nodeId);
+    if (!n) return;
+
+    const s = worldToScreen(n.x, n.y);
+    const left = clamp(s.x - 95, 12, W - 12 - 220);
+    const top  = clamp(s.y - n.r - 52, 12, H - 12 - 70);
+
+    nodeActions.style.left = `${left}px`;
+    nodeActions.style.top  = `${top}px`;
+    nodeActions.classList.remove('hidden');
+  }
+
+  function showCtxMenuAt(screenX, screenY, nodeId) {
+    const n = nodesById.get(nodeId);
+    if (!n) return;
+
+    const left = clamp(screenX, 12, W - 12 - 180);
+    const top  = clamp(screenY, 12, H - 12 - 220);
+
+    ctxMenu.style.left = `${left}px`;
+    ctxMenu.style.top  = `${top}px`;
+    ctxMenu.classList.remove('hidden');
+  }
+
+  // ======== Inline editor ========
+  function openInlineEditor(nodeId) {
+    const n = nodesById.get(nodeId);
+    if (!n) return;
+    editorNodeId = nodeId;
+
+    const s = worldToScreen(n.x, n.y);
+    const left = clamp(s.x - 110, 12, W - 12 - 270);
+    const top  = clamp(s.y + n.r + 10, 12, H - 12 - 70);
+
+    inlineEditor.style.left = `${left}px`;
+    inlineEditor.style.top = `${top}px`;
+    inlineEditor.classList.remove('hidden');
+
+    inlineTitleInput.value = n.task_title || '';
+    inlineTitleInput.focus();
+    inlineTitleInput.select();
+  }
+
+  function closeInlineEditor() {
+    inlineEditor.classList.add('hidden');
+    editorNodeId = null;
+  }
+
+  async function commitInlineEditor() {
+    if (!editorNodeId) return;
+    const n = nodesById.get(editorNodeId);
+    if (!n) return;
+
+    const newTitle = String(inlineTitleInput.value || n.task_title).slice(0, 100);
+    const csrftoken = getCookie('csrftoken');
+
+    try {
+      const formData = new FormData();
+      formData.append('title', newTitle);
+      formData.append('description', n.task_description || '');
+      formData.append('priority', n.task_priority);
+      formData.append('status', n.task_status);
+      if (n.category) formData.append('category', n.category);
+
+      // IMPORTANT: ensure this URL matches your task edit URL
+      const response = await fetch(`/tasks/${n.task_id}/edit/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest' },
+        body: formData
+      });
+
+      if (response.ok) {
+        n.task_title = newTitle;
+        showToast('Renamed!', 'success');
+      } else {
+        showToast('Rename failed', 'error');
+      }
+    } catch (error) {
+      console.error(error);
+      showToast('Rename failed', 'error');
+    }
+
+    closeInlineEditor();
+    requestRender();
+  }
+
+  saveInlineTitle.addEventListener('click', commitInlineEditor);
+  cancelInlineTitle.addEventListener('click', closeInlineEditor);
+  inlineTitleInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') commitInlineEditor();
+    if (e.key === 'Escape') closeInlineEditor();
+  });
+
+  // ======== Graph operations ========
+  function selectNode(id) {
+    selected.nodeId = id;
+    hideCtxMenu();
+    closeInlineEditor();
+    showNodeActionsFor(id);
+    updateModeText();
+    requestRender();
+  }
+
+  function clearSelection() {
+    selected.nodeId = null;
+    hideNodeActions();
+    hideCtxMenu();
+    updateModeText();
+    requestRender();
+  }
+
+  function hitNode(sx, sy) {
+    const w = screenToWorld(sx, sy);
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i];
+      if (dist2(w.x, w.y, n.x, n.y) <= n.r * n.r) return n;
+    }
+    return null;
+  }
+
+  function fitToContent() {
+    if (nodes.length === 0) {
+      view.x = W/2; view.y = H/2; view.s = 1;
+      requestRender();
+      return;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const n of nodes) {
+      minX = Math.min(minX, n.x - n.r);
+      minY = Math.min(minY, n.y - n.r);
+      maxX = Math.max(maxX, n.x + n.r);
+      maxY = Math.max(maxY, n.y + n.r);
+    }
+
+    const pad = 90;
+    const bw = (maxX - minX) + pad * 2;
+    const bh = (maxY - minY) + pad * 2;
+    view.s = clamp(Math.min(W / bw, H / bh), 0.25, 2.5);
+
+    const cx = (minX + maxX) / 2;
+    const cy = (minY + maxY) / 2;
+    view.x = W/2 - cx * view.s;
+    view.y = H/2 - cy * view.s;
+    requestRender();
+  }
+
+  // linking mode
+  function startConnectionMode(nodeId) {
+    linking.active = true;
+    linking.startId = nodeId;
+    connectionModeIndicator.classList.remove('hidden');
+    selectNode(nodeId);
+    updateModeText();
+  }
+  function cancelConnectionMode() {
+    linking.active = false;
+    linking.startId = null;
+    connectionModeIndicator.classList.add('hidden');
+    updateModeText();
+    requestRender();
+  }
+  window.cancelConnectionMode = cancelConnectionMode;
+
+  async function completeConnection(targetNodeId) {
+    if (!linking.startId || linking.startId === targetNodeId) {
+      cancelConnectionMode();
+      return;
+    }
+
+    const targetNode = nodesById.get(targetNodeId);
+    if (!targetNode) { cancelConnectionMode(); return; }
+
+    if (targetNode.dependencies && targetNode.dependencies.includes(linking.startId)) {
+      showToast('Already linked', 'error');
+      cancelConnectionMode();
+      return;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+    try {
+      const response = await fetch(`/plans/nodes/${targetNodeId}/add-dependency/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify({ dependency_id: linking.startId })
+      });
+
+      const data = await response.json();
+      if (data.ok) {
+        if (!targetNode.dependencies) targetNode.dependencies = [];
+        targetNode.dependencies.push(linking.startId);
+        showToast('Linked!', 'success');
+      } else {
+        showToast(data.error || 'Link failed', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Link failed', 'error');
+    }
+
+    cancelConnectionMode();
+    requestRender();
+  }
+
+  // ======== Persist node position ========
+  async function saveNodePosition(node) {
+    const csrftoken = getCookie('csrftoken');
+    try {
+      const res = await fetch(`/plans/nodes/${node.id}/update_position/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify({ x: Math.round(node.x), y: Math.round(node.y) })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data.ok ?? true)) return true;
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  // ======== Colors & rendering ========
+  function getNodeColor(node) {
+    if (node.task_status === 'completed') return { bg: '#dcfce7', border: '#22c55e', text: '#166534' };
+    if (node.task_status === 'in_progress') return { bg: '#fef3c7', border: '#f59e0b', text: '#92400e' };
+    if (node.can_start) return { bg: '#dbeafe', border: '#3b82f6', text: '#1e3a8a' };
+    return { bg: '#f3f4f6', border: '#9ca3af', text: '#4b5563' };
+  }
+
+  function drawArrow(fromNode, toNode) {
+    const ax = fromNode.x, ay = fromNode.y;
+    const bx = toNode.x, by = toNode.y;
+
+    const dx = bx - ax, dy = by - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len, uy = dy / len;
+
+    const sx = ax + ux * fromNode.r;
+    const sy = ay + uy * fromNode.r;
+    const ex = bx - ux * toNode.r;
+    const ey = by - uy * toNode.r;
+
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.65)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+
+    const head = 12 / view.s;
+    const angle = Math.atan2(ey - sy, ex - sx);
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.75)';
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - head * Math.cos(angle - Math.PI/7), ey - head * Math.sin(angle - Math.PI/7));
+    ctx.lineTo(ex - head * Math.cos(angle + Math.PI/7), ey - head * Math.sin(angle + Math.PI/7));
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  let needsRender = true;
+  function requestRender(){ needsRender = true; }
+
+  function render() {
+    if (!needsRender) return;
+    needsRender = false;
+
+    rebuildIndex();
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Grid
+    const grid = 60 * view.s;
+    ctx.save();
+    ctx.globalAlpha = 0.15;
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+    ctx.lineWidth = 1;
+    const startX = ((view.x % grid) + grid) % grid;
+    const startY = ((view.y % grid) + grid) % grid;
+    for (let x = startX; x < W; x += grid) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = startY; y < H; y += grid) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.restore();
+
+    // World transform
+    ctx.save();
+    ctx.translate(view.x, view.y);
+    ctx.scale(view.s, view.s);
+
+    // Edges: dependency -> node
+    for (const node of nodes) {
+      if (node.dependencies && node.dependencies.length) {
+        for (const depId of node.dependencies) {
+          const depNode = nodesById.get(depId);
+          if (depNode) drawArrow(depNode, node);
+        }
+      }
+    }
+
+    // Linking preview
+    if (linking.active && linking.startId && pointer.lastWorld) {
+      const startNode = nodesById.get(linking.startId);
+      if (startNode) {
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.85)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 8]);
+        ctx.beginPath();
+        ctx.moveTo(startNode.x, startNode.y);
+        ctx.lineTo(pointer.lastWorld.x, pointer.lastWorld.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Nodes
+    for (const node of nodes) {
+      const isSel = node.id === selected.nodeId;
+      const isStart = linking.active && node.id === linking.startId;
+      const colors = getNodeColor(node);
+
+      // dim others when selected
+      if (selected.nodeId && !isSel) {
+        ctx.save();
+        ctx.globalAlpha = 0.75;
+      }
+
+      // glow
+      if (isSel || isStart) {
+        ctx.save();
+        ctx.globalAlpha = 0.28;
+        ctx.fillStyle = isStart ? 'rgba(59, 130, 246, 1)' : 'rgba(34, 197, 94, 1)';
+        ctx.beginPath();
+        ctx.arc(node.x, node.y, node.r + 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // circle
+      ctx.fillStyle = colors.bg;
+      ctx.strokeStyle = (isSel || isStart)
+        ? (isStart ? 'rgba(59, 130, 246, 0.95)' : 'rgba(34, 197, 94, 0.95)')
+        : colors.border;
+      ctx.lineWidth = (isSel || isStart) ? 4 : 3;
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, node.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // icon
+      ctx.fillStyle = colors.text;
+      ctx.font = `${18 / view.s}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const icon = node.task_status === 'completed' ? '✓' : node.task_status === 'in_progress' ? '⏳' : '○';
+      ctx.fillText(icon, node.x, node.y - 10);
+
+      // title
+      ctx.font = `bold ${13 / view.s}px Arial`;
+      ctx.fillStyle = colors.text;
+      const title = (node.task_title || '').length > 16 ? (node.task_title || '').slice(0, 16) + '…' : (node.task_title || '');
+      ctx.fillText(title, node.x, node.y + 8);
+
+      // high priority badge
+      if (node.task_priority === 'high') {
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(node.x + node.r - 20, node.y - node.r + 5, 16, 10);
+        ctx.fillStyle = 'white';
+        ctx.font = `bold ${8 / view.s}px Arial`;
+        ctx.fillText('!', node.x + node.r - 12, node.y - node.r + 10);
+      }
+
+      if (selected.nodeId && !isSel) ctx.restore();
+    }
+
+    ctx.restore();
+
+    canvasStatus.textContent =
+      `Select a task to see actions • Drag to move (auto-saves) • Empty space: add task (click) or pan (drag) • Wheel/pinch: zoom • Right-click/long-press: menu`;
+
+    updateModeText();
+
+    // keep action bar near node on render
+    if (selected.nodeId && !nodeActions.classList.contains('hidden')) {
+      showNodeActionsFor(selected.nodeId);
+    }
+  }
+
+  function loop(){ render(); requestAnimationFrame(loop); }
+
+  // ================= Pointer Handling =================
+  const pointer = {
+    down: false,
+    sx: 0, sy: 0,
+    lastSx: 0, lastSy: 0,
+    lastWorld: null,
+    draggingNodeId: null,
+    dragOffX: 0, dragOffY: 0,
+    panning: false,
+    moved: false,
+    longPressTimer: null
+  };
+
+  const touches = new Map();
+  let gesture = { active: false, startDist: 0, startScale: 1, startMid: null, startView: null };
+
+  function startGesture() {
+    const pts = Array.from(touches.values());
+    const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+    gesture.active = true;
+    gesture.startDist = Math.hypot(dx, dy) || 1;
+    gesture.startScale = view.s;
+    gesture.startMid = { x: (pts[0].x + pts[1].x)/2, y: (pts[0].y + pts[1].y)/2 };
+    gesture.startView = { x: view.x, y: view.y };
+  }
+
+  canvas.addEventListener('pointerdown', (e) => {
+    canvas.setPointerCapture(e.pointerId);
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    pointer.down = true;
+    pointer.sx = pointer.lastSx = sx;
+    pointer.sy = pointer.lastSy = sy;
+    pointer.moved = false;
+    pointer.lastWorld = screenToWorld(sx, sy);
+
+    touches.set(e.pointerId, { x: sx, y: sy });
+    if (touches.size === 2) startGesture();
+
+    hideCtxMenu(); // close if open
+
+    // long-press opens context menu
+    if (e.pointerType === 'touch') {
+      clearTimeout(pointer.longPressTimer);
+      pointer.longPressTimer = setTimeout(() => {
+        if (!pointer.moved) {
+          const n = hitNode(sx, sy);
+          if (n) {
+            selectNode(n.id);
+            hideNodeActions();
+            showCtxMenuAt(sx, sy, n.id);
+          }
+        }
+      }, 600);
+    }
+
+    // link mode clicks
+    if (linking.active && touches.size === 1) {
+      const n = hitNode(sx, sy);
+      if (n) {
+        if (!linking.startId) startConnectionMode(n.id);
+        else completeConnection(n.id);
+      }
+      return;
+    }
+
+    // normal: node?
+    const n = hitNode(sx, sy);
+    if (n) {
+      selectNode(n.id);
+      pointer.draggingNodeId = n.id;
+      const w = screenToWorld(sx, sy);
+      pointer.dragOffX = w.x - n.x;
+      pointer.dragOffY = w.y - n.y;
+
+      dragStartPos = { x: n.x, y: n.y };
+      return;
+    }
+
+    // empty space - enable panning on single touch/click
+    clearSelection();
+    if (touches.size === 1) {
+      pointer.panning = true;
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (!pointer.down) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    if (touches.has(e.pointerId)) touches.set(e.pointerId, { x: sx, y: sy });
+    pointer.lastWorld = screenToWorld(sx, sy);
+
+    if (Math.hypot(sx - pointer.sx, sy - pointer.sy) > 5) pointer.moved = true;
+
+    // two-finger gesture: pinch zoom + pan
+    if (gesture.active && touches.size === 2) {
+      const pts = Array.from(touches.values());
+      const dx = pts[1].x - pts[0].x, dy = pts[1].y - pts[0].y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const mid = { x: (pts[0].x + pts[1].x)/2, y: (pts[0].y + pts[1].y)/2 };
+
+      const scale = clamp(gesture.startScale * (dist / gesture.startDist), 0.25, 3.0);
+      view.s = scale;
+      view.x = gesture.startView.x + (mid.x - gesture.startMid.x);
+      view.y = gesture.startView.y + (mid.y - gesture.startMid.y);
+      requestRender();
+      return;
+    }
+
+    const dxs = sx - pointer.lastSx;
+    const dys = sy - pointer.lastSy;
+
+    // drag node
+    if (pointer.draggingNodeId && touches.size === 1) {
+      closeInlineEditor();
+      const n = nodesById.get(pointer.draggingNodeId);
+      if (n) {
+        const w = screenToWorld(sx, sy);
+        n.x = w.x - pointer.dragOffX;
+        n.y = w.y - pointer.dragOffY;
+        requestRender();
+      }
+    }
+
+    // pan
+    if (pointer.panning && touches.size === 1) {
+      view.x += dxs;
+      view.y += dys;
+      requestRender();
+    }
+
+    if (linking.active) requestRender();
+
+    pointer.lastSx = sx;
+    pointer.lastSy = sy;
+  });
+
+  canvas.addEventListener('pointerup', async (e) => {
+    clearTimeout(pointer.longPressTimer);
+
+    const wasDragging = pointer.moved;
+    const draggedId = pointer.draggingNodeId;
+
+    pointer.down = false;
+    pointer.draggingNodeId = null;
+    pointer.panning = false;
+
+    touches.delete(e.pointerId);
+    if (touches.size < 2) gesture.active = false;
+
+    // If user clicked empty space (not drag), open modal to add task
+    if (!wasDragging && !draggedId && !linking.active && touches.size === 0) {
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+
+      const n = hitNode(sx, sy);
+      if (!n) {
+        const w = screenToWorld(sx, sy);
+        console.log('Clicked empty space at screen:', sx, sy, 'world:', w.x, w.y);
+        openTaskModal(w.x, w.y);
+      }
+    }
+
+    // If node moved, auto-save its position
+    if (draggedId) {
+      const n = nodesById.get(draggedId);
+      if (n && dragStartPos && (Math.hypot(n.x - dragStartPos.x, n.y - dragStartPos.y) > 2)) {
+        const ok = await saveNodePosition(n);
+        if (!ok) showToast('Could not save position', 'error');
+      }
+      dragStartPos = null;
+    }
+  });
+
+  canvas.addEventListener('pointercancel', (e) => {
+    clearTimeout(pointer.longPressTimer);
+    touches.delete(e.pointerId);
+    if (touches.size < 2) gesture.active = false;
+  });
+
+  // double click -> rename
+  canvas.addEventListener('dblclick', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+    const n = hitNode(sx, sy);
+    if (n) {
+      selectNode(n.id);
+      openInlineEditor(n.id);
+    }
+  });
+
+  // right click -> context menu
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const n = hitNode(sx, sy);
+    if (n) {
+      selectNode(n.id);
+      hideNodeActions();
+      showCtxMenuAt(sx, sy, n.id);
+    } else {
+      clearSelection();
+    }
+  });
+
+  // wheel zoom
+  canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    closeInlineEditor();
+
+    const rect = canvas.getBoundingClientRect();
+    const sx = e.clientX - rect.left;
+    const sy = e.clientY - rect.top;
+
+    const zoom = Math.exp(-e.deltaY * 0.001);
+    const newS = clamp(view.s * zoom, 0.25, 3.0);
+
+    const before = screenToWorld(sx, sy);
+    view.s = newS;
+    const after = screenToWorld(sx, sy);
+
+    view.x += (after.x - before.x) * view.s;
+    view.y += (after.y - before.y) * view.s;
+
+    requestRender();
+  }, { passive: false });
+
+  // ================= Global control functions =================
+  window.zoomIn = () => { view.s = clamp(view.s * 1.15, 0.25, 3.0); requestRender(); };
+  window.zoomOut = () => { view.s = clamp(view.s / 1.15, 0.25, 3.0); requestRender(); };
+  window.fitView = () => fitToContent();
+  window.toggleHelp = () => helpOverlay.classList.toggle('hidden');
+
+  window.openAddTaskHint = () => showToast('Tip: Tap empty space to add a task', 'info');
+
+  // ================= Action button wiring =================
+  document.getElementById('na-rename').addEventListener('click', () => {
+    if (selected.nodeId) openInlineEditor(selected.nodeId);
+  });
+  document.getElementById('na-link').addEventListener('click', () => {
+    if (selected.nodeId) startConnectionMode(selected.nodeId);
+  });
+  document.getElementById('na-delete').addEventListener('click', () => {
+    if (selected.nodeId) {
+      if (confirm('Remove this task from the plan?')) {
+        location.href = `/plans/nodes/${selected.nodeId}/delete/`;
+      }
+    }
+  });
+
+  document.getElementById('ctx-rename').addEventListener('click', () => {
+    hideCtxMenu();
+    if (selected.nodeId) openInlineEditor(selected.nodeId);
+  });
+  document.getElementById('ctx-link').addEventListener('click', () => {
+    hideCtxMenu();
+    if (selected.nodeId) startConnectionMode(selected.nodeId);
+  });
+  document.getElementById('ctx-delete').addEventListener('click', () => {
+    hideCtxMenu();
+    if (selected.nodeId) {
+      if (confirm('Remove this task from the plan?')) {
+        location.href = `/plans/nodes/${selected.nodeId}/delete/`;
+      }
+    }
+  });
+
+  // close menus on outside click
+  document.addEventListener('pointerdown', (e) => {
+    if (!ctxMenu.contains(e.target)) hideCtxMenu();
+    if (!nodeActions.contains(e.target) && e.target !== canvas) {
+      // keep selection; just hide actions if user clicks elsewhere
+    }
+  }, { capture: true });
+
+  // keyboard shortcuts
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeInlineEditor();
+      hideCtxMenu();
+      if (linking.active) cancelConnectionMode();
+      else clearSelection();
+    }
+    if (e.key.toLowerCase() === 'l' && selected.nodeId) startConnectionMode(selected.nodeId);
+    if (e.key.toLowerCase() === 'r' && selected.nodeId) openInlineEditor(selected.nodeId);
+  });
+
+  // ================= Task modal =================
+  // Override the global openTaskModalAtCenter to use canvas coordinates when canvas exists
+  window.openTaskModalAtCenter = function() {
+    // Ensure canvas is initialized
+    if (W === 0 || H === 0) {
+      resize();
+    }
+    const centerWorld = screenToWorld(W / 2, H / 2);
+    openTaskModal(centerWorld.x, centerWorld.y);
+  };
+
+  // Also expose openTaskModal for canvas usage
+  window.openTaskModal = openTaskModal;
+
+  // ================= Toolbar Functions (existing hooks) =================
+  function toggleAddTaskForm() {
+    document.getElementById('quick-add-form').classList.toggle('hidden');
+  }
+  window.toggleAddTaskForm = toggleAddTaskForm;
+
+  // ================= Auto Layout Algorithm =================
+  async function autoLayout() {
+    if (nodes.length === 0) return;
+
+    showToast('Arranging tasks...', 'info');
+    closeInlineEditor();
+    clearSelection();
+
+    // Calculate node layers based on dependency depth
+    const layers = calculateLayers();
+    
+    // Apply positions based on layers
+    applyLayeredLayout(layers);
+    
+    // Save all positions to backend
+    await saveAllPositions();
+    
+    // Fit view to new layout
+    setTimeout(() => {
+      fitToContent();
+      showToast('Layout applied!', 'success');
+    }, 100);
+  }
+
+  function calculateLayers() {
+    // Map node ID to its layer (depth in dependency chain)
+    const layerMap = new Map();
+    const visited = new Set();
+
+    // Build dependency lookup (which nodes depend on this one)
+    const dependents = new Map(); // nodeId -> [dependent node ids]
+    nodes.forEach(n => {
+      if (!dependents.has(n.id)) dependents.set(n.id, []);
+      if (n.dependencies && n.dependencies.length) {
+        n.dependencies.forEach(depId => {
+          if (!dependents.has(depId)) dependents.set(depId, []);
+          dependents.get(depId).push(n.id);
+        });
+      }
+    });
+
+    // Calculate layer for each node (longest path from roots)
+    function getLayer(nodeId) {
+      if (layerMap.has(nodeId)) return layerMap.get(nodeId);
+      if (visited.has(nodeId)) return 0; // cycle detection
+
+      visited.add(nodeId);
+      const node = nodesById.get(nodeId);
+      if (!node) return 0;
+
+      let maxDepLayer = -1;
+      if (node.dependencies && node.dependencies.length) {
+        for (const depId of node.dependencies) {
+          maxDepLayer = Math.max(maxDepLayer, getLayer(depId));
+        }
+      }
+
+      const layer = maxDepLayer + 1;
+      layerMap.set(nodeId, layer);
+      return layer;
+    }
+
+    // Calculate layers for all nodes
+    nodes.forEach(n => getLayer(n.id));
+
+    // Group nodes by layer
+    const layers = new Map();
+    layerMap.forEach((layer, nodeId) => {
+      if (!layers.has(layer)) layers.set(layer, []);
+      layers.get(layer).push(nodeId);
+    });
+
+    return layers;
+  }
+
+  function applyLayeredLayout(layers) {
+    const layerHeight = 180; // vertical spacing between layers
+    const nodeSpacing = 200; // horizontal spacing between nodes
+    const startY = -100; // start position for first layer
+
+    const layerNumbers = Array.from(layers.keys()).sort((a, b) => a - b);
+
+    layerNumbers.forEach((layerNum, layerIndex) => {
+      const nodeIds = layers.get(layerNum);
+      const y = startY + (layerIndex * layerHeight);
+
+      // Center nodes horizontally
+      const totalWidth = (nodeIds.length - 1) * nodeSpacing;
+      const startX = -totalWidth / 2;
+
+      nodeIds.forEach((nodeId, index) => {
+        const node = nodesById.get(nodeId);
+        if (node) {
+          node.x = startX + (index * nodeSpacing);
+          node.y = y;
+        }
+      });
+    });
+
+    requestRender();
+  }
+
+  async function saveAllPositions() {
+    const csrftoken = getCookie('csrftoken');
+    const promises = [];
+
+    for (const node of nodes) {
+      const promise = fetch(`/plans/nodes/${node.id}/update_position/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        body: JSON.stringify({ x: Math.round(node.x), y: Math.round(node.y) })
+      }).catch(() => null); // silently fail for individual saves
+
+      promises.push(promise);
+    }
+
+    // Save positions in batches to avoid overwhelming the server
+    const batchSize = 5;
+    for (let i = 0; i < promises.length; i += batchSize) {
+      const batch = promises.slice(i, i + batchSize);
+      await Promise.all(batch);
+    }
+  }
+
+  window.autoLayout = autoLayout;
+
+  // ================= Init =================
+  resize();
+
+  // initialize view
+  view.x = W / 2;
+  view.y = H / 2;
+  view.s = 1.0;
+
+  // if all positions are 0, distribute in a circle
+  if (nodes.length && nodes.every(n => (n.x === 0 && n.y === 0))) {
+    console.log('All nodes at (0,0), distributing in circle');
+    nodes.forEach((n, i) => {
+      const angle = (i / nodes.length) * Math.PI * 2;
+      const radius = 170;
+      n.x = Math.cos(angle) * radius;
+      n.y = Math.sin(angle) * radius;
+    });
+  } else {
+    console.log('Nodes have positions, not redistributing');
+  }
+  if (nodes.length) fitToContent();
+
+  updateModeText();
+  loop();
+})();
+</script>
+{% endif %}
+
+{% endblock %}

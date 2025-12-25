@@ -1,0 +1,93 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Plans - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<div class="container mx-auto px-4 py-6 max-w-7xl">
+  <!-- Header -->
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="text-3xl font-bold text-slate-800">
+        <i class="bi bi-diagram-3 mr-2"></i>Plans
+      </h1>
+      <p class="text-slate-600 mt-1">Organize your tasks into structured workflows</p>
+    </div>
+    <a href="{% url 'plan_create' %}" 
+       class="btn btn-primary gap-2">
+      <i class="bi bi-plus-lg"></i>
+      Create Plan
+    </a>
+  </div>
+
+  <!-- Plans Grid -->
+  {% if plans %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {% for plan in plans %}
+        <div class="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow cursor-pointer border border-base-300"
+             onclick="window.location.href='{% url 'plan_detail' plan.pk %}'">
+          <div class="card-body">
+            <div class="flex items-start justify-between">
+              <h2 class="card-title text-lg">
+                {{ plan.title }}
+                {% if not plan.is_active %}
+                  <span class="badge badge-ghost badge-sm">Inactive</span>
+                {% endif %}
+              </h2>
+              <div class="dropdown dropdown-end" onclick="event.stopPropagation()">
+                <label tabindex="0" class="btn btn-ghost btn-xs btn-circle" onclick="event.stopPropagation()">
+                  <i class="bi bi-three-dots-vertical"></i>
+                </label>
+                <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10" onclick="event.stopPropagation()">
+                  <li><a href="{% url 'plan_detail' plan.pk %}"><i class="bi bi-eye mr-2"></i>View Details</a></li>
+                  <li><a href="{% url 'plan_update' plan.pk %}"><i class="bi bi-pencil mr-2"></i>Edit</a></li>
+                  <li><a href="{% url 'plan_delete' plan.pk %}" class="text-error"><i class="bi bi-trash mr-2"></i>Delete</a></li>
+                </ul>
+              </div>
+            </div>
+            
+            {% if plan.description %}
+              <p class="text-sm text-base-content/70 line-clamp-2">{{ plan.description }}</p>
+            {% endif %}
+            
+            <div class="mt-4 flex items-center justify-between text-sm">
+              <div class="flex items-center gap-4">
+                <span class="flex items-center gap-1">
+                  <i class="bi bi-diagram-3"></i>
+                  <span class="font-medium">{{ plan.total_tasks }}</span> tasks
+                </span>
+                {% if plan.total_tasks > 0 %}
+                  <div class="flex items-center gap-1">
+                    <i class="bi bi-check-circle"></i>
+                    <span>{{ plan.completed_tasks }}/{{ plan.total_tasks }}</span>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+            
+            <div class="text-xs text-base-content/60 mt-2">
+              Updated {{ plan.updated_at|timesince }} ago
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Empty State -->
+    <div class="flex flex-col items-center justify-center py-16 px-4">
+      <div class="text-6xl mb-4 opacity-20">
+        <i class="bi bi-diagram-3"></i>
+      </div>
+      <h3 class="text-xl font-semibold text-slate-700 mb-2">No plans yet</h3>
+      <p class="text-slate-500 mb-6 text-center max-w-md">
+        Create your first plan to organize tasks into a structured workflow with dependencies.
+      </p>
+      <a href="{% url 'plan_create' %}" class="btn btn-primary gap-2">
+        <i class="bi bi-plus-lg"></i>
+        Create Your First Plan
+      </a>
+    </div>
+  {% endif %}
+</div>
+
+{% endblock %}

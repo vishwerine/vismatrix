@@ -362,6 +362,12 @@
         <span class="ml-1">Logs</span>
       </a>
 
+      <a href="{% url 'plan_list' %}"
+         class="btn btn-ghost btn-sm px-3 {% if 'plan' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
+        <i class="bi bi-diagram-3" aria-hidden="true"></i>
+        <span class="ml-1">Plans</span>
+      </a>
+
       <a href="{% url 'friends_list' %}"
          class="btn btn-ghost btn-sm px-3 {% if 'friend' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
         <i class="bi bi-people" aria-hidden="true"></i>
@@ -403,6 +409,11 @@
           <li><a href="{% url 'analytics' %}">
             <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
             Analytics
+          </a></li>
+
+          <li><a href="{% url 'plan_list' %}">
+            <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
+            Plans
           </a></li>
 
           <li><a href="{% url 'notifications' %}">
@@ -692,6 +703,7 @@
     const CSRF_TOKEN = '{{ csrf_token }}';
     const MINI_CHAT_MINIMISED_KEY = 'miniChatMinimised';
     let currentConvId = null;
+    let currentUserId = null;
     let pollTimer = null;
     let minimised = localStorage.getItem(MINI_CHAT_MINIMISED_KEY) === 'true';
 
@@ -745,12 +757,11 @@
 
       friendsEl.innerHTML = data.friends.map(f => {
         const badge = f.unread > 0 ? `<span class="badge badge-warning badge-sm">${f.unread}</span>` : ``;
-        const disabled = !f.conversation_id;
 
         return `
           <button type="button"
-                  class="w-full text-left p-3 hover:bg-base-200/40 transition flex items-center justify-between gap-3 ${disabled ? 'opacity-60' : ''}"
-                  ${disabled ? `data-open-inbox="1"` : `data-conv="${f.conversation_id}" data-user="${f.username}"`}>
+                  class="w-full text-left p-3 hover:bg-base-200/40 transition flex items-center justify-between gap-3"
+                  data-conv="${f.conversation_id || ''}" data-user="${f.username}" data-user-id="${f.id}">
             <span class="flex items-center gap-2 min-w-0">
               <span class="avatar placeholder">
                 <span class="bg-neutral text-neutral-content rounded-full w-8 h-8 flex items-center justify-center">
@@ -764,22 +775,25 @@
         `;
       }).join('');
 
-      friendsEl.querySelectorAll('button[data-conv]').forEach(btn => {
+      friendsEl.querySelectorAll('button').forEach(btn => {
         btn.addEventListener('click', () => {
           const convId = btn.getAttribute('data-conv');
           const uname = btn.getAttribute('data-user');
-          openConversation(convId, uname);
-        });
-      });
-
-      friendsEl.querySelectorAll('button[data-open-inbox]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          window.location.href = "{% url 'inbox' %}";
+          const userId = btn.getAttribute('data-user-id');
+          if (convId) {
+            openConversation(convId, uname, userId);
+          } else {
+            openConversation(null, uname, userId);
+          }
         });
       });
     }
 
     async function loadMessages(conversationId, scrollToBottom=true) {
+      if (!conversationId) {
+        msgsEl.innerHTML = `<div class="p-2 text-sm text-base-content/70">No messages yet. Say hello!</div>`;
+        return;
+      }
       const res = await fetch(`/api/mini-chat/${conversationId}/messages/`);
       if (!res.ok) {
         msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Could not load messages.</div>`;
@@ -794,10 +808,16 @@
       loadFriends(false);
     }
 
-    async function openConversation(conversationId, username) {
+    async function openConversation(conversationId, username, userId) {
       currentConvId = conversationId;
+      currentUserId = userId;
       withEl.textContent = username;
-      openFullEl.href = `/messages/${conversationId}/`;
+      if (conversationId) {
+        openFullEl.href = `/messages/${conversationId}/`;
+      } else {
+        openFullEl.href = '#';
+        openFullEl.style.display = 'none';
+      }
 
       emptyEl.classList.add('hidden');
       convEl.classList.remove('hidden');
@@ -836,8 +856,7 @@
 
     formEl.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!currentConvId) return;
-
+      
       const body = (inputEl.value || "").trim();
       if (!body) return;
 
@@ -850,17 +869,46 @@
       }));
       msgsEl.scrollTop = msgsEl.scrollHeight;
 
-      const res = await fetch(`/api/mini-chat/${currentConvId}/send/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-        body: JSON.stringify({ body })
-      });
-
-      if (!res.ok) {
-        await loadMessages(currentConvId, true);
+      let url, res;
+      if (currentConvId) {
+        // Existing conversation
+        url = `/api/mini-chat/${currentConvId}/send/`;
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ body })
+        });
+      } else if (currentUserId) {
+        // New conversation - need to create it
+        url = `/api/mini-chat/start/${currentUserId}/`;
+        res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+          body: JSON.stringify({ body })
+        });
+      } else {
         return;
       }
-      await loadMessages(currentConvId, true);
+
+      if (!res.ok) {
+        if (currentConvId) {
+          await loadMessages(currentConvId, true);
+        }
+        return;
+      }
+
+      const data = await res.json();
+      
+      // If this was a new conversation, update currentConvId and openFullEl
+      if (!currentConvId && data.conversation_id) {
+        currentConvId = data.conversation_id;
+        openFullEl.href = `/messages/${currentConvId}/`;
+        openFullEl.style.display = '';
+      }
+      
+      if (currentConvId) {
+        await loadMessages(currentConvId, true);
+      }
     });
 
     loadFriends(true);

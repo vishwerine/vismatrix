@@ -248,4 +248,87 @@ class Message(models.Model):
         return f"Msg {self.id} in conv {self.conversation_id} by {self.sender.username}"
 
 
+class Plan(models.Model):
+    """A plan is a directed acyclic graph of tasks"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='plans')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+    
+    def get_root_nodes(self):
+        """Get all nodes that have no dependencies (root nodes)"""
+        return self.nodes.filter(dependencies__isnull=True)
+    
+    def validate_dag(self):
+        """Validate that the plan forms a valid DAG (no cycles)"""
+        from collections import defaultdict, deque
+        
+        # Build adjacency list
+        graph = defaultdict(list)
+        in_degree = defaultdict(int)
+        
+        for node in self.nodes.all():
+            if node.id not in in_degree:
+                in_degree[node.id] = 0
+            for dep in node.dependencies.all():
+                graph[dep.id].append(node.id)
+                in_degree[node.id] += 1
+        
+        # Topological sort using Kahn's algorithm
+        queue = deque([node_id for node_id in in_degree if in_degree[node_id] == 0])
+        sorted_count = 0
+        
+        while queue:
+            node_id = queue.popleft()
+            sorted_count += 1
+            
+            for neighbor in graph[node_id]:
+                in_degree[neighbor] -= 1
+                if in_degree[neighbor] == 0:
+                    queue.append(neighbor)
+        
+        # If sorted_count doesn't equal total nodes, there's a cycle
+        return sorted_count == len(in_degree)
+
+
+class PlanNode(models.Model):
+    """A node in a plan DAG, representing a task"""
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='nodes')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='plan_nodes')
+    dependencies = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='dependents',
+        blank=True,
+        help_text="Tasks that must be completed before this one"
+    )
+    position_x = models.IntegerField(default=0, help_text="X position for visualization")
+    position_y = models.IntegerField(default=0, help_text="Y position for visualization")
+    order = models.IntegerField(default=0, help_text="Order in the plan")
+    
+    class Meta:
+        ordering = ['order', 'id']
+        unique_together = ['plan', 'task']
+    
+    def __str__(self):
+        return f"{self.plan.title} - {self.task.title}"
+    
+    def can_start(self):
+        """Check if all dependencies are completed"""
+        return all(dep.task.status == 'completed' for dep in self.dependencies.all())
+    
+    def get_dependents(self):
+        """Get all tasks that depend on this one"""
+        return self.dependents.all()
+
+
+
 
