@@ -1038,10 +1038,10 @@
     if (linking.active && touches.size === 1) {
       const n = hitNode(sx, sy);
       if (n) {
-        if (!linking.startId) startConnectionMode(n.id);
-        else completeConnection(n.id);
+        // Don't handle here, let pointerup handle it to avoid conflicts
+        e.preventDefault();
+        return;
       }
-      return;
     }
 
     // normal: node?
@@ -1057,9 +1057,9 @@
       return;
     }
 
-    // empty space - enable panning on single touch/click
+    // empty space - enable panning on single touch/click (but not in linking mode)
     clearSelection();
-    if (touches.size === 1) {
+    if (touches.size === 1 && !linking.active) {
       pointer.panning = true;
     }
   });
@@ -1124,6 +1124,7 @@
 
     const wasDragging = pointer.moved;
     const draggedId = pointer.draggingNodeId;
+    const wasLinking = linking.active;
 
     pointer.down = false;
     pointer.draggingNodeId = null;
@@ -1131,6 +1132,23 @@
 
     touches.delete(e.pointerId);
     if (touches.size < 2) gesture.active = false;
+
+    // Handle linking mode clicks (must come before other click handling)
+    if (wasLinking && !wasDragging && touches.size === 0) {
+      const rect = canvas.getBoundingClientRect();
+      const sx = e.clientX - rect.left;
+      const sy = e.clientY - rect.top;
+      const n = hitNode(sx, sy);
+      
+      if (n) {
+        if (!linking.startId) {
+          startConnectionMode(n.id);
+        } else {
+          await completeConnection(n.id);
+        }
+        return; // Don't process other click handlers
+      }
+    }
 
     // If user clicked empty space (not drag), open modal to add task
     if (!wasDragging && !draggedId && !linking.active && touches.size === 0) {
