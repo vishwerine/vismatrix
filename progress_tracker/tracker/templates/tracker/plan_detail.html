@@ -767,13 +767,25 @@
       return;
     }
 
-    const csrftoken = getCookie('csrftoken');
+    const csrftoken = getCookie('csrftoken') || '{{ csrf_token }}';
     try {
       const response = await fetch(`/plans/nodes/${targetNodeId}/add-dependency/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         body: JSON.stringify({ dependency_id: linking.startId })
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error:', response.status, errorText);
+        showToast(`Link failed: ${response.status}`, 'error');
+        cancelConnectionMode();
+        return;
+      }
 
       const data = await response.json();
       if (data.ok) {
@@ -784,7 +796,7 @@
         showToast(data.error || 'Link failed', 'error');
       }
     } catch (err) {
-      console.error(err);
+      console.error('Connection error:', err);
       showToast('Link failed', 'error');
     }
 
@@ -794,11 +806,15 @@
 
   // ======== Persist node position ========
   async function saveNodePosition(node) {
-    const csrftoken = getCookie('csrftoken');
+    const csrftoken = getCookie('csrftoken') || '{{ csrf_token }}';
     try {
       const res = await fetch(`/plans/nodes/${node.id}/update_position/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         body: JSON.stringify({ x: Math.round(node.x), y: Math.round(node.y) })
       });
       const data = await res.json().catch(() => ({}));
@@ -1415,13 +1431,17 @@
   }
 
   async function saveAllPositions() {
-    const csrftoken = getCookie('csrftoken');
+    const csrftoken = getCookie('csrftoken') || '{{ csrf_token }}';
     const promises = [];
 
     for (const node of nodes) {
       const promise = fetch(`/plans/nodes/${node.id}/update_position/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+        headers: { 
+          'Content-Type': 'application/json', 
+          'X-CSRFToken': csrftoken,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
         body: JSON.stringify({ x: Math.round(node.x), y: Math.round(node.y) })
       }).catch(() => null); // silently fail for individual saves
 
