@@ -256,12 +256,30 @@ class Plan(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
+    is_public = models.BooleanField(default=False, help_text="Whether this plan can be shared publicly")
+    share_token = models.CharField(max_length=64, blank=True, unique=True, null=True, help_text="Unique token for sharing")
     
     class Meta:
         ordering = ['-created_at']
     
     def __str__(self):
         return f"{self.user.username} - {self.title}"
+    
+    def generate_share_token(self):
+        """Generate a unique share token for this plan"""
+        import secrets
+        if not self.share_token:
+            self.share_token = secrets.token_urlsafe(32)
+            self.save()
+        return self.share_token
+    
+    def get_share_url(self, request=None):
+        """Get the full sharing URL for this plan"""
+        if not self.share_token:
+            return None
+        from django.urls import reverse
+        path = reverse('shared_plan', kwargs={'token': self.share_token})
+        return f"https://vismatrix.space{path}"
     
     def get_root_nodes(self):
         """Get all nodes that have no dependencies (root nodes)"""

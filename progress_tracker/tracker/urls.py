@@ -60,6 +60,11 @@ urlpatterns = [
     path("plans/nodes/<int:pk>/delete/", views.plan_node_delete, name="plan_node_delete"),
     path("plans/nodes/<int:pk>/add-dependency/", views.plan_node_add_dependency, name="plan_node_add_dependency"),
     path("plans/nodes/<int:pk>/update_position/", views.plan_node_update_position, name="plan_node_update_position"),
+    
+    # Plan sharing
+    path("plans/<int:pk>/toggle_sharing/", views.plan_toggle_sharing, name="plan_toggle_sharing"),
+    path("plans/<int:pk>/regenerate_token/", views.plan_regenerate_token, name="plan_regenerate_token"),
+    path("shared/plan/<str:token>/", views.shared_plan_view, name="shared_plan"),
 
     path("messages/", views.inbox, name="inbox"),
     path("messages/start/<str:username>/", views.start_chat, name="start_chat"),

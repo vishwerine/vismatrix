@@ -2144,8 +2144,10 @@ def plan_detail(request, pk):
             'dependents': [dep.id for dep in node.dependents.all()],
         })
     
-    # Get user's categories for the modal
-    categories = Category.objects.filter(user=request.user).order_by('name')
+    # Get user's categories and global categories for the modal
+    categories = Category.objects.filter(
+        Q(user=request.user) | Q(is_global=True)
+    ).order_by('-is_global', 'name')
     
     context = {
         'plan': plan,
@@ -2348,4 +2350,97 @@ def plan_node_update_position(request, pk):
         return JsonResponse({'ok': True})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+# ================= Plan Sharing =================
+
+@login_required
+@require_http_methods(["POST"])
+def plan_toggle_sharing(request, pk):
+    """Toggle plan sharing and generate share token if needed"""
+    plan = get_object_or_404(Plan, pk=pk, user=request.user)
+    
+    try:
+        data = json.loads(request.body)
+        is_public = data.get('is_public', False)
+        
+        plan.is_public = is_public
+        if is_public and not plan.share_token:
+            plan.generate_share_token()
+        plan.save()
+        
+        share_url = plan.get_share_url(request) if plan.is_public else None
+        
+        return JsonResponse({
+            'ok': True,
+            'is_public': plan.is_public,
+            'share_token': plan.share_token,
+            'share_url': share_url
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def plan_regenerate_token(request, pk):
+    """Regenerate share token for a plan"""
+    plan = get_object_or_404(Plan, pk=pk, user=request.user)
+    
+    try:
+        import secrets
+        plan.share_token = secrets.token_urlsafe(32)
+        plan.save()
+        
+        share_url = plan.get_share_url(request) if plan.is_public else None
+        
+        return JsonResponse({
+            'ok': True,
+            'share_token': plan.share_token,
+            'share_url': share_url
+        })
+    except Exception as e:
+        return JsonResponse({'ok': False, 'error': str(e)}, status=400)
+
+
+def shared_plan_view(request, token):
+    """Public view for shared plans (no authentication required)"""
+    plan = get_object_or_404(Plan, share_token=token, is_public=True)
+    nodes = plan.nodes.all().select_related('task').prefetch_related('dependencies', 'dependents')
+    
+    # Calculate statistics
+    total_nodes = nodes.count()
+    completed_nodes = nodes.filter(task__status='completed').count()
+    in_progress_nodes = nodes.filter(task__status='in_progress').count()
+    pending_nodes = nodes.filter(task__status='pending').count()
+    
+    # Prepare node data for visualization
+    nodes_data = []
+    for node in nodes:
+        nodes_data.append({
+            'id': node.id,
+            'task_id': node.task.id,
+            'task_title': node.task.title,
+            'task_description': node.task.description[:100] if node.task.description else '',
+            'task_status': node.task.status,
+            'task_priority': node.task.priority,
+            'can_start': node.can_start(),
+            'position_x': node.position_x,
+            'position_y': node.position_y,
+            'dependencies': [dep.id for dep in node.dependencies.all()],
+            'dependents': [dep.id for dep in node.dependents.all()],
+        })
+    
+    context = {
+        'plan': plan,
+        'nodes': nodes,
+        'nodes_data': json.dumps(nodes_data),
+        'total_nodes': total_nodes,
+        'completed_nodes': completed_nodes,
+        'in_progress_nodes': in_progress_nodes,
+        'pending_nodes': pending_nodes,
+        'is_shared_view': True,  # Flag to show read-only view
+        'owner': plan.user,
+    }
+    return render(request, 'tracker/shared_plan.html', context)
 
