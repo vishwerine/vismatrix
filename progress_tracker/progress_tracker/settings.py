@@ -45,6 +45,11 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
+    # REST Framework
+    'rest_framework',
+    'rest_framework.authtoken',
+    'corsheaders',
+    
     # Allauth requirements
     'django.contrib.sites',
     'allauth',
@@ -59,6 +64,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # Must be before CommonMiddleware
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -202,9 +208,48 @@ STATICFILES_DIRS = []
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
+# REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 100,
+}
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+
 # --- Same-domain Next.js + Django (reverse proxy) ---
 if ENVIRONMENT == "prod":
     CSRF_TRUSTED_ORIGINS = ["https://vismatrix.space", "https://www.vismatrix.space"]
+    
+    CORS_ALLOWED_ORIGINS = [
+        "https://vismatrix.space",
+        "https://www.vismatrix.space",
+    ]
 
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -218,9 +263,12 @@ if ENVIRONMENT == "prod":
     SECURE_SSL_REDIRECT = True
 else:
     # Local dev
-    CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1"]
+    CSRF_TRUSTED_ORIGINS = ["http://localhost", "http://127.0.0.1", "http://localhost:3000"]
     SESSION_COOKIE_SECURE = False
     CSRF_COOKIE_SECURE = False
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    CSRF_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_HTTPONLY = True
 
 
 # --- End Same-domain Next.js + Django (reverse proxy) ---
