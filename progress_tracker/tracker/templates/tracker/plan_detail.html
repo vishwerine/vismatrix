@@ -489,6 +489,7 @@
 <script>
   // Share Modal Functions
   let currentShareUrl = "{{ plan.get_share_url }}";
+  const CSRF_TOKEN = '{{ csrf_token }}';
   
   function openShareModal() {
     document.getElementById('share-modal').showModal();
@@ -501,14 +502,13 @@
   
   async function toggleSharing() {
     const isPublic = document.getElementById('share-toggle').checked;
-    const csrftoken = getCookie('csrftoken');
     
     try {
       const response = await fetch('{% url "plan_toggle_sharing" plan.pk %}', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': csrftoken,
+          'X-CSRFToken': CSRF_TOKEN,
           'X-Requested-With': 'XMLHttpRequest'
         },
         body: JSON.stringify({ is_public: isPublic })
@@ -563,13 +563,11 @@
   async function regenerateToken() {
     if (!confirm('This will invalidate the current link and generate a new one. Continue?')) return;
     
-    const csrftoken = getCookie('csrftoken');
-    
     try {
       const response = await fetch('{% url "plan_regenerate_token" plan.pk %}', {
         method: 'POST',
         headers: {
-          'X-CSRFToken': csrftoken,
+          'X-CSRFToken': CSRF_TOKEN,
           'X-Requested-With': 'XMLHttpRequest'
         }
       });
