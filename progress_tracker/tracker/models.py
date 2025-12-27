@@ -365,5 +365,82 @@ class PlanNode(models.Model):
         return self.dependents.all()
 
 
+class GoogleCalendarIntegration(models.Model):
+    """Store Google Calendar OAuth tokens and sync preferences for each user"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='google_calendar')
+    
+    # OAuth tokens
+    access_token = models.TextField(help_text="OAuth2 access token")
+    refresh_token = models.TextField(help_text="OAuth2 refresh token")
+    token_uri = models.CharField(max_length=255, default='https://oauth2.googleapis.com/token')
+    client_id = models.CharField(max_length=255)
+    client_secret = models.CharField(max_length=255)
+    scopes = models.TextField(default='https://www.googleapis.com/auth/calendar.readonly', help_text="Space-separated scopes")
+    
+    # Sync settings
+    is_active = models.BooleanField(default=True, help_text="Enable/disable sync")
+    auto_sync = models.BooleanField(default=True, help_text="Automatically sync calendar events")
+    sync_interval_hours = models.IntegerField(default=1, help_text="How often to sync (in hours)")
+    
+    # Sync state
+    last_sync_at = models.DateTimeField(null=True, blank=True, help_text="Last successful sync")
+    last_sync_token = models.TextField(blank=True, help_text="Sync token for incremental sync")
+    sync_error = models.TextField(blank=True, help_text="Last sync error message")
+    
+    # Filtering preferences
+    sync_calendars = models.TextField(blank=True, help_text="Comma-separated calendar IDs to sync (empty = all)")
+    min_event_duration = models.IntegerField(default=15, help_text="Minimum event duration in minutes to sync")
+    exclude_all_day_events = models.BooleanField(default=False, help_text="Skip all-day events")
+    
+    # Default category for synced events
+    default_category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, help_text="Default category for calendar events")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Google Calendar Integration"
+        verbose_name_plural = "Google Calendar Integrations"
+    
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.user.username} - Google Calendar ({status})"
+    
+    def get_credentials_dict(self):
+        """Convert stored data to credentials dictionary for Google API"""
+        return {
+            'token': self.access_token,
+            'refresh_token': self.refresh_token,
+            'token_uri': self.token_uri,
+            'client_id': self.client_id,
+            'client_secret': self.client_secret,
+            'scopes': self.scopes.split()
+        }
+    
+    def should_sync(self):
+        """Check if it's time to sync based on interval"""
+        if not self.is_active or not self.auto_sync:
+            return False
+        if not self.last_sync_at:
+            return True
+        
+        from datetime import timedelta
+        next_sync = self.last_sync_at + timedelta(hours=self.sync_interval_hours)
+        return timezone.now() >= next_sync
+    
+    def mark_sync_success(self, sync_token=None):
+        """Update last sync timestamp and token"""
+        self.last_sync_at = timezone.now()
+        if sync_token:
+            self.last_sync_token = sync_token
+        self.sync_error = ''
+        self.save()
+    
+    def mark_sync_error(self, error_message):
+        """Record sync error"""
+        self.sync_error = error_message
+        self.save()
+
 
 

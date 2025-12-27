@@ -46,8 +46,10 @@ urlpatterns = [
     # Daily summary
     path("daily/<int:year>/<int:month>/<int:day>/", views.daily_summary, name="daily_summary"),
 
-    # About page
+    # About, Privacy & Terms
     path("about/", views.about, name="about"),
+    path("privacy/", views.privacy_policy, name="privacy_policy"),
+    path("terms/", views.terms_of_service, name="terms_of_service"),
 
     # Plans
     path("plans/", views.plan_list, name="plan_list"),
@@ -74,5 +76,14 @@ urlpatterns = [
     path("api/mini-chat/<int:conversation_id>/messages/", views.mini_chat_messages, name="mini_chat_messages"),
     path("api/mini-chat/<int:conversation_id>/send/", views.mini_chat_send, name="mini_chat_send"),
     path("api/mini-chat/start/<int:friend_id>/", views.mini_chat_start, name="mini_chat_start"),
+
+    # Google Calendar Integration
+    path("calendar/settings/", views.calendar_settings, name="calendar_settings"),
+    path("calendar/connect/", views.calendar_connect, name="calendar_connect"),
+    path("calendar/oauth2callback/", views.calendar_oauth_callback, name="calendar_oauth_callback"),
+    path("calendar/disconnect/", views.calendar_disconnect, name="calendar_disconnect"),
+    path("calendar/sync/", views.calendar_sync_now, name="calendar_sync_now"),
+    path("calendar/update_settings/", views.calendar_update_settings, name="calendar_update_settings"),
+    path("api/calendar/list/", views.calendar_list_calendars, name="calendar_list_calendars"),
 
 ]

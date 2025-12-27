@@ -2039,6 +2039,16 @@ def about(request):
     return render(request, 'tracker/about.html')
 
 
+def privacy_policy(request):
+    """Privacy policy page."""
+    return render(request, 'tracker/privacy_policy.html')
+
+
+def terms_of_service(request):
+    """Terms of service page."""
+    return render(request, 'tracker/terms_of_service.html')
+
+
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import Http404
@@ -2684,3 +2694,332 @@ def shared_plan_view(request, token):
     }
     return render(request, 'tracker/shared_plan.html', context)
 
+
+# ============================================================================
+# Google Calendar Integration Views
+# ============================================================================
+
+from google_auth_oauthlib.flow import Flow
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from .models import GoogleCalendarIntegration
+from .calendar_service import GoogleCalendarService
+from django.conf import settings
+
+# OAuth2 Configuration
+GOOGLE_CLIENT_ID = settings.GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET = settings.GOOGLE_CLIENT_SECRET
+GOOGLE_REDIRECT_URI = settings.GOOGLE_REDIRECT_URI
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+
+
+@login_required
+def calendar_settings(request):
+    """Calendar integration settings page"""
+    try:
+        integration = GoogleCalendarIntegration.objects.get(user=request.user)
+    except GoogleCalendarIntegration.DoesNotExist:
+        integration = None
+    
+    # Get all categories for default category selection
+    categories = Category.objects.filter(
+        Q(user=request.user) | Q(is_global=True)
+    ).order_by('-is_global', 'name')
+    
+    context = {
+        'integration': integration,
+        'categories': categories,
+        'google_configured': bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
+    }
+    
+    return render(request, 'tracker/calendar_settings.html', context)
+
+
+@login_required
+def calendar_connect(request):
+    """Initiate OAuth2 flow for Google Calendar"""
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        messages.error(request, "Google Calendar integration is not configured. Please contact administrator.")
+        return redirect('calendar_settings')
+    
+    print(f"DEBUG connect: User {request.user.username} (id: {request.user.id}) starting OAuth")
+    print(f"DEBUG connect: Session key before: {request.session.session_key}")
+    
+    # Create OAuth2 flow
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [GOOGLE_REDIRECT_URI],
+            }
+        },
+        scopes=SCOPES,
+        redirect_uri=GOOGLE_REDIRECT_URI
+    )
+    
+    # Generate authorization URL with custom state including user_id
+    import json
+    import base64
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent'  # Force consent screen to get refresh token
+    )
+    
+    # Encode user_id into the state parameter
+    state_data = {
+        'state': state,
+        'user_id': request.user.id
+    }
+    encoded_state = base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
+    
+    # Replace state in URL
+    authorization_url = authorization_url.replace(f'state={state}', f'state={encoded_state}')
+    
+    print(f"DEBUG connect: Storing user_id {request.user.id} in session")
+    print(f"DEBUG connect: Encoded state: {encoded_state[:50]}...")
+    
+    # Still store in session as backup
+    request.session['oauth_state'] = state
+    request.session['oauth_user_id'] = request.user.id
+    request.session['oauth_encoded_state'] = encoded_state
+    request.session.modified = True
+    request.session.save()
+    
+    print(f"DEBUG connect: Session after save - user_id: {request.session.get('oauth_user_id')}")
+    print(f"DEBUG connect: Session key after: {request.session.session_key}")
+    
+    return redirect(authorization_url)
+
+
+def calendar_oauth_callback(request):
+    """Handle OAuth2 callback from Google"""
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        messages.error(request, "Google Calendar integration is not configured.")
+        return redirect('calendar_settings')
+    
+    print(f"DEBUG callback: Session key: {request.session.session_key}")
+    print(f"DEBUG callback: All session keys: {list(request.session.keys())}")
+    
+    # Try to get user_id from encoded state first
+    encoded_state = request.GET.get('state')
+    user_id = None
+    original_state = None
+    
+    try:
+        import json
+        import base64
+        decoded = base64.urlsafe_b64decode(encoded_state.encode()).decode()
+        state_data = json.loads(decoded)
+        user_id = state_data.get('user_id')
+        original_state = state_data.get('state')
+        print(f"DEBUG callback: Decoded user_id from state: {user_id}")
+    except Exception as e:
+        print(f"DEBUG callback: Failed to decode state: {e}")
+        # Fall back to session
+        user_id = request.session.get('oauth_user_id')
+        original_state = request.session.get('oauth_state')
+        print(f"DEBUG callback: Retrieved user_id from session: {user_id}")
+    
+    if not user_id:
+        messages.error(request, "Session expired. Please try connecting again.")
+        return redirect('calendar_settings')
+    
+    try:
+        from django.contrib.auth import get_user_model, login
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+        
+        print(f"DEBUG callback: Found user: {user.username} (id: {user.id})")
+        print(f"DEBUG callback: User authenticated before login: {request.user.is_authenticated}")
+        
+        # Log the user back in immediately
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
+        
+        print(f"DEBUG callback: User authenticated after login: {request.user.is_authenticated}")
+        print(f"DEBUG callback: Logged in user: {request.user.username}")
+        
+        # Save session explicitly
+        request.session.save()
+        print(f"DEBUG callback: Session saved")
+        
+    except User.DoesNotExist:
+        messages.error(request, "User not found. Please try again.")
+        return redirect('calendar_settings')
+    
+    # Verify state - use the original state we extracted
+    if not original_state:
+        messages.error(request, "Invalid OAuth state. Please try again.")
+        return redirect('calendar_settings')
+    
+    # Exchange authorization code for credentials
+    flow = Flow.from_client_config(
+        {
+            "web": {
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "redirect_uris": [GOOGLE_REDIRECT_URI],
+            }
+        },
+        scopes=SCOPES,
+        state=original_state,
+        redirect_uri=GOOGLE_REDIRECT_URI
+    )
+    
+    try:
+        flow.fetch_token(code=request.GET.get('code'))
+        credentials = flow.credentials
+        
+        # Create or update integration
+        integration, created = GoogleCalendarIntegration.objects.update_or_create(
+            user=user,
+            defaults={
+                'access_token': credentials.token,
+                'refresh_token': credentials.refresh_token,
+                'token_uri': credentials.token_uri,
+                'client_id': credentials.client_id,
+                'client_secret': credentials.client_secret,
+                'scopes': ' '.join(credentials.scopes),
+                'is_active': True,
+            }
+        )
+        
+        action = "connected" if created else "reconnected"
+        messages.success(request, f"Google Calendar successfully {action}!")
+        
+        # Trigger initial sync
+        service = GoogleCalendarService(user)
+        stats = service.sync_events_to_logs(days_back=7)
+        
+        if stats.get('logs_created', 0) > 0:
+            messages.info(request, f"Synced {stats['logs_created']} calendar events as log activities.")
+        
+        # Clean up session variables
+        request.session.pop('oauth_state', None)
+        request.session.pop('oauth_user_id', None)
+        
+    except Exception as e:
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"OAuth callback error for user {user_id}: {e}")
+        messages.error(request, f"Failed to connect Google Calendar: {str(e)}")
+        
+        # Clean up session variables on error too
+        request.session.pop('oauth_state', None)
+        request.session.pop('oauth_user_id', None)
+    
+    return redirect('calendar_settings')
+
+
+@login_required
+def calendar_disconnect(request):
+    """Disconnect Google Calendar integration"""
+    if request.method == 'POST':
+        try:
+            integration = GoogleCalendarIntegration.objects.get(user=request.user)
+            integration.delete()
+            messages.success(request, "Google Calendar disconnected successfully.")
+        except GoogleCalendarIntegration.DoesNotExist:
+            messages.info(request, "No Google Calendar integration found.")
+    
+    return redirect('calendar_settings')
+
+
+@login_required
+def calendar_sync_now(request):
+    """Manually trigger calendar sync"""
+    if request.method == 'POST':
+        try:
+            integration = GoogleCalendarIntegration.objects.get(user=request.user)
+            
+            if not integration.is_active:
+                messages.warning(request, "Calendar integration is disabled. Enable it first.")
+                return redirect('calendar_settings')
+            
+            # Perform sync
+            service = GoogleCalendarService(request.user)
+            stats = service.sync_events_to_logs(days_back=7)
+            
+            if stats.get('errors'):
+                messages.error(request, f"Sync completed with errors: {', '.join(stats['errors'][:3])}")
+            elif stats['logs_created'] > 0:
+                messages.success(request, f"Successfully synced! Created {stats['logs_created']} new log entries from {stats['events_processed']} calendar events.")
+            else:
+                messages.info(request, f"Sync completed. No new events to import (processed {stats['events_processed']} events).")
+        
+        except GoogleCalendarIntegration.DoesNotExist:
+            messages.error(request, "Please connect your Google Calendar first.")
+        except Exception as e:
+            logger.error(f"Manual sync error for {request.user.username}: {e}")
+            messages.error(request, f"Sync failed: {str(e)}")
+    
+    return redirect('calendar_settings')
+
+
+@login_required
+def calendar_update_settings(request):
+    """Update calendar sync settings"""
+    if request.method == 'POST':
+        try:
+            integration = GoogleCalendarIntegration.objects.get(user=request.user)
+            
+            # Update settings from POST data
+            integration.auto_sync = request.POST.get('auto_sync') == 'on'
+            integration.sync_interval_hours = int(request.POST.get('sync_interval_hours', 1))
+            integration.min_event_duration = int(request.POST.get('min_event_duration', 15))
+            integration.exclude_all_day_events = request.POST.get('exclude_all_day_events') == 'on'
+            
+            # Update default category
+            category_id = request.POST.get('default_category')
+            if category_id:
+                try:
+                    category = Category.objects.get(id=category_id)
+                    # Verify user has access to this category
+                    if category.is_global or category.user == request.user:
+                        integration.default_category = category
+                except Category.DoesNotExist:
+                    pass
+            else:
+                integration.default_category = None
+            
+            integration.save()
+            messages.success(request, "Calendar settings updated successfully.")
+        
+        except GoogleCalendarIntegration.DoesNotExist:
+            messages.error(request, "Please connect your Google Calendar first.")
+        except ValueError as e:
+            messages.error(request, f"Invalid settings: {str(e)}")
+    
+    return redirect('calendar_settings')
+
+
+@login_required
+@require_http_methods(["GET"])
+def calendar_list_calendars(request):
+    """API endpoint to list available calendars"""
+    try:
+        service = GoogleCalendarService(request.user)
+        calendars = service.list_calendars()
+        
+        return JsonResponse({
+            'success': True,
+            'calendars': [
+                {
+                    'id': cal.get('id'),
+                    'summary': cal.get('summary'),
+                    'primary': cal.get('primary', False),
+                    'backgroundColor': cal.get('backgroundColor', '#000000'),
+                }
+                for cal in calendars
+            ]
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)

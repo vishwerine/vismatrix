@@ -1,0 +1,325 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Google Calendar Settings - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="space-y-6">
+  
+  <!-- Header -->
+  <header class="card border border-base-200 bg-base-100 animate-slideUp" role="banner">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content flex items-center gap-2">
+            <i class="bi bi-calendar-check text-primary text-xl sm:text-2xl" aria-hidden="true"></i>
+            <span class="gradient-text">Google Calendar Integration</span>
+          </h1>
+          <p class="text-sm text-base-content/70 mt-1">
+            Automatically sync your calendar events as log activities
+          </p>
+        </div>
+        
+        <a href="{% url 'dashboard' %}" class="btn btn-outline btn-sm gap-2">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          <span>Back to Dashboard</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  {% if not google_configured %}
+  <!-- Configuration Warning -->
+  <div class="alert alert-warning animate-fadeIn">
+    <i class="bi bi-exclamation-triangle text-xl" aria-hidden="true"></i>
+    <div>
+      <h3 class="font-bold">Google Calendar Not Configured</h3>
+      <div class="text-sm">
+        The administrator needs to configure Google Calendar API credentials. 
+        Please contact support or check the documentation.
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if integration %}
+  <!-- Connection Status Card -->
+  <div class="card border border-base-200 bg-gradient-to-br from-success/5 to-transparent animate-fadeIn">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-success/20 to-success/5 ring-2 ring-success/30 flex items-center justify-center">
+            <i class="bi bi-check-circle-fill text-success text-2xl" aria-hidden="true"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-bold">Connected to Google Calendar</h2>
+            <p class="text-sm text-base-content/70 mt-1">
+              {% if integration.last_sync_at %}
+                Last synced: {{ integration.last_sync_at|timesince }} ago
+              {% else %}
+                Never synced
+              {% endif %}
+            </p>
+          </div>
+        </div>
+        
+        <div class="flex gap-2">
+          <form method="post" action="{% url 'calendar_sync_now' %}" class="inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary btn-sm gap-2" {% if not integration.is_active %}disabled{% endif %}>
+              <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+              <span>Sync Now</span>
+            </button>
+          </form>
+          
+          <button onclick="disconnectModal.showModal()" class="btn btn-error btn-outline btn-sm gap-2">
+            <i class="bi bi-x-circle" aria-hidden="true"></i>
+            <span>Disconnect</span>
+          </button>
+        </div>
+      </div>
+      
+      {% if integration.sync_error %}
+      <div class="mt-4 p-3 rounded-lg bg-error/10 border border-error/30">
+        <div class="flex items-start gap-2">
+          <i class="bi bi-exclamation-circle text-error text-lg mt-0.5" aria-hidden="true"></i>
+          <div class="flex-1">
+            <p class="text-sm font-semibold text-error">Last Sync Error</p>
+            <p class="text-sm text-base-content/70 mt-1">{{ integration.sync_error }}</p>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Sync Settings -->
+  <div class="card border border-base-200 bg-base-100 animate-fadeIn">
+    <div class="card-body p-5 sm:p-6">
+      <h2 class="text-lg font-bold flex items-center gap-2 mb-4">
+        <i class="bi bi-gear text-primary" aria-hidden="true"></i>
+        <span>Sync Settings</span>
+      </h2>
+      
+      <form method="post" action="{% url 'calendar_update_settings' %}" class="space-y-5">
+        {% csrf_token %}
+        
+        <!-- Auto Sync -->
+        <div class="form-control">
+          <label class="label cursor-pointer justify-start gap-3">
+            <input type="checkbox" name="auto_sync" class="toggle toggle-primary" 
+                   {% if integration.auto_sync %}checked{% endif %}>
+            <div>
+              <span class="label-text font-semibold">Automatic Sync</span>
+              <p class="text-xs text-base-content/60 mt-1">Automatically sync calendar events at regular intervals</p>
+            </div>
+          </label>
+        </div>
+        
+        <!-- Sync Interval -->
+        <div>
+          <label class="label">
+            <span class="label-text font-semibold flex items-center gap-2">
+              <i class="bi bi-clock text-primary" aria-hidden="true"></i>
+              Sync Interval
+            </span>
+          </label>
+          <select name="sync_interval_hours" class="select select-bordered w-full">
+            <option value="1" {% if integration.sync_interval_hours == 1 %}selected{% endif %}>Every hour</option>
+            <option value="2" {% if integration.sync_interval_hours == 2 %}selected{% endif %}>Every 2 hours</option>
+            <option value="4" {% if integration.sync_interval_hours == 4 %}selected{% endif %}>Every 4 hours</option>
+            <option value="6" {% if integration.sync_interval_hours == 6 %}selected{% endif %}>Every 6 hours</option>
+            <option value="12" {% if integration.sync_interval_hours == 12 %}selected{% endif %}>Every 12 hours</option>
+            <option value="24" {% if integration.sync_interval_hours == 24 %}selected{% endif %}>Once daily</option>
+          </select>
+          <p class="text-xs text-base-content/60 mt-2">How often to check for new calendar events</p>
+        </div>
+        
+        <!-- Default Category -->
+        <div>
+          <label class="label">
+            <span class="label-text font-semibold flex items-center gap-2">
+              <i class="bi bi-tag text-primary" aria-hidden="true"></i>
+              Default Category
+            </span>
+          </label>
+          <select name="default_category" class="select select-bordered w-full">
+            <option value="">No category</option>
+            {% for category in categories %}
+              <option value="{{ category.id }}" 
+                      {% if integration.default_category_id == category.id %}selected{% endif %}>
+                {{ category.name }}{% if category.is_global %} (Global){% endif %}
+              </option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-base-content/60 mt-2">Category to assign to synced calendar events</p>
+        </div>
+        
+        <!-- Min Event Duration -->
+        <div>
+          <label class="label">
+            <span class="label-text font-semibold flex items-center gap-2">
+              <i class="bi bi-hourglass text-primary" aria-hidden="true"></i>
+              Minimum Event Duration
+            </span>
+          </label>
+          <div class="join w-full">
+            <input type="number" name="min_event_duration" 
+                   value="{{ integration.min_event_duration }}" 
+                   min="0" step="5"
+                   class="input input-bordered join-item w-full">
+            <span class="btn btn-outline join-item">minutes</span>
+          </div>
+          <p class="text-xs text-base-content/60 mt-2">Skip events shorter than this duration</p>
+        </div>
+        
+        <!-- Exclude All-Day Events -->
+        <div class="form-control">
+          <label class="label cursor-pointer justify-start gap-3">
+            <input type="checkbox" name="exclude_all_day_events" class="checkbox checkbox-primary" 
+                   {% if integration.exclude_all_day_events %}checked{% endif %}>
+            <div>
+              <span class="label-text font-semibold">Exclude All-Day Events</span>
+              <p class="text-xs text-base-content/60 mt-1">Don't sync all-day calendar events</p>
+            </div>
+          </label>
+        </div>
+        
+        <div class="flex gap-2 pt-4">
+          <button type="submit" class="btn btn-primary gap-2">
+            <i class="bi bi-check-circle" aria-hidden="true"></i>
+            <span>Save Settings</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Info Card -->
+  <div class="card border border-base-200 bg-base-100 animate-fadeIn">
+    <div class="card-body p-5 sm:p-6">
+      <h2 class="text-lg font-bold flex items-center gap-2 mb-4">
+        <i class="bi bi-info-circle text-primary" aria-hidden="true"></i>
+        <span>How It Works</span>
+      </h2>
+      
+      <div class="space-y-3 text-sm text-base-content/80">
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span class="font-bold text-primary">1</span>
+          </div>
+          <div>
+            <p class="font-semibold">Automatic Sync</p>
+            <p class="text-base-content/60">Calendar events are automatically imported as log activities based on your sync interval.</p>
+          </div>
+        </div>
+        
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span class="font-bold text-primary">2</span>
+          </div>
+          <div>
+            <p class="font-semibold">Smart Filtering</p>
+            <p class="text-base-content/60">Only events that meet your duration and type criteria are synced.</p>
+          </div>
+        </div>
+        
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span class="font-bold text-primary">3</span>
+          </div>
+          <div>
+            <p class="font-semibold">No Duplicates</p>
+            <p class="text-base-content/60">Events are tracked to prevent duplicate imports.</p>
+          </div>
+        </div>
+        
+        <div class="flex items-start gap-3">
+          <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span class="font-bold text-primary">4</span>
+          </div>
+          <div>
+            <p class="font-semibold">Manual Sync</p>
+            <p class="text-base-content/60">Use the "Sync Now" button anytime to import recent events immediately.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- Connect Card -->
+  <div class="card border border-base-200 bg-base-100 animate-fadeIn">
+    <div class="card-body p-5 sm:p-6 text-center">
+      <div class="flex flex-col items-center gap-4 py-8">
+        <div class="w-20 h-20 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 ring-2 ring-primary/20 flex items-center justify-center">
+          <i class="bi bi-calendar-plus text-primary text-4xl" aria-hidden="true"></i>
+        </div>
+        
+        <div>
+          <h2 class="text-xl font-bold">Connect Your Google Calendar</h2>
+          <p class="text-sm text-base-content/70 mt-2 max-w-md mx-auto">
+            Link your Google Calendar to automatically import calendar events as log activities. 
+            Track your time effortlessly!
+          </p>
+        </div>
+        
+        {% if google_configured %}
+        <a href="{% url 'calendar_connect' %}" class="btn btn-primary btn-lg gap-3 mt-4">
+          <i class="bi bi-google text-xl" aria-hidden="true"></i>
+          <span>Connect Google Calendar</span>
+        </a>
+        {% else %}
+        <button class="btn btn-disabled btn-lg gap-3 mt-4" disabled>
+          <i class="bi bi-google text-xl" aria-hidden="true"></i>
+          <span>Connect Google Calendar</span>
+        </button>
+        {% endif %}
+        
+        <div class="mt-6 p-4 rounded-lg bg-base-200/50 max-w-lg">
+          <div class="flex items-start gap-3 text-left">
+            <i class="bi bi-shield-check text-success text-2xl flex-shrink-0" aria-hidden="true"></i>
+            <div class="text-sm">
+              <p class="font-semibold">Your data is secure</p>
+              <p class="text-base-content/70 mt-1">
+                We only request read-only access to your calendar. We never modify or delete your events.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</main>
+
+<!-- Disconnect Confirmation Modal -->
+<dialog id="disconnectModal" class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg flex items-center gap-2">
+      <i class="bi bi-exclamation-triangle text-warning" aria-hidden="true"></i>
+      Disconnect Google Calendar?
+    </h3>
+    <p class="py-4">
+      This will remove the connection to your Google Calendar. Your existing log activities will not be deleted, 
+      but new calendar events will no longer be synced automatically.
+    </p>
+    <div class="modal-action">
+      <form method="post" action="{% url 'calendar_disconnect' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-error gap-2">
+          <i class="bi bi-x-circle" aria-hidden="true"></i>
+          <span>Disconnect</span>
+        </button>
+      </form>
+      <form method="dialog">
+        <button class="btn btn-outline">Cancel</button>
+      </form>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+{% endblock %}

@@ -524,6 +524,11 @@
             Friends
           </a></li>
 
+          <li><a href="{% url 'calendar_settings' %}">
+            <i class="bi bi-calendar-check text-lg opacity-80" aria-hidden="true"></i>
+            Google Calendar
+          </a></li>
+
           <!-- Dark mode toggle -->
           <li>
             <button type="button" id="themeToggleBtn" class="w-full text-left" role="menuitem">
@@ -540,6 +545,16 @@
           <li><a href="{% url 'about' %}">
             <i class="bi bi-info-circle text-lg opacity-80" aria-hidden="true"></i>
             About VisMatrix
+          </a></li>
+
+          <li><a href="{% url 'privacy_policy' %}">
+            <i class="bi bi-shield-check text-lg opacity-80" aria-hidden="true"></i>
+            Privacy Policy
+          </a></li>
+
+          <li><a href="{% url 'terms_of_service' %}">
+            <i class="bi bi-file-text text-lg opacity-80" aria-hidden="true"></i>
+            Terms of Service
           </a></li>
 
           <li>
