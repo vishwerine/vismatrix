@@ -1,0 +1,57 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Google Calendar Settings hehe - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="space-y-6">
+  
+  <header class="card border border-base-200 bg-base-100">
+    <div class="card-body p-5 sm:p-6">
+      <h1 class="text-2xl font-bold">Google Calendar Integration</h1>
+      <a href="{% url 'dashboard' %}" class="btn btn-outline btn-sm">Back to Dashboard</a>
+    </div>
+  </header>
+
+  {% if integration %}
+  <div class="card border border-base-200 bg-base-100">
+    <div class="card-body">
+      <h2>Connected</h2>
+      <p>Integration is active: {{ integration.is_active }}</p>
+      
+      <div class="flex gap-2">
+        <form method="post" action="{% url 'calendar_sync_now' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm">Sync Now</button>
+        </form>
+        
+        <label for="disconnect-modal" class="btn btn-error btn-sm">Disconnect</label>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="card border border-base-200 bg-base-100">
+    <div class="card-body">
+      <h2>Not Connected</h2>
+      <a href="{% url 'calendar_connect' %}" class="btn btn-primary">Connect Google Calendar</a>
+    </div>
+  </div>
+  {% endif %}
+
+</main>
+
+<input type="checkbox" id="disconnect-modal" class="modal-toggle" />
+<div class="modal">
+  <div class="modal-box">
+    <h3 class="font-bold text-lg">Disconnect?</h3>
+    <p class="py-4">Are you sure?</p>
+    <div class="modal-action">
+      <form method="post" action="{% url 'calendar_disconnect' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-error">Disconnect</button>
+      </form>
+      <label for="disconnect-modal" class="btn">Cancel</label>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,172 @@
+{% extends 'tracker/base.html' %}
+{% load widget_tweaks %}
+
+{% block title %}Profile Settings - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="space-y-6 max-w-3xl mx-auto">
+  <!-- Header -->
+  <header class="flex items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-black">Profile Settings</h1>
+      <p class="text-base-content/70 mt-1">Manage your display name and profile information</p>
+    </div>
+  </header>
+
+  <!-- Profile Form Card -->
+  <section class="card border border-base-200 bg-base-100" aria-labelledby="profile-form-title">
+    <div class="card-body p-6">
+      <h2 id="profile-form-title" class="card-title text-xl font-bold mb-4">
+        <i class="bi bi-person-circle text-primary" aria-hidden="true"></i>
+        Display Name
+      </h2>
+
+      <form method="post" class="space-y-5" novalidate>
+        {% csrf_token %}
+
+        {% if messages %}
+        <div class="space-y-2" role="alert">
+          {% for message in messages %}
+          <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %} shadow-sm">
+            <i class="bi {% if message.tags == 'success' %}bi-check-circle{% elif message.tags == 'error' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>
+            <span>{{ message }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- First Name Field -->
+        <div class="form-control w-full">
+          <label for="{{ form.first_name.id_for_label }}" class="label">
+            <span class="label-text font-semibold">
+              {{ form.first_name.label }}
+            </span>
+          </label>
+          {{ form.first_name }}
+          {% if form.first_name.help_text %}
+          <label class="label">
+            <span class="label-text-alt text-base-content/60">{{ form.first_name.help_text }}</span>
+          </label>
+          {% endif %}
+          {% if form.first_name.errors %}
+          <label class="label">
+            <span class="label-text-alt text-error">{{ form.first_name.errors|first }}</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <!-- Last Name Field -->
+        <div class="form-control w-full">
+          <label for="{{ form.last_name.id_for_label }}" class="label">
+            <span class="label-text font-semibold">
+              {{ form.last_name.label }}
+            </span>
+          </label>
+          {{ form.last_name }}
+          {% if form.last_name.help_text %}
+          <label class="label">
+            <span class="label-text-alt text-base-content/60">{{ form.last_name.help_text }}</span>
+          </label>
+          {% endif %}
+          {% if form.last_name.errors %}
+          <label class="label">
+            <span class="label-text-alt text-error">{{ form.last_name.errors|first }}</span>
+          </label>
+          {% endif %}
+        </div>
+
+        <!-- Current Display Name Preview -->
+        <div class="alert alert-info shadow-sm">
+          <i class="bi bi-info-circle" aria-hidden="true"></i>
+          <div>
+            <p class="font-semibold">Current Display Name</p>
+            <p class="text-sm">
+              {% if user.get_full_name %}
+                {{ user.get_full_name }}
+              {% else %}
+                {{ user.username }} (using username)
+              {% endif %}
+            </p>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn btn-primary gap-2">
+            <i class="bi bi-check-circle" aria-hidden="true"></i>
+            <span>Save Changes</span>
+          </button>
+          <a href="{% url 'dashboard' %}" class="btn btn-outline gap-2">
+            <i class="bi bi-x-circle" aria-hidden="true"></i>
+            <span>Cancel</span>
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Information Card -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-6">
+      <h2 class="card-title text-lg font-bold mb-3">
+        <i class="bi bi-lightbulb text-warning" aria-hidden="true"></i>
+        About Display Names
+      </h2>
+      <div class="space-y-2 text-sm text-base-content/80">
+        <p>
+          <i class="bi bi-check2 text-success mr-2" aria-hidden="true"></i>
+          Your display name will be shown to other users across the platform
+        </p>
+        <p>
+          <i class="bi bi-check2 text-success mr-2" aria-hidden="true"></i>
+          If no display name is set, your username will be used instead
+        </p>
+        <p>
+          <i class="bi bi-check2 text-success mr-2" aria-hidden="true"></i>
+          You can update your display name at any time
+        </p>
+        <p class="mt-4 pt-3 border-t border-base-200">
+          <strong>Note:</strong> Your username (@{{ user.username }}) cannot be changed and will always be visible alongside your display name.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Account Information Card -->
+  <section class="card border border-base-200 bg-base-100">
+
+
+
+    <div class="card-body p-6">
+      <h2 class="card-title text-lg font-bold mb-3">
+        <i class="bi bi-info-circle text-info" aria-hidden="true"></i>
+        Account Information
+      </h2>
+      <div class="btn btn-primary gap-2">
+        <li><a href="{% url 'calendar_settings' %}">
+            <i class="bi bi-calendar-check text-lg opacity-80" aria-hidden="true"></i>
+            Google Calendar Settings
+          </a></li>
+        </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+        <div>
+          <p class="text-base-content/60 mb-1">Username</p>
+          <p class="font-semibold">@{{ user.username }}</p>
+        </div>
+        <div>
+          <p class="text-base-content/60 mb-1">Email</p>
+          <p class="font-semibold">{{ user.email }}</p>
+        </div>
+        <div>
+          <p class="text-base-content/60 mb-1">Member Since</p>
+          <p class="font-semibold">{{ user.date_joined|date:"M d, Y" }}</p>
+        </div>
+        <div>
+          <p class="text-base-content/60 mb-1">Last Login</p>
+          <p class="font-semibold">{{ user.last_login|date:"M d, Y"|default:"Never" }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock %}

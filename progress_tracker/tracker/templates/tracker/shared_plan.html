@@ -327,7 +327,18 @@
     ctx.restore();
   }
 
-  function loop(){ render(); requestAnimationFrame(loop); }
+  let animationFrameId = null;
+  function loop(){ 
+    render(); 
+    animationFrameId = requestAnimationFrame(loop); 
+  }
+  
+  // Clean up animation loop when leaving the page
+  window.addEventListener('beforeunload', function() {
+    if (animationFrameId) {
+      cancelAnimationFrame(animationFrameId);
+    }
+  });
 
   // Pan controls
   canvas.addEventListener('pointerdown', (e) => {

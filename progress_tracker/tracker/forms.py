@@ -1,5 +1,6 @@
 from django import forms
 from django.db import models
+from django.contrib.auth.models import User
 from .models import Task, DailyLog, Category, DailySummary, Plan, PlanNode
 
 class TaskForm(forms.ModelForm):
@@ -193,3 +194,39 @@ class PlanNodeForm(forms.ModelForm):
             if self.instance.pk:
                 self.fields['dependencies'].queryset = self.fields['dependencies'].queryset.exclude(pk=self.instance.pk)
 
+
+class UserProfileForm(forms.ModelForm):
+    """Form for editing user profile information (display name)"""
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name']
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'Enter your first name'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'Enter your last name'
+            }),
+        }
+        labels = {
+            'first_name': 'First Name',
+            'last_name': 'Last Name',
+        }
+        help_texts = {
+            'first_name': 'This will be displayed as your name across the site',
+            'last_name': 'Optional',
+        }
+
+    def clean_first_name(self):
+        first_name = self.cleaned_data.get('first_name', '').strip()
+        if first_name and len(first_name) > 30:
+            raise forms.ValidationError("First name cannot exceed 30 characters.")
+        return first_name
+
+    def clean_last_name(self):
+        last_name = self.cleaned_data.get('last_name', '').strip()
+        if last_name and len(last_name) > 150:
+            raise forms.ValidationError("Last name cannot exceed 150 characters.")
+        return last_name

@@ -87,4 +87,7 @@ urlpatterns = [
     path("calendar/update_settings/", views.calendar_update_settings, name="calendar_update_settings"),
     path("api/calendar/list/", views.calendar_list_calendars, name="calendar_list_calendars"),
 
+    # Profile Settings
+    path("profile/settings/", views.profile_settings, name="profile_settings"),
+
 ]

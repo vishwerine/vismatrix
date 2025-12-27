@@ -664,7 +664,26 @@
       }
     });
 
-    document.addEventListener('click', (e) => {
+    const handleDocumentClick = (e) => {
+      const clickedInsideAny = menus.some((menu) => menu.contains(e.target));
+      if (!clickedInsideAny) closeAll();
+    };
+
+    const handleEscapeKey = (e) => {
+      if (e.key === 'Escape') closeAll();
+    };
+
+    document.addEventListener('click', handleDocumentClick);
+    document.addEventListener('keydown', handleEscapeKey);
+    document.addEventListener('scroll', closeAll, { passive: true });
+
+    // Clean up event listeners on page unload
+    window.addEventListener('beforeunload', function() {
+      document.removeEventListener('click', handleDocumentClick);
+      document.removeEventListener('keydown', handleEscapeKey);
+      document.removeEventListener('scroll', closeAll);
+    });
+  })();
 
   // Instant search functionality
   (function () {
@@ -801,17 +820,6 @@
         card.style.opacity = '';
       }, { passive: true });
     });
-  })();
-      const clickedInsideAny = menus.some((menu) => menu.contains(e.target));
-      if (!clickedInsideAny) closeAll();
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') closeAll();
-    });
-
-    // Also close on scroll (prevents floating menus while scrolling list)
-    document.addEventListener('scroll', closeAll, { passive: true });
   })();
 </script>
 

@@ -104,7 +104,9 @@
               <tr class="hover">
                 <td>
                   <div class="min-w-0">
+                    <a href="{% url 'log_update' log.id %}" >
                     <p class="font-semibold truncate">{{ log.activity|truncatewords:6 }}</p>
+                    </a>
                     {% if log.notes %}
                       <p class="text-xs text-base-content/70 truncate">{{ log.notes|truncatewords:6 }}</p>
                     {% endif %}
@@ -121,7 +123,9 @@
 
                 <td class="hidden sm:table-cell">
                   {% if log.category %}
+                  
                     <span class="badge badge-outline">{{ log.category.name|truncatewords:2 }}</span>
+                  
                   {% else %}
                     <span class="text-sm text-base-content/60">—</span>
                   {% endif %}

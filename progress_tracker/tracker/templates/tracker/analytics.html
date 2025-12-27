@@ -83,7 +83,13 @@
           </h1>
           <p class="text-sm text-base-content/70 mt-1">Trends, goals, and time breakdown.</p>
         </div>
+
         <div class="flex items-center gap-2 text-sm text-base-content/70">
+                <a href="{% url 'dashboard' %}"
+         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'analytics' %}vm-nav-active{% endif %}">
+        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
+        <span class="ml-1">Dashboard</span>
+      </a>
           <i class="bi bi-calendar-event text-primary text-lg" aria-hidden="true"></i>
           <span class="font-semibold">{{ today|date:"l, F j, Y" }}</span>
         </div>
@@ -594,247 +600,291 @@
 {{ task_data|json_script:"task-data" }}
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Global: improve contrast using theme values (no fancy animations)
-  Chart.defaults.color = 'rgba(15, 23, 42, 0.75)'; // slate-900-ish
-  Chart.defaults.font.family = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-
-  const weeklyData = JSON.parse(document.getElementById('weekly-data').textContent || '[]');
-  if (weeklyData.length > 0) {
-    const ctx = document.getElementById('weeklyChart').getContext('2d');
-    const labels = weeklyData.map(d => d.label);
-    const data = weeklyData.map(d => d.minutes);
-
-    new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: [{
-          label: 'Minutes logged',
-          data,
-          borderColor: 'rgb(29, 78, 216)',          // accessible blue
-          backgroundColor: 'rgba(29, 78, 216, 0.10)',
-          borderWidth: 2,
-          fill: true,
-          tension: 0.35,
-          pointRadius: 3,
-          pointHoverRadius: 5
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { intersect: false, mode: 'index' },
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            displayColors: false,
-            callbacks: {
-              label: (context) => `${context.parsed.y} minutes`
-            }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            ticks: { callback: (v) => `${v}m` },
-            grid: { color: 'rgba(15, 23, 42, 0.08)' }
-          },
-          x: {
-            grid: { color: 'rgba(15, 23, 42, 0.08)' }
-          }
-        },
-        animation: false
+(function() {
+  'use strict';
+  
+  // Store chart instances for cleanup
+  let chartInstances = [];
+  
+  function initPage() {
+    // Clean up any existing charts first
+    chartInstances.forEach(chart => {
+      if (chart && typeof chart.destroy === 'function') {
+        chart.destroy();
       }
     });
-  }
+    chartInstances = [];
+    
+    // Global Chart.js settings
+    if (typeof Chart !== 'undefined') {
+      Chart.defaults.color = 'rgba(15, 23, 42, 0.75)';
+      Chart.defaults.font.family = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
+    }
 
-  const categoryData = JSON.parse(document.getElementById('category-data').textContent || '[]');
-  if (categoryData.length > 0) {
-    const labels = categoryData.map(i => i.name);
-    const values = categoryData.map(i => i.value);
-    const ctx2 = document.getElementById('categoryChart').getContext('2d');
+    // Weekly chart
+    const weeklyData = JSON.parse(document.getElementById('weekly-data')?.textContent || '[]');
+    if (weeklyData.length > 0) {
+      const ctx = document.getElementById('weeklyChart')?.getContext('2d');
+      if (ctx) {
+        const labels = weeklyData.map(d => d.label);
+        const data = weeklyData.map(d => d.minutes);
 
-    // Color set: distinct + readable (avoid very light colours)
-    const colors = [
-      'rgba(29, 78, 216, 0.85)',  // blue
-      'rgba(17, 94, 89, 0.85)',   // teal
-      'rgba(21, 128, 61, 0.85)',  // green
-      'rgba(161, 98, 7, 0.85)',   // amber
-      'rgba(185, 28, 28, 0.85)',  // red
-      'rgba(91, 33, 182, 0.85)'   // purple
-    ];
-
-    new Chart(ctx2, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{
-          data: values,
-          backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-          borderColor: '#ffffff',
-          borderWidth: 2,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '62%',
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { boxWidth: 10, usePointStyle: true, padding: 16 }
+        const weeklyChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels,
+            datasets: [{
+              label: 'Minutes logged',
+              data,
+              borderColor: 'rgb(29, 78, 216)',
+              backgroundColor: 'rgba(29, 78, 216, 0.10)',
+              borderWidth: 2,
+              fill: true,
+              tension: 0.35,
+              pointRadius: 3,
+              pointHoverRadius: 5
+            }]
           },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                const total = context.dataset.data.reduce((a,b) => a + b, 0);
-                const pct = total ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
-                return `${context.label}: ${context.parsed} min (${pct}%)`;
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                displayColors: false,
+                callbacks: {
+                  label: (context) => `${context.parsed.y} minutes`
+                }
               }
-            }
-          }
-        },
-        animation: false
-      }
-    });
-  }
-
-  const taskData = JSON.parse(document.getElementById('task-data').textContent || '[]');
-  if (taskData.length > 0) {
-    const labels = taskData.map(i => i.name);
-    const values = taskData.map(i => i.value);
-    const ctx3 = document.getElementById('taskChart').getContext('2d');
-
-    // Color set: distinct + readable (avoid very light colours)
-    const colors = [
-      'rgba(29, 78, 216, 0.85)',  // blue
-      'rgba(17, 94, 89, 0.85)',   // teal
-      'rgba(21, 128, 61, 0.85)',  // green
-      'rgba(161, 98, 7, 0.85)',   // amber
-      'rgba(185, 28, 28, 0.85)',  // red
-      'rgba(91, 33, 182, 0.85)',  // purple
-      'rgba(180, 83, 9, 0.85)',   // orange
-      'rgba(13, 148, 136, 0.85)', // cyan
-      'rgba(34, 197, 94, 0.85)',  // lime
-      'rgba(251, 146, 60, 0.85)'  // yellow
-    ];
-
-    new Chart(ctx3, {
-      type: 'doughnut',
-      data: {
-        labels,
-        datasets: [{
-          data: values,
-          backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-          borderColor: '#ffffff',
-          borderWidth: 2,
-          hoverOffset: 6
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '62%',
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { boxWidth: 10, usePointStyle: true, padding: 16 }
-          },
-          tooltip: {
-            callbacks: {
-              label: (context) => {
-                const total = context.dataset.data.reduce((a,b) => a + b, 0);
-                const pct = total ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
-                return `${context.label}: ${context.parsed} min (${pct}%)`;
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { callback: (v) => `${v}m` },
+                grid: { color: 'rgba(15, 23, 42, 0.08)' }
+              },
+              x: {
+                grid: { color: 'rgba(15, 23, 42, 0.08)' }
               }
-            }
+            },
+            animation: false
           }
-        },
-        animation: false
+        });
+        chartInstances.push(weeklyChart);
+      }
+    }
+
+    // Category chart
+    const categoryData = JSON.parse(document.getElementById('category-data')?.textContent || '[]');
+    if (categoryData.length > 0) {
+      const labels = categoryData.map(i => i.name);
+      const values = categoryData.map(i => i.value);
+      const ctx2 = document.getElementById('categoryChart')?.getContext('2d');
+      if (ctx2) {
+        const colors = [
+          'rgba(29, 78, 216, 0.85)',
+          'rgba(17, 94, 89, 0.85)',
+          'rgba(21, 128, 61, 0.85)',
+          'rgba(161, 98, 7, 0.85)',
+          'rgba(185, 28, 28, 0.85)',
+          'rgba(91, 33, 182, 0.85)'
+        ];
+
+        const categoryChart = new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+              borderColor: '#ffffff',
+              borderWidth: 2,
+              hoverOffset: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { boxWidth: 10, usePointStyle: true, padding: 16 }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const total = context.dataset.data.reduce((a,b) => a + b, 0);
+                    const pct = total ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                    return `${context.label}: ${context.parsed} min (${pct}%)`;
+                  }
+                }
+              }
+            },
+            animation: false
+          }
+        });
+        chartInstances.push(categoryChart);
+      }
+    }
+
+    // Task chart
+    const taskData = JSON.parse(document.getElementById('task-data')?.textContent || '[]');
+    if (taskData.length > 0) {
+      const labels = taskData.map(i => i.name);
+      const values = taskData.map(i => i.value);
+      const ctx3 = document.getElementById('taskChart')?.getContext('2d');
+      if (ctx3) {
+        const colors = [
+          'rgba(29, 78, 216, 0.85)',
+          'rgba(17, 94, 89, 0.85)',
+          'rgba(21, 128, 61, 0.85)',
+          'rgba(161, 98, 7, 0.85)',
+          'rgba(185, 28, 28, 0.85)',
+          'rgba(91, 33, 182, 0.85)',
+          'rgba(180, 83, 9, 0.85)',
+          'rgba(13, 148, 136, 0.85)',
+          'rgba(34, 197, 94, 0.85)',
+          'rgba(251, 146, 60, 0.85)'
+        ];
+
+        const taskChart = new Chart(ctx3, {
+          type: 'doughnut',
+          data: {
+            labels,
+            datasets: [{
+              data: values,
+              backgroundColor: labels.map((_, i) => colors[i % colors.length]),
+              borderColor: '#ffffff',
+              borderWidth: 2,
+              hoverOffset: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { boxWidth: 10, usePointStyle: true, padding: 16 }
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    const total = context.dataset.data.reduce((a,b) => a + b, 0);
+                    const pct = total ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
+                    return `${context.label}: ${context.parsed} min (${pct}%)`;
+                  }
+                }
+              }
+            },
+            animation: false
+          }
+        });
+        chartInstances.push(taskChart);
+      }
+    }
+
+    // Calendar navigation
+    const prevBtn = document.getElementById('prev-month-btn');
+    const nextBtn = document.getElementById('next-month-btn');
+    const monthYearDisplay = document.getElementById('calendar-month-year');
+    const calendarGrid = document.getElementById('calendar-grid');
+    const logsThisMonthStat = document.getElementById('logs-this-month');
+
+    if (prevBtn && nextBtn) {
+      function setNavLoading(isLoading) {
+        prevBtn.disabled = isLoading;
+        nextBtn.disabled = isLoading;
+        prevBtn.innerHTML = isLoading ? '<i class="bi bi-arrow-repeat"></i>' : '<i class="bi bi-chevron-left"></i>';
+        nextBtn.innerHTML = isLoading ? '<i class="bi bi-arrow-repeat"></i>' : '<i class="bi bi-chevron-right"></i>';
+      }
+
+      function updateCalendar(year, month) {
+        setNavLoading(true);
+
+        fetch(`{% url 'analytics' %}?year=${year}&month=${month}`, {
+          method: 'GET',
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (monthYearDisplay) {
+            monthYearDisplay.textContent = `${data.month_name} ${data.selected_year}`;
+          }
+
+          prevBtn.setAttribute('data-year', data.prev_year);
+          prevBtn.setAttribute('data-month', data.prev_month);
+          nextBtn.setAttribute('data-year', data.next_year);
+          nextBtn.setAttribute('data-month', data.next_month);
+
+          if (calendarGrid) {
+            let html = '<div class="grid grid-cols-7 gap-2 text-center mb-3">';
+            data.day_names.forEach(dayName => {
+              html += `<div class="text-xs font-semibold text-base-content/70 py-2">${dayName}</div>`;
+            });
+            html += '</div><div class="grid grid-cols-7 gap-2">';
+
+            data.calendar_days.forEach(day => {
+              const date = new Date(day.date);
+              const y = date.getFullYear();
+              const m = date.getMonth() + 1;
+              const d = date.getDate();
+              const dailyUrl = `{% url 'daily_summary' 0 0 0 %}`.replace('0/0/0', `${y}/${m}/${d}`);
+
+              if (day.logged) {
+                html += `<a href="${dailyUrl}" class="cal-day cal-day--active" aria-label="View summary for ${date.toDateString()} (active day)">${day.day}</a>`;
+              } else if (day.is_future) {
+                html += `<div class="cal-day cal-day--future" aria-label="${date.toDateString()} (future day)">${day.day}</div>`;
+              } else {
+                html += `<a href="${dailyUrl}" class="cal-day" aria-label="View summary for ${date.toDateString()}">${day.day}</a>`;
+              }
+            });
+
+            html += '</div>';
+            calendarGrid.innerHTML = html;
+          }
+
+          if (logsThisMonthStat) {
+            logsThisMonthStat.textContent = data.logs_this_month;
+          }
+
+          const url = new URL(window.location);
+          url.searchParams.set('year', data.selected_year);
+          url.searchParams.set('month', data.selected_month);
+          window.history.pushState({}, '', url);
+        })
+        .catch(err => console.error('Error updating calendar:', err))
+        .finally(() => setNavLoading(false));
+      }
+
+      prevBtn.addEventListener('click', function() {
+        updateCalendar(this.getAttribute('data-year'), this.getAttribute('data-month'));
+      });
+
+      nextBtn.addEventListener('click', function() {
+        updateCalendar(this.getAttribute('data-year'), this.getAttribute('data-month'));
+      });
+    }
+  }
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPage, { once: true });
+  } else {
+    initPage();
+  }
+
+  // Clean up charts when navigating away
+  window.addEventListener('beforeunload', function() {
+    chartInstances.forEach(chart => {
+      if (chart && typeof chart.destroy === 'function') {
+        chart.destroy();
       }
     });
-  }
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  const prevBtn = document.getElementById('prev-month-btn');
-  const nextBtn = document.getElementById('next-month-btn');
-  const monthYearDisplay = document.getElementById('calendar-month-year');
-  const calendarGrid = document.getElementById('calendar-grid');
-  const logsThisMonthStat = document.getElementById('logs-this-month');
-
-  function setNavLoading(isLoading) {
-    prevBtn.disabled = isLoading;
-    nextBtn.disabled = isLoading;
-    prevBtn.innerHTML = isLoading ? '<i class="bi bi-arrow-repeat"></i>' : '<i class="bi bi-chevron-left"></i>';
-    nextBtn.innerHTML = isLoading ? '<i class="bi bi-arrow-repeat"></i>' : '<i class="bi bi-chevron-right"></i>';
-  }
-
-  function updateCalendar(year, month) {
-    setNavLoading(true);
-
-    fetch(`{% url 'analytics' %}?year=${year}&month=${month}`, {
-      method: 'GET',
-      headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(data => {
-      monthYearDisplay.textContent = `${data.month_name} ${data.selected_year}`;
-
-      prevBtn.setAttribute('data-year', data.prev_year);
-      prevBtn.setAttribute('data-month', data.prev_month);
-      nextBtn.setAttribute('data-year', data.next_year);
-      nextBtn.setAttribute('data-month', data.next_month);
-
-      // Rebuild calendar markup (same structure: day names row + 7-col grid)
-      let html = '';
-      html += '<div class="grid grid-cols-7 gap-2 text-center mb-3">';
-      data.day_names.forEach(dayName => {
-        html += `<div class="text-xs font-semibold text-base-content/70 py-2">${dayName}</div>`;
-      });
-      html += '</div><div class="grid grid-cols-7 gap-2">';
-
-      data.calendar_days.forEach(day => {
-        const date = new Date(day.date);
-        const y = date.getFullYear();
-        const m = date.getMonth() + 1;
-        const d = date.getDate();
-        const dailyUrl = `{% url 'daily_summary' 0 0 0 %}`.replace('0/0/0', `${y}/${m}/${d}`);
-
-        if (day.logged) {
-          html += `<a href="${dailyUrl}" class="cal-day cal-day--active" aria-label="View summary for ${date.toDateString()} (active day)">${day.day}</a>`;
-        } else if (day.is_future) {
-          html += `<div class="cal-day cal-day--future" aria-label="${date.toDateString()} (future day)">${day.day}</div>`;
-        } else {
-          html += `<a href="${dailyUrl}" class="cal-day" aria-label="View summary for ${date.toDateString()}">${day.day}</a>`;
-        }
-      });
-
-      html += '</div>';
-      calendarGrid.innerHTML = html;
-
-      if (logsThisMonthStat) logsThisMonthStat.textContent = data.logs_this_month;
-
-      const url = new URL(window.location);
-      url.searchParams.set('year', data.selected_year);
-      url.searchParams.set('month', data.selected_month);
-      window.history.pushState({}, '', url);
-    })
-    .catch(err => console.error('Error updating calendar:', err))
-    .finally(() => setNavLoading(false));
-  }
-
-  prevBtn.addEventListener('click', function() {
-    updateCalendar(this.getAttribute('data-year'), this.getAttribute('data-month'));
   });
-
-  nextBtn.addEventListener('click', function() {
-    updateCalendar(this.getAttribute('data-year'), this.getAttribute('data-month'));
-  });
-});
+})();
 </script>
 {% endblock %}

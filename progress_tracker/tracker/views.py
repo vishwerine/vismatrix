@@ -11,7 +11,7 @@ from django.core.cache import cache
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta, date
 from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode
-from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm
+from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm, UserProfileForm
 from django.views.decorators.http import require_http_methods
 import logging
 
@@ -2736,7 +2736,25 @@ def calendar_settings(request):
         'google_configured': bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
     }
     
-    return render(request, 'tracker/calendar_settings.html', context)
+    return render(request, 'tracker/calendar_settings_minimal.html', context)
+
+
+@login_required
+def profile_settings(request):
+    """User profile settings page for editing display name"""
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your profile has been updated successfully!")
+            return redirect('profile_settings')
+    else:
+        form = UserProfileForm(instance=request.user)
+    
+    context = {
+        'form': form,
+    }
+    return render(request, 'tracker/profile_settings.html', context)
 
 
 @login_required

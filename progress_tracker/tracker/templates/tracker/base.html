@@ -429,11 +429,14 @@
 
     <!-- Desktop nav -->
     <div class="hidden lg:flex items-center gap-1 px-2">
+
       <a href="{% url 'dashboard' %}"
          class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'dashboard' %}vm-nav-active{% endif %}">
-        <i class="bi bi-grid-1x2" aria-hidden="true"></i>
+        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
         <span class="ml-1">Dashboard</span>
       </a>
+
+
 
       <a href="{% url 'analytics' %}"
          class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'analytics' %}vm-nav-active{% endif %}">
@@ -466,12 +469,6 @@
         <i class="bi bi-people" aria-hidden="true"></i>
         <span class="ml-1">Friends</span>
       </a>
-
-      <a href="{% url 'about' %}"
-         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'about' %}vm-nav-active{% endif %}">
-        <i class="bi bi-info-circle" aria-hidden="true"></i>
-        <span class="ml-1">About</span>
-      </a>
     </div>
 
     <!-- User / Auth -->
@@ -499,35 +496,12 @@
         >
           <li class="menu-title">Hi, {{ user.username }}</li>
 
-          <li><a href="{% url 'analytics' %}">
-            <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
-            Analytics
+          <li><a href="{% url 'profile_settings' %}">
+            <i class="bi bi-person-circle text-lg opacity-80" aria-hidden="true"></i>
+            Profile Settings
           </a></li>
 
-          <li><a href="{% url 'task_list' %}">
-            <i class="bi bi-grid-1x2 text-lg opacity-80" aria-hidden="true"></i>
-            Tasks
-          </a></li>
 
-          <li><a href="{% url 'notifications' %}">
-            <i class="bi bi-bell text-lg opacity-80" aria-hidden="true"></i>
-            Notifications
-          </a></li>
-
-          <li><a href="{% url 'category_list' %}">
-            <i class="bi bi-tags text-lg opacity-80" aria-hidden="true"></i>
-            Categories
-          </a></li>
-
-          <li><a href="{% url 'friends_list' %}">
-            <i class="bi bi-person-plus text-lg opacity-80" aria-hidden="true"></i>
-            Friends
-          </a></li>
-
-          <li><a href="{% url 'calendar_settings' %}">
-            <i class="bi bi-calendar-check text-lg opacity-80" aria-hidden="true"></i>
-            Google Calendar
-          </a></li>
 
           <!-- Dark mode toggle -->
           <li>
@@ -711,6 +685,7 @@
       setTimeout(() => toast.remove(), 550);
     }, 4000);
 
+    // Navigation menu and theme toggle - wrapped to prevent memory leaks
     (function () {
       const menu = document.getElementById('userMenu');
       const btn = document.getElementById('userMenuButton');
@@ -733,14 +708,22 @@
         dropdown.classList.contains('hidden') ? openMenu() : closeMenu();
       };
 
-      btn.addEventListener('click', toggleMenu);
-
-      document.addEventListener('click', (e) => {
+      const handleDocumentClick = (e) => {
         if (!menu.contains(e.target)) closeMenu();
-      });
+      };
 
-      document.addEventListener('keydown', (e) => {
+      const handleEscapeKey = (e) => {
         if (e.key === 'Escape') closeMenu();
+      };
+
+      btn.addEventListener('click', toggleMenu);
+      document.addEventListener('click', handleDocumentClick);
+      document.addEventListener('keydown', handleEscapeKey);
+
+      // Clean up event listeners on page unload
+      window.addEventListener('beforeunload', function() {
+        document.removeEventListener('click', handleDocumentClick);
+        document.removeEventListener('keydown', handleEscapeKey);
       });
 
       // ----------------------------
@@ -774,15 +757,22 @@
       // Init UI state from whatever head script applied
       applyTheme(htmlEl.getAttribute('data-theme') || 'light');
 
+      const handleThemeToggle = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const next = htmlEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        localStorage.setItem(STORAGE_KEY, next);
+        applyTheme(next);
+      };
+
       // Toggle on click (keep dropdown open)
       if (toggleBtn) {
-        toggleBtn.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-
-          const next = htmlEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-          localStorage.setItem(STORAGE_KEY, next);
-          applyTheme(next);
+        toggleBtn.addEventListener('click', handleThemeToggle);
+        
+        // Clean up theme toggle on unload
+        window.addEventListener('beforeunload', function() {
+          toggleBtn.removeEventListener('click', handleThemeToggle);
         });
       }
     })();
@@ -1021,10 +1011,22 @@
 
     loadFriends(true);
     startPolling();
+
+    // Clean up polling when navigating away from the page
+    window.addEventListener('beforeunload', function() {
+      stopPolling();
+    });
+
+    // Clean up polling when page becomes hidden (e.g., switching tabs or navigating)
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        stopPolling();
+      } else {
+        startPolling();
+      }
+    });
   });
   </script>
   {% endif %}
-</body>
-</html>
 </body>
 </html>
