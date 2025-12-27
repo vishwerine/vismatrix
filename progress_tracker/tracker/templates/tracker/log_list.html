@@ -7,11 +7,13 @@
   <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
 
     <!-- Header -->
-    <header class="card border border-base-200 bg-base-100" role="banner">
+    <header class="card border border-base-200 bg-base-100 animate-slideUp" role="banner">
       <div class="card-body p-5 sm:p-6">
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
-            <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content truncate">Activity logs</h1>
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content truncate">
+              <span class="gradient-text">Activity logs</span>
+            </h1>
             <p class="text-sm text-base-content/70 mt-1">Track your productivity and progress.</p>
           </div>
           <a href="{% url 'log_create' %}" class="btn btn-primary btn-sm gap-2">
@@ -23,25 +25,25 @@
     </header>
 
     <!-- Stats -->
-    <section class="grid grid-cols-2 sm:grid-cols-3 gap-4" aria-label="Stats">
-      <div class="card border border-base-200 bg-base-100">
+    <section class="grid grid-cols-2 sm:grid-cols-3 gap-4 animate-fadeIn" aria-label="Stats">
+      <div class="card border border-base-200 bg-base-100 hover-lift">
         <div class="card-body p-4">
-          <p class="text-xs text-base-content/70">Total logs</p>
-          <p class="text-2xl font-extrabold tabular-nums">{{ total_logs }}</p>
+          <p class="text-xs text-base-content/70 font-semibold uppercase tracking-wide">Total logs</p>
+          <p class="text-3xl font-extrabold tabular-nums gradient-text">{{ total_logs }}</p>
         </div>
       </div>
 
-      <div class="card border border-base-200 bg-base-100">
+      <div class="card border border-base-200 bg-base-100 hover-lift">
         <div class="card-body p-4">
-          <p class="text-xs text-base-content/70">This week</p>
-          <p class="text-2xl font-extrabold tabular-nums">{{ week_logs }}</p>
+          <p class="text-xs text-base-content/70 font-semibold uppercase tracking-wide">This week</p>
+          <p class="text-3xl font-extrabold tabular-nums gradient-text">{{ week_logs }}</p>
         </div>
       </div>
 
-      <div class="card border border-base-200 bg-base-100">
+      <div class="card border border-base-200 bg-base-100 hover-lift">
         <div class="card-body p-4">
-          <p class="text-xs text-base-content/70">Total time</p>
-          <p class="text-2xl font-extrabold tabular-nums">
+          <p class="text-xs text-base-content/70 font-semibold uppercase tracking-wide">Total time</p>
+          <p class="text-3xl font-extrabold tabular-nums gradient-text">
             {% widthratio total_minutes 60 1 %}h
           </p>
         </div>

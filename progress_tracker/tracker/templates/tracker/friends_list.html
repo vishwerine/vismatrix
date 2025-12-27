@@ -8,13 +8,13 @@
      style="background: var(--bg); color: var(--text);">
 
   <!-- Header -->
-  <header class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4">
+  <header class="max-w-6xl mx-auto mb-6 md:mb-12 pt-4 animate-slideUp">
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-6 mb-4">
       <div class="min-w-0">
         <h1 class="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black mb-1 md:mb-2 flex items-center gap-2"
             style="color: var(--text);">
           <i class="bi bi-people-fill" aria-hidden="true" style="color: var(--muted);"></i>
-          <span>My Friends</span>
+          <span class="gradient-text">My Friends</span>
         </h1>
 
         <p class="text-sm md:text-lg flex items-center gap-1" style="color: var(--muted);">
@@ -72,12 +72,12 @@
   </header>
 
   <!-- Friends Grid -->
-  <main class="max-w-6xl mx-auto" aria-label="Friends list">
+  <main class="max-w-6xl mx-auto animate-fadeIn" aria-label="Friends list">
     {% if friends_data %}
       <div id="friends-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         {% for item in friends_data %}
         <article
-          class="rounded-2xl p-5 md:p-6 border hover:shadow-lg transition-all flex flex-col friend-card"
+          class="rounded-2xl p-5 md:p-6 border hover:shadow-2xl transition-all flex flex-col friend-card hover-lift"
           id="friend-{{ item.friendship.id }}"
           data-friend-name="{{ item.friend.get_full_name|default:item.friend.username|lower }}"
           data-friend-username="{{ item.friend.username|lower }}"

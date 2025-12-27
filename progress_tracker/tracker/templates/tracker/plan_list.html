@@ -6,10 +6,10 @@
 
 <div class="container mx-auto px-4 py-6 max-w-7xl">
   <!-- Header -->
-  <div class="flex justify-between items-center mb-6">
+  <div class="flex justify-between items-center mb-6 animate-slideUp">
     <div>
       <h1 class="text-3xl font-bold text-slate-800">
-        <i class="bi bi-diagram-3 mr-2"></i>Plans
+        <i class="bi bi-diagram-3 mr-2"></i><span class="gradient-text">Plans</span>
       </h1>
       <p class="text-slate-600 mt-1">Organize your tasks into structured workflows</p>
     </div>
@@ -22,9 +22,9 @@
 
   <!-- Plans Grid -->
   {% if plans %}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 animate-fadeIn">
       {% for plan in plans %}
-        <div class="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow cursor-pointer border border-base-300"
+        <div class="card bg-base-100 shadow-lg hover:shadow-2xl transition-all cursor-pointer border border-base-300 hover-lift"
              onclick="window.location.href='{% url 'plan_detail' plan.pk %}'">
           <div class="card-body">
             <div class="flex items-start justify-between">
