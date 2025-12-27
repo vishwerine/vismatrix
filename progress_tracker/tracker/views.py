@@ -3,16 +3,24 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Sum, Count, Q, Case, When, Value, F, DateField
+from django.db.models import Sum, Count, Q, Case, When, Value, F, DateField, Prefetch
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta, date
 from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode
 from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm
 from django.views.decorators.http import require_http_methods
+import logging
+
+from .decorators import rate_limit, validate_ajax, validate_json, log_errors
 
 import json
 import calendar
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def dashboard(request):
@@ -45,6 +53,7 @@ def dashboard(request):
             user=request.user,
             status__in=["pending", "in_progress"],
         )
+        .select_related('category')  # Optimize query
         .annotate(
             # Treat null due_dates as far future (9999-12-31) so they appear last
             effective_due_date=Coalesce(
@@ -291,6 +300,50 @@ def dashboard(request):
         except ConversationMember.DoesNotExist:
             pass
 
+    # --- Today's completion rate ---
+    today_completion_rate = 0
+    if today_tasks_count > 0:
+        today_completion_rate = int((today_completed / today_tasks_count) * 100)
+    
+    # --- Week comparison (this week vs last week) ---
+    last_week_start = week_ago - timedelta(days=7)
+    last_week_end = week_ago - timedelta(days=1)
+    
+    week_time = DailyLog.objects.filter(
+        user=request.user, date__gte=week_ago, date__lte=today
+    ).aggregate(total=Sum('duration'))['total'] or 0
+    
+    last_week_time = DailyLog.objects.filter(
+        user=request.user, date__gte=last_week_start, date__lte=last_week_end
+    ).aggregate(total=Sum('duration'))['total'] or 0
+    
+    week_trend = 0
+    if last_week_time > 0:
+        week_trend = int(((week_time - last_week_time) / last_week_time) * 100)
+    elif week_time > 0:
+        week_trend = 100
+    
+    # --- Daily average time ---
+    total_days = DailyLog.objects.filter(user=request.user).values('date').distinct().count()
+    avg_daily_time = int(total_time / total_days) if total_days > 0 else 0
+    
+    # --- Best performing day (highest activity) ---
+    best_day_info = None
+    if log_dates_set:
+        # Get activity for each day in last 30 days
+        thirty_days_ago = today - timedelta(days=30)
+        daily_activity = DailyLog.objects.filter(
+            user=request.user,
+            date__gte=thirty_days_ago,
+            date__lte=today
+        ).values('date').annotate(total_minutes=Sum('duration')).order_by('-total_minutes').first()
+        
+        if daily_activity:
+            best_day_info = {
+                'date': daily_activity['date'],
+                'minutes': daily_activity['total_minutes']
+            }
+    
     # --- Active plans with progress ---
     active_plans = Plan.objects.filter(user=request.user, is_active=True).order_by('-updated_at')
     
@@ -306,6 +359,10 @@ def dashboard(request):
 
     context = {
         "today": today,
+        "today_tasks_count": today_tasks_count,
+        "today_completed": today_completed,
+        "today_time": today_time,
+        "today_completion_rate": today_completion_rate,
         "pending_tasks": pending_tasks,
         "recent_logs": recent_logs,
         "friends": friends_activity,
@@ -316,6 +373,16 @@ def dashboard(request):
         "star_notifications_count": star_notifications_count,
         "unread_message_count": unread_message_count,
         "active_plans": plans_with_stats,
+        "current_streak": current_streak,
+        "logs_this_month": logs_this_month,
+        "total_time": total_time,
+        "week_time": week_time,
+        "week_trend": week_trend,
+        "avg_daily_time": avg_daily_time,
+        "best_day_info": best_day_info,
+        "weekly_overview": weekly_overview,
+        "calendar_days": calendar_days,
+        "day_names": day_names,
     }
     return render(request, "tracker/dashboard.html", context)
 
@@ -368,7 +435,37 @@ def analytics(request):
         or 0
     )
 
-    # --- Current streak ---
+    # --- Trend calculations ---
+    # Yesterday's task count for trend
+    yesterday = today - timedelta(days=1)
+    yesterday_tasks_count = Task.objects.filter(
+        user=request.user, created_at__date=yesterday
+    ).count()
+    
+    if yesterday_tasks_count > 0:
+        tasks_trend = ((today_tasks_count - yesterday_tasks_count) / yesterday_tasks_count) * 100
+    else:
+        tasks_trend = 100 if today_tasks_count > 0 else 0
+    
+    # Last month's log count for trend
+    last_month_start = (selected_month_start - timedelta(days=1)).replace(day=1)
+    last_month_end = selected_month_start - timedelta(days=1)
+    logs_last_month = DailyLog.objects.filter(
+        user=request.user, 
+        date__gte=last_month_start, 
+        date__lte=last_month_end
+    ).count()
+    
+    if logs_last_month > 0:
+        month_trend = ((logs_this_month - logs_last_month) / logs_last_month) * 100
+    else:
+        month_trend = 100 if logs_this_month > 0 else 0
+    
+    # Average daily minutes
+    total_days = DailyLog.objects.filter(user=request.user).values('date').distinct().count()
+    avg_daily_minutes = int(total_time / total_days) if total_days > 0 else 0
+
+    # --- Current streak and best streak ---
     log_dates = (
         DailyLog.objects.filter(user=request.user, date__lte=today)
         .values_list("date", flat=True)
@@ -384,6 +481,22 @@ def analytics(request):
         cursor = cursor - timedelta(days=1)
 
     current_streak = streak
+    
+    # Calculate best streak (all time)
+    best_streak = 0
+    current_temp_streak = 0
+    all_log_dates = sorted(list(log_dates_set))
+    
+    for i, date_val in enumerate(all_log_dates):
+        if i == 0:
+            current_temp_streak = 1
+        else:
+            if (date_val - all_log_dates[i-1]).days == 1:
+                current_temp_streak += 1
+            else:
+                best_streak = max(best_streak, current_temp_streak)
+                current_temp_streak = 1
+    best_streak = max(best_streak, current_temp_streak)
 
     # --- Weekly overview for line chart ---
     last_7_days = [base_date - timedelta(days=i) for i in range(6, -1, -1)]
@@ -411,33 +524,57 @@ def analytics(request):
                 }
             )
 
-    # --- Mini calendar ---
+    # --- Mini calendar with intensity levels ---
     import calendar
     cal = calendar.monthcalendar(year, month)
-    logged_dates = set(
-        DailyLog.objects.filter(
-            user=request.user,
-            date__year=year,
-            date__month=month
-        ).values_list("date", flat=True)
-    )
+    
+    # Get all logs for the month with their durations
+    month_logs = DailyLog.objects.filter(
+        user=request.user,
+        date__year=year,
+        date__month=month
+    ).values('date').annotate(total_minutes=Sum('duration'))
+    
+    # Create a dictionary of date -> minutes
+    date_minutes_map = {log['date']: log['total_minutes'] for log in month_logs}
+    
+    # Calculate intensity levels (1-5) based on minutes
+    all_minutes = list(date_minutes_map.values())
+    if all_minutes:
+        max_minutes_month = max(all_minutes)
+        min_minutes_month = min(all_minutes)
+    else:
+        max_minutes_month = 0
+        min_minutes_month = 0
+    
     calendar_days = []
     for week in cal:
         for day in week:
             if day == 0:
                 continue
             date_obj = timezone.datetime(year, month, day).date()
+            minutes = date_minutes_map.get(date_obj, 0)
+            
+            # Calculate intensity (1-5)
+            intensity = 0
+            if minutes > 0:
+                if max_minutes_month > min_minutes_month:
+                    normalized = (minutes - min_minutes_month) / (max_minutes_month - min_minutes_month)
+                    intensity = max(1, min(5, int(normalized * 5) + 1))
+                else:
+                    intensity = 3  # Default to medium if all values are the same
+            
             calendar_days.append({
                 "day": day,
                 "date": date_obj,
-                "logged": date_obj in logged_dates,
+                "logged": minutes > 0,
                 "is_today": date_obj == today,
                 "is_future": date_obj > today,
+                "minutes": minutes,
+                "intensity": intensity,
             })
 
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-
 
     category_queryset = (
         DailyLog.objects.filter(user=request.user, date__gte=week_ago, date__lte=today)
@@ -446,6 +583,56 @@ def analytics(request):
         .order_by('-total')
     )
     category_data = [{'name': row['name'], 'value': row['total']} for row in category_queryset]
+
+    # --- Productivity Insights (after category_data is defined) ---
+    # Best day of the week (most productive)
+    best_day = None
+    if log_dates_set:
+        # Get last 8 weeks of data
+        eight_weeks_ago = today - timedelta(days=56)
+        recent_logs = DailyLog.objects.filter(
+            user=request.user,
+            date__gte=eight_weeks_ago,
+            date__lte=today
+        ).values('date').annotate(total_minutes=Sum('duration'))
+        
+        # Group by day of week
+        day_totals = {i: [] for i in range(7)}  # 0=Monday, 6=Sunday
+        for log in recent_logs:
+            day_of_week = log['date'].weekday()
+            day_totals[day_of_week].append(log['total_minutes'])
+        
+        # Calculate average for each day
+        day_averages = {}
+        for day, minutes_list in day_totals.items():
+            if minutes_list:
+                day_averages[day] = sum(minutes_list) / len(minutes_list)
+        
+        if day_averages:
+            best_day_num = max(day_averages, key=day_averages.get)
+            best_day_names = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            best_day = {
+                'name': best_day_names[best_day_num],
+                'minutes': int(day_averages[best_day_num])
+            }
+    
+    # Most productive category
+    most_productive_category = None
+    if category_data:
+        most_productive_category = max(category_data, key=lambda x: x['value'])
+    
+    # Weekly completion rate
+    completion_rate_week = 0
+    week_tasks = Task.objects.filter(
+        user=request.user,
+        created_at__date__gte=week_ago,
+        created_at__date__lte=today
+    )
+    week_tasks_count = week_tasks.count()
+    week_completed = week_tasks.filter(status="completed").count()
+    
+    if week_tasks_count > 0:
+        completion_rate_week = int((week_completed / week_tasks_count) * 100)
 
     # --- Task breakdown for weekly period ---
     task_queryset = (
@@ -525,18 +712,27 @@ def analytics(request):
         "total_plans": total_plans,
         "active_plans": active_plans,
         "plan_stats": plan_stats,
+        # New trend and insights data
+        "tasks_trend": round(tasks_trend, 1),
+        "month_trend": round(month_trend, 1),
+        "logs_last_month": logs_last_month,
+        "avg_daily_minutes": avg_daily_minutes,
+        "best_streak": best_streak,
+        "best_day": best_day,
+        "most_productive_category": most_productive_category,
+        "completion_rate_week": completion_rate_week,
     }
     return render(request, "tracker/analytics.html", context)
 
 # Task views
 @login_required
 def task_list(request):
-    """List all tasks with filtering"""
+    """List all tasks with filtering and pagination"""
     status_filter = request.GET.get('status', 'all')
     priority_filter = request.GET.get('priority', '')
     search_query = request.GET.get('search', '').strip()
     
-    tasks = Task.objects.filter(user=request.user)
+    tasks = Task.objects.filter(user=request.user).select_related('category')
     
     # Apply status filter
     if status_filter != 'all':
@@ -566,11 +762,22 @@ def task_list(request):
         '-created_at'
     )
     
+    # Pagination - 20 tasks per page
+    paginator = Paginator(tasks, 20)
+    page_number = request.GET.get('page', 1)
+    
+    try:
+        page_obj = paginator.get_page(page_number)
+    except (EmptyPage, PageNotAnInteger):
+        page_obj = paginator.get_page(1)
+    
     context = {
-        'tasks': tasks,
+        'tasks': page_obj,
+        'page_obj': page_obj,
         'status_filter': status_filter,
         'priority_filter': priority_filter,
         'search_query': search_query,
+        'total_tasks': paginator.count,
     }
     return render(request, 'tracker/task_list.html', context)
 
@@ -715,10 +922,15 @@ def log_create(request):
     if request.method == "POST":
         form = DailyLogForm(request.POST, user=request.user)
         if form.is_valid():
-            log = form.save(commit=False)
-            log.user = request.user
-            log.save()
-            return redirect("log_list")
+            try:
+                log = form.save(commit=False)
+                log.user = request.user
+                log.save()
+                messages.success(request, "Activity logged successfully!")
+                return redirect("log_list")
+            except Exception as e:
+                logger.error(f"Error saving daily log for user {request.user.id}: {str(e)}")
+                messages.error(request, "An error occurred while saving your log. Please try again.")
     else:
         # Check for task parameter to pre-select
         initial_data = {}
@@ -732,7 +944,9 @@ def log_create(request):
                 if task.category:
                     initial_data['category'] = task.category.id
             except Task.DoesNotExist:
-                pass
+                messages.warning(request, "The specified task was not found.")
+            except ValueError:
+                logger.warning(f"Invalid task_id parameter: {task_id}")
         else:
             # If no task specified, use default task
             default_task = Task.objects.filter(
@@ -893,6 +1107,7 @@ def user_list(request):
 # ===== SEND FRIEND REQUEST (AUTO-ACCEPT) =====
 @login_required
 @require_http_methods(["POST"])
+@rate_limit(requests_per_minute=10)  # Limit friend requests to prevent spam
 def send_friend_request(request, user_id):
     """Send a friend request that automatically creates mutual friendship (AJAX & redirect support)"""
     
@@ -959,6 +1174,7 @@ from django.views.decorators.http import require_http_methods
 # ===== ACCEPT FRIEND REQUEST =====
 @login_required
 @require_http_methods(["POST"])
+@rate_limit(requests_per_minute=20)
 def accept_friend_request(request, request_id):
     """Accept a friend request (AJAX enabled)"""
     
@@ -989,6 +1205,7 @@ def accept_friend_request(request, request_id):
 # ===== REJECT FRIEND REQUEST =====
 @login_required
 @require_http_methods(["POST"])
+@rate_limit(requests_per_minute=20)
 def reject_friend_request(request, request_id):
     """Reject a friend request (AJAX enabled)"""
     
@@ -1058,6 +1275,7 @@ def cancel_friend_request(request, user_id):
 # ===== REMOVE FRIEND =====
 @login_required
 @require_http_methods(["POST"])
+@rate_limit(requests_per_minute=10)
 def remove_friend(request, friendship_id):
     """Remove a friend (AJAX enabled)"""
     
@@ -1562,6 +1780,27 @@ def view_friend_profile(request, friendship_id):
         'data': data
     } if any(data) else None
 
+    # ===== ACTIVE PLANS =====
+    active_plans = Plan.objects.filter(
+        user=friend,
+        is_active=True
+    ).prefetch_related('nodes__task')[:5]  # Show up to 5 active plans
+    
+    # Calculate progress for each plan
+    plans_with_progress = []
+    for plan in active_plans:
+        nodes = plan.nodes.all()
+        total_tasks = nodes.count()
+        if total_tasks > 0:
+            completed_tasks = sum(1 for node in nodes if node.task.status == 'completed')
+            progress_percentage = int((completed_tasks / total_tasks) * 100)
+            plans_with_progress.append({
+                'plan': plan,
+                'total_tasks': total_tasks,
+                'completed_tasks': completed_tasks,
+                'progress_percentage': progress_percentage,
+            })
+
     context = {
         'friend': friend,
         'friendship': friendship,
@@ -1587,67 +1826,68 @@ def view_friend_profile(request, friendship_id):
         'month_name': calendar.month_name[today.month],
         'selected_year': today.year,
         'selected_month': today.month,
+        'active_plans': plans_with_progress,
     }
     return render(request, 'tracker/friend_profile.html', context)
 
 
 @login_required
 @require_http_methods(["POST"])
+@rate_limit(requests_per_minute=30)
+@validate_ajax
+@validate_json(required_fields=['activity_type', 'activity_id'])
+@log_errors
 def toggle_star_reaction(request):
     """Toggle star reaction on a friend's activity (task or log)"""
-    try:
-        data = json.loads(request.body)
-        activity_type = data.get('activity_type')
-        activity_id = data.get('activity_id')
-        
-        if activity_type == 'task':
-            activity = get_object_or_404(Task, id=activity_id)
-        elif activity_type == 'log':
-            activity = get_object_or_404(DailyLog, id=activity_id)
-        else:
-            return JsonResponse({'error': 'Invalid activity type'}, status=400)
-        
-        # Check if user is friends with the activity owner
-        if not Friendship.objects.filter(
-            Q(user=request.user, friend=activity.user) | 
-            Q(user=activity.user, friend=request.user)
-        ).exists():
-            return JsonResponse({'error': 'You can only react to friends\' activities'}, status=403)
-        
-        # Toggle the reaction
-        if activity_type == 'task':
-            reaction, created = ActivityReaction.objects.get_or_create(
-                user=request.user,
-                task=activity,
-                defaults={'reaction_type': 'star'}
-            )
-        else:
-            reaction, created = ActivityReaction.objects.get_or_create(
-                user=request.user,
-                daily_log=activity,
-                defaults={'reaction_type': 'star'}
-            )
-        
-        if not created:
-            # If reaction already exists, remove it (unstar)
-            reaction.delete()
-            starred = False
-        else:
-            starred = True
-        
-        # Get updated star count
-        if activity_type == 'task':
-            star_count = ActivityReaction.objects.filter(task=activity).count()
-        else:
-            star_count = ActivityReaction.objects.filter(daily_log=activity).count()
-        
-        return JsonResponse({
-            'starred': starred,
-            'star_count': star_count
-        })
-        
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+    data = request.json_data  # Already validated by decorator
+    activity_type = data.get('activity_type')
+    activity_id = data.get('activity_id')
+    
+    if activity_type == 'task':
+        activity = get_object_or_404(Task, id=activity_id)
+    elif activity_type == 'log':
+        activity = get_object_or_404(DailyLog, id=activity_id)
+    else:
+        return JsonResponse({'error': 'Invalid activity type'}, status=400)
+    
+    # Check if user is friends with the activity owner
+    if not Friendship.objects.filter(
+        Q(user=request.user, friend=activity.user) | 
+        Q(user=activity.user, friend=request.user)
+    ).exists():
+        return JsonResponse({'error': 'You can only react to friends\' activities'}, status=403)
+    
+    # Toggle the reaction
+    if activity_type == 'task':
+        reaction, created = ActivityReaction.objects.get_or_create(
+            user=request.user,
+            task=activity,
+            defaults={'reaction_type': 'star'}
+        )
+    else:
+        reaction, created = ActivityReaction.objects.get_or_create(
+            user=request.user,
+            daily_log=activity,
+            defaults={'reaction_type': 'star'}
+        )
+    
+    if not created:
+        # If reaction already exists, remove it (unstar)
+        reaction.delete()
+        starred = False
+    else:
+        starred = True
+    
+    # Get updated star count
+    if activity_type == 'task':
+        star_count = ActivityReaction.objects.filter(task=activity).count()
+    else:
+        star_count = ActivityReaction.objects.filter(daily_log=activity).count()
+    
+    return JsonResponse({
+        'starred': starred,
+        'star_count': star_count
+    })
 
 
 @login_required

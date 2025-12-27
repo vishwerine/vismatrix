@@ -17,7 +17,7 @@
     border-radius: 12px;
   }
 
-  /* Calendar day styles (not relying on colour only) */
+  /* Calendar day styles with intensity levels */
   .cal-day {
     border: 1px solid var(--border, #e2e8f0);
     border-radius: 12px;
@@ -27,6 +27,7 @@
     justify-content: center;
     font-weight: 600;
     text-decoration: none;
+    position: relative;
   }
   .cal-day:hover { background: rgba(226,232,240,.5); }
 
@@ -36,6 +37,22 @@
     color: #1d4ed8;
   }
   .cal-day--active:hover { background: rgb(29 78 216 / 0.16); }
+  
+  /* Intensity levels for heatmap effect */
+  .cal-day--intensity-1 { background: rgb(29 78 216 / 0.10); border-color: rgb(29 78 216 / 0.20); }
+  .cal-day--intensity-2 { background: rgb(29 78 216 / 0.20); border-color: rgb(29 78 216 / 0.30); }
+  .cal-day--intensity-3 { background: rgb(29 78 216 / 0.35); border-color: rgb(29 78 216 / 0.45); }
+  .cal-day--intensity-4 { background: rgb(29 78 216 / 0.50); border-color: rgb(29 78 216 / 0.60); color: white; }
+  .cal-day--intensity-5 { background: rgb(29 78 216 / 0.75); border-color: rgb(29 78 216 / 0.85); color: white; font-weight: 700; }
+  
+  .cal-day[data-minutes]::after {
+    content: attr(data-minutes);
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    font-size: 8px;
+    opacity: 0.6;
+  }
 
   .cal-day--future {
     opacity: .55;
@@ -67,7 +84,7 @@
     </div>
   </header>
 
-  <!-- Metrics (no gradients) -->
+  <!-- Metrics with trends -->
   <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Key metrics">
     <div class="card border border-base-200 bg-base-100">
       <div class="card-body p-5">
@@ -78,7 +95,14 @@
             </span>
             <div>
               <p class="text-xs uppercase tracking-wide text-base-content/60">Tasks today</p>
-              <p class="text-2xl font-extrabold tabular-nums">{{ today_tasks_count|default:0 }}</p>
+              <div class="flex items-center gap-2">
+                <p class="text-2xl font-extrabold tabular-nums">{{ today_tasks_count|default:0 }}</p>
+                {% if tasks_trend %}
+                  <span class="text-xs font-semibold {% if tasks_trend > 0 %}text-success{% elif tasks_trend < 0 %}text-error{% else %}text-base-content/60{% endif %}">
+                    <i class="bi bi-{% if tasks_trend > 0 %}arrow-up{% elif tasks_trend < 0 %}arrow-down{% else %}dash{% endif %}" aria-hidden="true"></i>
+                  </span>
+                {% endif %}
+              </div>
             </div>
           </div>
         </div>
@@ -91,6 +115,7 @@
           <progress class="progress progress-primary w-full"
             value="{% if today_tasks_count %}{{ completed_today|mul:100|div:today_tasks_count }}{% else %}0{% endif %}"
             max="100"></progress>
+          <p class="text-xs text-base-content/60">Avg: {{ avg_daily_tasks|default:0|floatformat:1 }} tasks/day</p>
         </div>
       </div>
     </div>
@@ -102,11 +127,24 @@
             <i class="bi bi-fire text-primary text-lg" aria-hidden="true"></i>
           </span>
           <div>
-            <p class="text-xs uppercase tracking-wide text-base-content/60">Streak</p>
-            <p class="text-2xl font-extrabold tabular-nums">{{ current_streak|default:0 }}</p>
+            <p class="text-xs uppercase tracking-wide text-base-content/60">Current Streak</p>
+            <div class="flex items-baseline gap-2">
+              <p class="text-2xl font-extrabold tabular-nums">{{ current_streak|default:0 }}</p>
+              {% if best_streak and best_streak > current_streak %}
+                <span class="text-xs text-base-content/60">/ {{ best_streak }}</span>
+              {% endif %}
+            </div>
           </div>
         </div>
-        <p class="mt-3 text-sm text-base-content/70">Keep it steady—small wins daily.</p>
+        <p class="mt-3 text-sm text-base-content/70">
+          {% if current_streak == best_streak and current_streak > 0 %}
+            🔥 Personal best! Keep going!
+          {% elif best_streak %}
+            Best: {{ best_streak }} days
+          {% else %}
+            Keep it steady—small wins daily.
+          {% endif %}
+        </p>
       </div>
     </div>
 
@@ -118,10 +156,18 @@
           </span>
           <div>
             <p class="text-xs uppercase tracking-wide text-base-content/60">This month</p>
-            <p class="text-2xl font-extrabold tabular-nums" id="logs-this-month">{{ logs_this_month|default:0 }}</p>
+            <div class="flex items-center gap-2">
+              <p class="text-2xl font-extrabold tabular-nums" id="logs-this-month">{{ logs_this_month|default:0 }}</p>
+              {% if month_trend %}
+                <span class="text-xs font-semibold {% if month_trend > 0 %}text-success{% elif month_trend < 0 %}text-error{% else %}text-base-content/60{% endif %}">
+                  <i class="bi bi-{% if month_trend > 0 %}arrow-up{% elif month_trend < 0 %}arrow-down{% else %}dash{% endif %}" aria-hidden="true"></i>
+                  {{ month_trend|floatformat:0 }}%
+                </span>
+              {% endif %}
+            </div>
           </div>
         </div>
-        <p class="mt-3 text-sm text-base-content/70">Activity logs recorded.</p>
+        <p class="mt-3 text-sm text-base-content/70">{% if logs_last_month %}Last month: {{ logs_last_month }}{% else %}Activity logs recorded.{% endif %}</p>
       </div>
     </div>
 
@@ -133,13 +179,76 @@
           </span>
           <div>
             <p class="text-xs uppercase tracking-wide text-base-content/60">Total time</p>
-            <p class="text-2xl font-extrabold tabular-nums">{{ total_time|default:0 }}</p>
+            <div class="flex items-baseline gap-2">
+              <p class="text-2xl font-extrabold tabular-nums">{{ total_time|default:0 }}</p>
+              <span class="text-xs text-base-content/60">min</span>
+            </div>
           </div>
         </div>
-        <p class="mt-3 text-sm text-base-content/70">Minutes tracked.</p>
+        <p class="mt-3 text-sm text-base-content/70">
+          {% if avg_daily_minutes %}
+            Avg: {{ avg_daily_minutes|floatformat:0 }} min/day
+          {% else %}
+            Minutes tracked.
+          {% endif %}
+        </p>
       </div>
     </div>
   </section>
+
+  <!-- Productivity Insights -->
+  {% if best_day or most_productive_category or completion_rate_week %}
+  <section class="card border border-base-200 bg-base-100" aria-label="Productivity insights">
+    <div class="card-body p-5 sm:p-6">
+      <h2 class="text-lg font-bold flex items-center gap-2">
+        <i class="bi bi-lightbulb text-primary" aria-hidden="true"></i>
+        <span>Insights & Highlights</span>
+      </h2>
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        {% if best_day %}
+        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-success/5 to-transparent">
+          <div class="flex items-start gap-3">
+            <i class="bi bi-trophy-fill text-success text-2xl" aria-hidden="true"></i>
+            <div>
+              <p class="text-xs font-semibold text-base-content/60 uppercase">Best Day</p>
+              <p class="text-base font-bold mt-1">{{ best_day.day_name }}</p>
+              <p class="text-sm text-base-content/70 mt-1">{{ best_day.minutes }} minutes logged</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
+        {% if most_productive_category %}
+        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-primary/5 to-transparent">
+          <div class="flex items-start gap-3">
+            <i class="bi bi-star-fill text-primary text-2xl" aria-hidden="true"></i>
+            <div>
+              <p class="text-xs font-semibold text-base-content/60 uppercase">Top Category</p>
+              <p class="text-base font-bold mt-1">{{ most_productive_category.name }}</p>
+              <p class="text-sm text-base-content/70 mt-1">{{ most_productive_category.minutes }} minutes</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+        
+        {% if completion_rate_week %}
+        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-info/5 to-transparent">
+          <div class="flex items-start gap-3">
+            <i class="bi bi-check-circle-fill text-info text-2xl" aria-hidden="true"></i>
+            <div>
+              <p class="text-xs font-semibold text-base-content/60 uppercase">Weekly Rate</p>
+              <p class="text-base font-bold mt-1">{{ completion_rate_week }}% Complete</p>
+              <p class="text-sm text-base-content/70 mt-1">
+                {% if completion_rate_week >= 80 %}Excellent work!{% elif completion_rate_week >= 60 %}Good progress!{% else %}Keep going!{% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
 
   <!-- Weekly chart -->
   <section class="card border border-base-200 bg-base-100" aria-label="Weekly overview">
@@ -260,8 +369,9 @@
             {% for day in calendar_days %}
               {% if day.logged %}
                 <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
-                   class="cal-day cal-day--active"
-                   aria-label="View summary for {{ day.date|date:'F j, Y' }} (active day)">
+                   class="cal-day cal-day--active {% if day.intensity %}cal-day--intensity-{{ day.intensity }}{% endif %}"
+                   {% if day.minutes %}data-minutes="{{ day.minutes }}m"{% endif %}
+                   aria-label="View summary for {{ day.date|date:'F j, Y' }} ({{ day.minutes|default:0 }} minutes logged)">
                   <span>{{ day.day }}</span>
                 </a>
               {% elif day.is_future %}
@@ -279,16 +389,25 @@
           </div>
         </div>
 
-        <div class="mt-4 flex flex-wrap items-center justify-center gap-4 text-sm text-base-content/70">
-          <span class="inline-flex items-center gap-2">
-            <span class="legend-dot" style="background: rgb(29 78 216 / .55)"></span> Active
-          </span>
-          <span class="inline-flex items-center gap-2">
-            <span class="legend-dot" style="background: rgba(226,232,240,1)"></span> Inactive
-          </span>
-          <span class="inline-flex items-center gap-2">
-            <span class="legend-dot" style="background: rgba(226,232,240,.6)"></span> Future
-          </span>
+        <div class="mt-4">
+          <p class="text-xs text-base-content/60 text-center mb-2">Activity Intensity</p>
+          <div class="flex flex-wrap items-center justify-center gap-2 text-xs text-base-content/70">
+            <span class="inline-flex items-center gap-1">
+              <span class="legend-dot" style="background: rgba(226,232,240,1)"></span> None
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <span class="legend-dot" style="background: rgb(29 78 216 / 0.10)"></span> Low
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <span class="legend-dot" style="background: rgb(29 78 216 / 0.30)"></span> Medium
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <span class="legend-dot" style="background: rgb(29 78 216 / 0.55)"></span> High
+            </span>
+            <span class="inline-flex items-center gap-1">
+              <span class="legend-dot" style="background: rgb(29 78 216 / 0.75)"></span> Very High
+            </span>
+          </div>
         </div>
       </div>
     </section>

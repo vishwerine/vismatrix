@@ -85,6 +85,142 @@
   </section>
   {% endif %}
 
+  <!-- Quick Stats Overview -->
+  <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Quick statistics">
+    
+    <!-- Today's Progress -->
+    <div class="card border border-base-200 bg-gradient-to-br from-primary/5 to-transparent">
+      <div class="card-body p-5">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1">
+            <p class="text-xs font-semibold text-base-content/60 uppercase">Today's Progress</p>
+            <p class="text-2xl font-bold mt-2">{{ today_completed }}/{{ today_tasks_count }}</p>
+            <p class="text-sm text-base-content/70 mt-1">
+              {% if today_tasks_count > 0 %}
+                {{ today_completion_rate }}% complete
+              {% else %}
+                No tasks yet
+              {% endif %}
+            </p>
+          </div>
+          <div class="radial-progress text-primary" 
+               style="--value:{{ today_completion_rate }}; --size:3rem; --thickness:4px;"
+               role="progressbar"
+               aria-label="Today's completion">
+            <i class="bi bi-check-circle text-lg"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Current Streak -->
+    <div class="card border border-base-200 bg-gradient-to-br from-success/5 to-transparent">
+      <div class="card-body p-5">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1">
+            <p class="text-xs font-semibold text-base-content/60 uppercase">Current Streak</p>
+            <p class="text-2xl font-bold mt-2">{{ current_streak }}</p>
+            <p class="text-sm text-base-content/70 mt-1">day{{ current_streak|pluralize }}</p>
+          </div>
+          <div class="flex items-center justify-center w-12 h-12 rounded-full bg-success/10">
+            <i class="bi bi-fire text-success text-2xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Week Activity -->
+    <div class="card border border-base-200 bg-gradient-to-br from-info/5 to-transparent">
+      <div class="card-body p-5">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1">
+            <p class="text-xs font-semibold text-base-content/60 uppercase">This Week</p>
+            <p class="text-2xl font-bold mt-2">{{ week_time }}</p>
+            <p class="text-sm text-base-content/70 mt-1 flex items-center gap-1">
+              <span>minutes</span>
+              {% if week_trend > 0 %}
+                <i class="bi bi-arrow-up text-success text-sm"></i>
+                <span class="text-success">+{{ week_trend }}%</span>
+              {% elif week_trend < 0 %}
+                <i class="bi bi-arrow-down text-error text-sm"></i>
+                <span class="text-error">{{ week_trend }}%</span>
+              {% endif %}
+            </p>
+          </div>
+          <div class="flex items-center justify-center w-12 h-12 rounded-full bg-info/10">
+            <i class="bi bi-graph-up text-info text-2xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Time -->
+    <div class="card border border-base-200 bg-gradient-to-br from-warning/5 to-transparent">
+      <div class="card-body p-5">
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex-1">
+            <p class="text-xs font-semibold text-base-content/60 uppercase">Total Time</p>
+            <p class="text-2xl font-bold mt-2">{{ total_time }}</p>
+            <p class="text-sm text-base-content/70 mt-1">
+              Avg: {{ avg_daily_time }}m/day
+            </p>
+          </div>
+          <div class="flex items-center justify-center w-12 h-12 rounded-full bg-warning/10">
+            <i class="bi bi-clock text-warning text-2xl"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  {% if best_day_info or weekly_overview %}
+  <!-- Activity Insights -->
+  <section class="card border border-base-200 bg-base-100" aria-label="Activity insights">
+    <div class="card-body p-5 sm:p-6">
+      <h2 class="text-lg font-bold flex items-center gap-2">
+        <i class="bi bi-lightbulb" aria-hidden="true"></i>
+        <span>Activity Insights</span>
+      </h2>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {% if best_day_info %}
+        <!-- Best Day -->
+        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-success/5 to-transparent">
+          <div class="flex items-start gap-3">
+            <i class="bi bi-trophy-fill text-success text-2xl" aria-hidden="true"></i>
+            <div>
+              <p class="text-xs font-semibold text-base-content/60 uppercase">Most Productive Day</p>
+              <p class="text-base font-bold mt-1">{{ best_day_info.date|date:"F j, Y" }}</p>
+              <p class="text-sm text-base-content/70 mt-1">{{ best_day_info.minutes }} minutes logged</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if weekly_overview %}
+        <!-- Weekly Activity Pattern -->
+        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
+          <p class="text-xs font-semibold text-base-content/60 uppercase mb-3">Last 7 Days</p>
+          <div class="flex items-end justify-between gap-1 h-20">
+            {% for day in weekly_overview %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full bg-primary rounded-t" 
+                   style="height: {{ day.percent }}%;"
+                   title="{{ day.label }}: {{ day.minutes }}m"></div>
+              <span class="text-xs text-base-content/60">{{ day.label }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <!-- Main layout -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -96,69 +232,81 @@
           <h2 class="text-lg font-bold flex items-center gap-2">
             <i class="bi bi-people" aria-hidden="true"></i>
             <span>Friends Feed</span>
+            <span class="badge badge-primary badge-sm">{{ friends_timeline|length }}</span>
           </h2>
-          <a href="{% url 'friends_list' %}" class="link link-primary text-sm">View all</a>
+          <a href="{% url 'friends_list' %}" class="link link-primary text-sm flex items-center gap-1">
+            <span>View all</span>
+            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+          </a>
         </div>
 
-        <div class="mt-4 divide-y divide-base-200">
+        <div class="mt-4 space-y-3">
           {% for item in friends_timeline %}
-          <article class="py-4 flex items-start gap-3">
-            <div class="avatar placeholder">
-              <div class="bg-neutral text-neutral-content rounded-full w-10">
-                <span class="text-sm">{{ item.user.username|first|upper }}</span>
-              </div>
-            </div>
-
-            <div class="flex-1 min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <a href="{% url 'view_friend_profile' item.friendship_id %}"
-                   class="font-semibold text-sm link link-primary hover:underline">
-                  {{ item.user.username }}
-                </a>
-                {% if item.type == 'task' %}
-                  <span class="badge badge-success badge-sm">Task</span>
-                {% else %}
-                  <span class="badge badge-info badge-sm">Log</span>
-                {% endif %}
+          <article class="p-4 rounded-2xl border border-base-200 bg-base-100 hover:bg-base-200/40 transition">
+            <div class="flex items-start gap-3">
+              <div class="avatar placeholder">
+                <div class="bg-gradient-to-br from-primary to-secondary text-primary-content rounded-full w-12 h-12 ring-2 ring-primary/20">
+                  <span class="text-base font-bold">{{ item.user.username|first|upper }}</span>
+                </div>
               </div>
 
-              <p class="mt-1 text-sm">
-                {% if item.type == 'task' %}
-                  Completed: <span class="font-semibold">{{ item.title }}</span>
-                {% else %}
-                  Logged: <span class="font-semibold">{{ item.title }}</span>
-                {% endif %}
-              </p>
+              <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                  <a href="{% url 'view_friend_profile' item.friendship_id %}"
+                     class="font-bold text-sm link link-primary hover:underline">
+                    {{ item.user.username }}
+                  </a>
+                  {% if item.type == 'task' %}
+                    <span class="badge badge-success badge-sm gap-1">
+                      <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                      <span>Task</span>
+                    </span>
+                  {% else %}
+                    <span class="badge badge-info badge-sm gap-1">
+                      <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                      <span>Log</span>
+                    </span>
+                  {% endif %}
+                </div>
 
-              <p class="mt-1 text-xs text-base-content/70 flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span class="inline-flex items-center gap-1">
-                  <i class="bi bi-clock" aria-hidden="true"></i>
-                  {{ item.timestamp|date:"M j, g:i A" }}
-                </span>
-                {% if item.duration %}
-                <span class="inline-flex items-center gap-1">
-                  <i class="bi bi-stopwatch" aria-hidden="true"></i>
-                  {{ item.duration }}m
-                </span>
-                {% endif %}
-                {% if item.category %}
-                <span class="inline-flex items-center gap-1">
-                  <i class="bi bi-tag" aria-hidden="true"></i>
-                  {{ item.category.name }}
-                </span>
-                {% endif %}
-              </p>
+                <p class="text-sm font-semibold mb-2">
+                  {% if item.type == 'task' %}
+                    Completed: {{ item.title }}
+                  {% else %}
+                    Logged: {{ item.title }}
+                  {% endif %}
+                </p>
+
+                <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-base-content/70">
+                  <span class="inline-flex items-center gap-1">
+                    <i class="bi bi-clock" aria-hidden="true"></i>
+                    {{ item.timestamp|date:"M j, g:i A" }}
+                  </span>
+                  {% if item.duration %}
+                  <span class="inline-flex items-center gap-1">
+                    <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                    {{ item.duration }}m
+                  </span>
+                  {% endif %}
+                  {% if item.category %}
+                  <span class="inline-flex items-center gap-1 badge badge-outline badge-xs">
+                    <i class="bi bi-tag" aria-hidden="true"></i>
+                    {{ item.category.name }}
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Star action -->
+              <button
+                class="star-btn btn btn-ghost btn-sm gap-2 flex-shrink-0"
+                data-activity-type="{{ item.type }}"
+                data-activity-id="{{ item.id }}"
+                aria-label="{% if item.user_starred %}Unstar this activity{% else %}Star this activity{% endif %}">
+                <i class="bi bi-star{% if item.user_starred %}-fill{% endif %} {% if item.user_starred %}text-warning{% endif %} text-lg" aria-hidden="true"></i>
+                <span class="star-count text-sm font-semibold tabular-nums">{{ item.star_count }}</span>
+              </button>
             </div>
-
-            <!-- Star action -->
-            <button
-              class="star-btn btn btn-ghost btn-sm gap-2"
-              data-activity-type="{{ item.type }}"
-              data-activity-id="{{ item.id }}"
-              aria-label="{% if item.user_starred %}Unstar this activity{% else %}Star this activity{% endif %}">
-              <i class="bi bi-star{% if item.user_starred %}-fill{% endif %} {% if item.user_starred %}text-warning{% endif %}" aria-hidden="true"></i>
-              <span class="star-count text-sm tabular-nums">{{ item.star_count }}</span>
-            </button>
           </article>
           {% endfor %}
         </div>
@@ -205,36 +353,56 @@
           <div class="flex items-center justify-between gap-3">
             <h2 class="text-base font-bold flex items-center gap-2">
               <i class="bi bi-list-check" aria-hidden="true"></i>
-              <span>Today</span>
+              <span>Today's Tasks</span>
             </h2>
-            <a href="{% url 'task_list' %}" class="link link-primary text-sm">View all</a>
+            <a href="{% url 'task_list' %}" class="link link-primary text-sm flex items-center gap-1">
+              <span>View all</span>
+              <i class="bi bi-arrow-right text-xs" aria-hidden="true"></i>
+            </a>
           </div>
 
           {% if pending_tasks %}
           <ul class="mt-3 space-y-2">
-            {% for task in pending_tasks|slice:":3" %}
-            <li class="flex items-center justify-between gap-3 p-3 rounded-xl border border-base-200 bg-base-100 hover:bg-base-200/40 transition">
-              <div class="min-w-0">
-                <p class="text-sm font-semibold truncate">{{ task.title }}</p>
-                {% if task.category %}
-                <p class="text-xs text-base-content/70 flex items-center gap-1 mt-1">
-                  <i class="bi bi-tag" aria-hidden="true"></i>
-                  <span class="truncate">{{ task.category.name }}</span>
-                </p>
-                {% endif %}
+            {% for task in pending_tasks|slice:":4" %}
+            <li class="group">
+              <div class="flex items-start gap-3 p-3 rounded-xl border border-base-200 bg-base-100 hover:bg-base-200/40 hover:border-primary/30 transition">
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold truncate">{{ task.title }}</p>
+                  <div class="flex flex-wrap items-center gap-2 mt-1">
+                    {% if task.category %}
+                    <span class="badge badge-outline badge-xs gap-1">
+                      <i class="bi bi-tag" aria-hidden="true"></i>
+                      {{ task.category.name }}
+                    </span>
+                    {% endif %}
+                    {% if task.due_date %}
+                    <span class="badge badge-xs gap-1 {% if task.due_date == today %}badge-warning{% elif task.due_date < today %}badge-error{% else %}badge-ghost{% endif %}">
+                      <i class="bi bi-calendar" aria-hidden="true"></i>
+                      {{ task.due_date|date:"M j" }}
+                    </span>
+                    {% endif %}
+                    {% if task.priority %}
+                    <span class="badge badge-xs {% if task.priority == 'high' %}badge-error{% elif task.priority == 'medium' %}badge-warning{% else %}badge-ghost{% endif %}">
+                      {{ task.priority }}
+                    </span>
+                    {% endif %}
+                  </div>
+                </div>
+                <a href="{% url 'log_create' %}?task={{ task.id }}"
+                   class="btn btn-primary btn-sm gap-1"
+                   aria-label="Log time for {{ task.title }}">
+                  <i class="bi bi-play-fill" aria-hidden="true"></i>
+                  <span>Start</span>
+                </a>
               </div>
-              <a href="{% url 'log_create' %}?task={{ task.id }}"
-                 class="btn btn-primary btn-sm"
-                 aria-label="Log time for {{ task.title }}">
-                <i class="bi bi-plus-lg" aria-hidden="true"></i>
-                <span class="sr-only">Log</span>
-              </a>
             </li>
             {% endfor %}
           </ul>
           {% else %}
-          <div class="mt-4 p-4 rounded-xl bg-base-200/50 text-center">
-            <p class="text-sm text-base-content/70">All caught up for today.</p>
+          <div class="mt-4 p-4 rounded-xl bg-gradient-to-br from-success/5 to-transparent border border-success/20 text-center">
+            <i class="bi bi-check-circle text-success text-3xl mb-2"></i>
+            <p class="text-sm font-semibold text-base-content">All caught up!</p>
+            <p class="text-xs text-base-content/70 mt-1">No pending tasks for today.</p>
           </div>
           {% endif %}
         </div>
@@ -330,6 +498,53 @@
           {% endif %}
         </div>
       </section>
+
+      <!-- Activity Calendar -->
+      {% if calendar_days %}
+      <section class="card border border-base-200 bg-base-100" aria-label="Monthly activity">
+        <div class="card-body p-5">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold flex items-center gap-2">
+              <i class="bi bi-calendar3" aria-hidden="true"></i>
+              <span>This Month</span>
+            </h2>
+            <span class="badge badge-outline text-xs">{{ logs_this_month }} logs</span>
+          </div>
+
+          <div class="mt-3">
+            <!-- Calendar header -->
+            <div class="grid grid-cols-7 gap-1 mb-2">
+              {% for day_name in day_names %}
+              <div class="text-xs text-center font-semibold text-base-content/60">
+                {{ day_name|slice:":1" }}
+              </div>
+              {% endfor %}
+            </div>
+            
+            <!-- Calendar days -->
+            <div class="grid grid-cols-7 gap-1">
+              {% for day in calendar_days %}
+              <div class="aspect-square flex items-center justify-center text-xs rounded {% if day.logged %}bg-primary text-primary-content font-semibold{% else %}bg-base-200/50 text-base-content/50{% endif %}"
+                   title="{% if day.logged %}Activity logged{% else %}No activity{% endif %}">
+                {{ day.day }}
+              </div>
+              {% endfor %}
+            </div>
+            
+            <div class="mt-3 flex items-center justify-center gap-3 text-xs">
+              <div class="flex items-center gap-1">
+                <div class="w-3 h-3 rounded bg-base-200/50"></div>
+                <span class="text-base-content/60">None</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <div class="w-3 h-3 rounded bg-primary"></div>
+                <span class="text-base-content/60">Logged</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      {% endif %}
 
       <!-- Optional: Messages quick link (nice on desktop, harmless on mobile) -->
       <section class="card border border-base-200 bg-base-100" aria-label="Messages shortcut">

@@ -11,7 +11,7 @@ class TaskForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'category': forms.Select(attrs={'class': 'form-select'}),
             'priority': forms.Select(attrs={'class': 'form-select'}),
-            'estimated_duration': forms.NumberInput(attrs={'class': 'form-control'}),
+            'estimated_duration': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '1440'}),
             'due_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
         }
     
@@ -29,6 +29,32 @@ class TaskForm(forms.ModelForm):
         if obj.is_global:
             return f"🌐 {obj.name}"
         return obj.name
+    
+    def clean_title(self):
+        title = self.cleaned_data.get('title', '').strip()
+        if not title:
+            raise forms.ValidationError("Title cannot be empty.")
+        if len(title) < 3:
+            raise forms.ValidationError("Title must be at least 3 characters long.")
+        return title
+    
+    def clean_estimated_duration(self):
+        duration = self.cleaned_data.get('estimated_duration')
+        if duration is not None:
+            if duration < 1:
+                raise forms.ValidationError("Duration must be at least 1 minute.")
+            if duration > 1440:  # 24 hours
+                raise forms.ValidationError("Duration cannot exceed 24 hours (1440 minutes).")
+        return duration
+    
+    def clean_due_date(self):
+        due_date = self.cleaned_data.get('due_date')
+        if due_date:
+            from django.utils import timezone
+            # Allow today and future dates only
+            if due_date < timezone.now().date():
+                raise forms.ValidationError("Due date cannot be in the past.")
+        return due_date
 
 # forms.py - Complete working form
 

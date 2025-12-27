@@ -163,9 +163,9 @@
             <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content flex items-center gap-2 truncate">
               <i class="bi bi-list-check text-primary" aria-hidden="true"></i>
               <span>Tasks</span>
-              {% if tasks %}
+              {% if total_tasks %}
                 <span class="badge vm-chip text-xs font-bold ml-2">
-                  {{ tasks|length }} total
+                  {{ total_tasks }} total
                 </span>
               {% endif %}
             </h1>
@@ -464,6 +464,75 @@
       {% endif %}
     </section>
 
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <section class="flex justify-center" aria-label="Pagination navigation">
+      <div class="join">
+        {% if page_obj.has_previous %}
+          <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+             class="join-item btn btn-sm"
+             aria-label="First page">
+            <i class="bi bi-chevron-bar-left" aria-hidden="true"></i>
+          </a>
+          <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+             class="join-item btn btn-sm"
+             aria-label="Previous page">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+          </a>
+        {% else %}
+          <button class="join-item btn btn-sm btn-disabled" disabled aria-label="First page (disabled)">
+            <i class="bi bi-chevron-bar-left" aria-hidden="true"></i>
+          </button>
+          <button class="join-item btn btn-sm btn-disabled" disabled aria-label="Previous page (disabled)">
+            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+          </button>
+        {% endif %}
+
+        <!-- Page numbers -->
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <button class="join-item btn btn-sm btn-active" aria-current="page" aria-label="Page {{ num }}">{{ num }}</button>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+               class="join-item btn btn-sm"
+               aria-label="Page {{ num }}">{{ num }}</a>
+          {% elif num == 1 or num == page_obj.paginator.num_pages %}
+            <a href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+               class="join-item btn btn-sm"
+               aria-label="Page {{ num }}">{{ num }}</a>
+          {% elif num == page_obj.number|add:'-3' or num == page_obj.number|add:'3' %}
+            <button class="join-item btn btn-sm btn-disabled" disabled>...</button>
+          {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+          <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+             class="join-item btn btn-sm"
+             aria-label="Next page">
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+          </a>
+          <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.priority %}&priority={{ request.GET.priority }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}" 
+             class="join-item btn btn-sm"
+             aria-label="Last page">
+            <i class="bi bi-chevron-bar-right" aria-hidden="true"></i>
+          </a>
+        {% else %}
+          <button class="join-item btn btn-sm btn-disabled" disabled aria-label="Next page (disabled)">
+            <i class="bi bi-chevron-right" aria-hidden="true"></i>
+          </button>
+          <button class="join-item btn btn-sm btn-disabled" disabled aria-label="Last page (disabled)">
+            <i class="bi bi-chevron-bar-right" aria-hidden="true"></i>
+          </button>
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- Pagination info -->
+    <div class="text-center text-sm text-base-content/70 mt-3">
+      Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ total_tasks }} task{{ total_tasks|pluralize }}
+    </div>
+    {% endif %}
+
   </div>
 </main>
 
@@ -598,6 +667,8 @@
     const noResultsMsg = document.getElementById('noSearchResults');
     const taskCards = Array.from(document.querySelectorAll('.vm-task'));
     const emptyState = document.querySelector('.card.vm-section .card-body > .text-4xl')?.closest('.card.vm-section');
+    const paginationSection = document.querySelector('section[aria-label="Pagination navigation"]');
+    const paginationInfo = document.querySelector('.text-center.text-sm.text-base-content\\/70');
 
     if (!searchInput || taskCards.length === 0) return;
 
@@ -613,11 +684,15 @@
         if (resultsCount) resultsCount.classList.add('hidden');
         if (noResultsMsg) noResultsMsg.classList.add('hidden');
         if (emptyState) emptyState.style.display = '';
+        if (paginationSection) paginationSection.style.display = '';
+        if (paginationInfo) paginationInfo.style.display = '';
         return;
       }
 
-      // Hide the original empty state when searching
+      // Hide the original empty state and pagination when searching
       if (emptyState) emptyState.style.display = 'none';
+      if (paginationSection) paginationSection.style.display = 'none';
+      if (paginationInfo) paginationInfo.style.display = 'none';
 
       // Filter tasks
       taskCards.forEach(card => {
@@ -647,7 +722,7 @@
       } else {
         if (noResultsMsg) noResultsMsg.classList.add('hidden');
         if (resultsCount) {
-          resultsCount.textContent = `${visibleCount} result${visibleCount !== 1 ? 's' : ''}`;
+          resultsCount.textContent = `${visibleCount} result${visibleCount !== 1 ? 's' : ''} (on this page)`;
           resultsCount.classList.remove('hidden');
         }
       }

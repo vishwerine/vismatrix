@@ -109,6 +109,67 @@
     </div>
   </section>
 
+  <!-- Active Plans -->
+  {% if active_plans %}
+  <section class="card border border-base-200 bg-base-100" aria-label="Active plans">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 class="text-lg font-bold flex items-center gap-2">
+            <i class="bi bi-diagram-3" aria-hidden="true"></i>
+            <span>Active plans</span>
+          </h2>
+          <p class="text-sm text-base-content/70 mt-1">Current plans {{ friend.username }} is working on.</p>
+        </div>
+        <span class="badge badge-primary badge-outline">{{ active_plans|length }} active</span>
+      </div>
+
+      <div class="mt-4 space-y-4">
+        {% for plan_info in active_plans %}
+        <div class="p-4 rounded-2xl border border-base-200 bg-base-100 hover:bg-base-200/40 transition-colors">
+          <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+            <div class="flex-1 min-w-0">
+              <h3 class="text-base font-bold flex items-center gap-2">
+                <i class="bi bi-folder text-primary" aria-hidden="true"></i>
+                <span class="truncate">{{ plan_info.plan.title }}</span>
+              </h3>
+              {% if plan_info.plan.description %}
+              <p class="text-sm text-base-content/70 mt-1 line-clamp-2">{{ plan_info.plan.description }}</p>
+              {% endif %}
+              <div class="flex flex-wrap items-center gap-3 mt-3 text-xs text-base-content/60">
+                <span class="flex items-center gap-1">
+                  <i class="bi bi-calendar3" aria-hidden="true"></i>
+                  Created {{ plan_info.plan.created_at|date:"M d, Y" }}
+                </span>
+                <span class="flex items-center gap-1">
+                  <i class="bi bi-list-check" aria-hidden="true"></i>
+                  {{ plan_info.total_tasks }} task{{ plan_info.total_tasks|pluralize }}
+                </span>
+              </div>
+            </div>
+            
+            <div class="flex flex-col items-end gap-2 min-w-[120px]">
+              <div class="text-right">
+                <p class="text-xs text-base-content/70">Progress</p>
+                <p class="text-lg font-bold tabular-nums">{{ plan_info.progress_percentage }}%</p>
+              </div>
+              <div class="w-full">
+                <progress class="progress progress-primary w-full" 
+                  value="{{ plan_info.progress_percentage }}" 
+                  max="100"></progress>
+                <p class="text-xs text-base-content/60 mt-1 text-center">
+                  {{ plan_info.completed_tasks }}/{{ plan_info.total_tasks }} complete
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <!-- Weekly chart -->
   <section class="card border border-base-200 bg-base-100" aria-label="Weekly overview">
     <div class="card-body p-5 sm:p-6">

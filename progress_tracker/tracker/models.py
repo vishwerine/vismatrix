@@ -34,11 +34,11 @@ class Task(models.Model):
         ('high', 'High'),
     ]
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='tasks', db_index=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
     
     # Time tracking
@@ -46,12 +46,17 @@ class Task(models.Model):
     actual_duration = models.IntegerField(help_text="Actual time spent in minutes", null=True, blank=True)
     
     # Dates
-    created_at = models.DateTimeField(auto_now_add=True)
-    due_date = models.DateField(null=True, blank=True)
-    completed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    due_date = models.DateField(null=True, blank=True, db_index=True)
+    completed_at = models.DateTimeField(null=True, blank=True, db_index=True)
     
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status', '-created_at']),
+            models.Index(fields=['user', 'due_date']),
+            models.Index(fields=['status', 'completed_at']),
+        ]
     
     def __str__(self):
         return f"{self.user.username} - {self.title}"
@@ -63,14 +68,22 @@ class Task(models.Model):
 
 # models.py - FIXED
 class DailyLog(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_logs')
-    date = models.DateField()  # ✅ NO DEFAULT HERE
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='daily_logs', db_index=True)
+    date = models.DateField(db_index=True)  # ✅ NO DEFAULT HERE
     activity = models.TextField(max_length=500)
     description = models.TextField(blank=True)
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='logs')  # Link to task
     duration = models.PositiveIntegerField(help_text="Duration in minutes", default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    
+    class Meta:
+        ordering = ['-date', '-created_at']
+        indexes = [
+            models.Index(fields=['user', '-date']),
+            models.Index(fields=['user', 'date', 'category']),
+            models.Index(fields=['task', '-date']),
+        ]
 
 
 class DailySummary(models.Model):
@@ -100,15 +113,19 @@ class FriendRequest(models.Model):
         ('rejected', 'Rejected'),
     ]
     
-    from_user = models.ForeignKey(User, related_name='sent_friend_requests', on_delete=models.CASCADE)
-    to_user = models.ForeignKey(User, related_name='received_friend_requests', on_delete=models.CASCADE)
-    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
-    created_at = models.DateTimeField(auto_now_add=True)
+    from_user = models.ForeignKey(User, related_name='sent_friend_requests', on_delete=models.CASCADE, db_index=True)
+    to_user = models.ForeignKey(User, related_name='received_friend_requests', on_delete=models.CASCADE, db_index=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
         unique_together = ('from_user', 'to_user')
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['to_user', 'status', '-created_at']),
+            models.Index(fields=['from_user', 'status']),
+        ]
     
     def __str__(self):
         return f"{self.from_user.username} -> {self.to_user.username} ({self.status})"
