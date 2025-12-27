@@ -2,8 +2,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Existing HTML routes (keep them)
-    path("", views.dashboard, name="dashboard"),
+    # Public landing page
+    path("", views.landing_page, name="landing_page"),
+    # Dashboard (requires login)
     path("dashboard/", views.dashboard, name="dashboard"),
     path("analytics/", views.analytics, name="analytics"),
 

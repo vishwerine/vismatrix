@@ -88,8 +88,8 @@ ACCOUNT_SIGNUP_FIELDS = ['username*', 'email', 'password1*', 'password2*']
 
 # Login settings
 LOGIN_URL = '/accounts/login/'  # allauth login URL
-LOGIN_REDIRECT_URL = '/'
-ACCOUNT_LOGOUT_REDIRECT_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/dashboard/'  # Redirect to dashboard after login
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'  # Redirect to landing page after logout
 ACCOUNT_AUTHENTICATED_LOGIN_REDIRECTS = True
 
 SOCIALACCOUNT_AUTO_SIGNUP = True

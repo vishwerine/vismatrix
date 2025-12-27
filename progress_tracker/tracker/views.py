@@ -22,6 +22,10 @@ import calendar
 
 logger = logging.getLogger(__name__)
 
+def landing_page(request):
+    """Public landing page - accessible without authentication."""
+    return render(request, 'tracker/landing_page.html')
+
 @login_required
 def dashboard(request):
     """Main dashboard showing today's overview + weekly summary."""

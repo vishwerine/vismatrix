@@ -1,0 +1,482 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VisMatrix - Personal Progress Tracking Platform</title>
+    <meta name="description" content="VisMatrix is a comprehensive progress tracking platform that helps you manage tasks, track daily activities, analyze productivity, and stay connected with friends. Sync with Google Calendar to automatically log your activities.">
+    <meta name="keywords" content="progress tracking, productivity, task management, time tracking, Google Calendar integration">
+    
+    <!-- Tailwind CSS + DaisyUI -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css">
+    
+    <style>
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+        
+        .hero-pattern {
+            background-color: #ffffff;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23667eea' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar bg-base-100 shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto">
+            <div class="flex-1">
+                <a href="/" class="btn btn-ghost text-xl font-bold">
+                    <i class="bi bi-graph-up-arrow text-primary"></i>
+                    <span class="gradient-text">VisMatrix</span>
+                </a>
+            </div>
+            <div class="flex-none gap-2">
+                <a href="#features" class="btn btn-ghost btn-sm hidden sm:inline-flex">Features</a>
+                <a href="#privacy" class="btn btn-ghost btn-sm hidden sm:inline-flex">Privacy</a>
+                <a href="{% url 'privacy_policy' %}" class="btn btn-ghost btn-sm">Privacy Policy</a>
+                <a href="{% url 'terms_of_service' %}" class="btn btn-ghost btn-sm hidden sm:inline-flex">Terms</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-sm gap-2">
+                        <i class="bi bi-speedometer2"></i>
+                        Dashboard
+                    </a>
+                {% else %}
+                    <a href="/accounts/login/" class="btn btn-primary btn-sm gap-2">
+                        <i class="bi bi-box-arrow-in-right"></i>
+                        Sign In
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero min-h-[80vh] hero-pattern">
+        <div class="hero-content text-center">
+            <div class="max-w-3xl animate-fade-in">
+                <h1 class="text-5xl sm:text-6xl font-extrabold mb-6">
+                    Track Your Progress,<br>
+                    <span class="gradient-text">Achieve Your Goals</span>
+                </h1>
+                <p class="text-xl text-base-content/70 mb-8">
+                    VisMatrix is a comprehensive personal progress tracking platform that helps you manage tasks, 
+                    monitor daily activities, analyze your productivity, and stay motivated with friends.
+                </p>
+                <div class="flex flex-wrap gap-4 justify-center">
+                    {% if not user.is_authenticated %}
+                        <a href="/accounts/signup/" class="btn btn-primary btn-lg gap-2">
+                            <i class="bi bi-rocket-takeoff"></i>
+                            Get Started Free
+                        </a>
+                        <a href="/accounts/login/" class="btn btn-outline btn-lg gap-2">
+                            <i class="bi bi-box-arrow-in-right"></i>
+                            Sign In
+                        </a>
+                    {% else %}
+                        <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg gap-2">
+                            <i class="bi bi-speedometer2"></i>
+                            Go to Dashboard
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-base-200">
+        <div class="container mx-auto px-4">
+            <h2 class="text-4xl font-bold text-center mb-4">
+                <span class="gradient-text">Powerful Features</span>
+            </h2>
+            <p class="text-center text-base-content/70 mb-12 max-w-2xl mx-auto">
+                Everything you need to track your progress, stay organized, and achieve your goals
+            </p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                <!-- Task Management -->
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all">
+                    <div class="card-body">
+                        <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                            <i class="bi bi-check-circle text-primary text-2xl"></i>
+                        </div>
+                        <h3 class="card-title">Task Management</h3>
+                        <p class="text-base-content/70">
+                            Create, organize, and track tasks with priorities, due dates, and categories. 
+                            Monitor progress and completion rates.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Activity Logging -->
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all">
+                    <div class="card-body">
+                        <div class="w-12 h-12 rounded-full bg-success/10 flex items-center justify-center mb-4">
+                            <i class="bi bi-journal-text text-success text-2xl"></i>
+                        </div>
+                        <h3 class="card-title">Daily Activity Logs</h3>
+                        <p class="text-base-content/70">
+                            Track your daily activities, time spent, and progress. Create detailed logs 
+                            with categories and descriptions.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Google Calendar Integration -->
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all">
+                    <div class="card-body">
+                        <div class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center mb-4">
+                            <i class="bi bi-google text-error text-2xl"></i>
+                        </div>
+                        <h3 class="card-title">Google Calendar Sync</h3>
+                        <p class="text-base-content/70">
+                            Automatically sync your Google Calendar events as activity logs. 
+                            Seamlessly integrate your schedule with progress tracking.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Analytics -->
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all">
+                    <div class="card-body">
+                        <div class="w-12 h-12 rounded-full bg-warning/10 flex items-center justify-center mb-4">
+                            <i class="bi bi-graph-up text-warning text-2xl"></i>
+                        </div>
+                        <h3 class="card-title">Analytics & Insights</h3>
+                        <p class="text-base-content/70">
+                            Visualize your progress with charts and statistics. Track time spent by category, 
+                            completion rates, and productivity trends.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Social Features -->
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all">
+                    <div class="card-body">
+                        <div class="w-12 h-12 rounded-full bg-info/10 flex items-center justify-center mb-4">
+                            <i class="bi bi-people text-info text-2xl"></i>
+                        </div>
+                        <h3 class="card-title">Connect with Friends</h3>
+                        <p class="text-base-content/70">
+                            Add friends, share your progress, and stay motivated together. 
+                            Send messages and react to activities.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Planning -->
+                <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all">
+                    <div class="card-body">
+                        <div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center mb-4">
+                            <i class="bi bi-diagram-3 text-secondary text-2xl"></i>
+                        </div>
+                        <h3 class="card-title">Goal Planning</h3>
+                        <p class="text-base-content/70">
+                            Create structured plans with milestones and dependencies. 
+                            Visualize your roadmap and track progress toward goals.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Privacy & Data Usage Section -->
+    <section id="privacy" class="py-20 bg-base-100">
+        <div class="container mx-auto px-4">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-4xl font-bold mb-4">
+                        <i class="bi bi-shield-check text-primary"></i>
+                        <span class="gradient-text ml-2">Privacy & Security</span>
+                    </h2>
+                    <p class="text-xl text-base-content/70">
+                        Your data is safe with us. We're transparent about how we use your information.
+                    </p>
+                </div>
+
+                <div class="space-y-6">
+                    <!-- What We Collect -->
+                    <div class="card bg-base-200 shadow-lg">
+                        <div class="card-body">
+                            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                                <i class="bi bi-database text-primary"></i>
+                                What Information We Collect
+                            </h3>
+                            <ul class="space-y-3 text-base-content/80">
+                                <li class="flex gap-3">
+                                    <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                    <div>
+                                        <strong>Account Information:</strong> Username, email, and password (encrypted)
+                                    </div>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                    <div>
+                                        <strong>Activity Data:</strong> Tasks, logs, plans, and categories you create
+                                    </div>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                    <div>
+                                        <strong>Google Calendar Data:</strong> Calendar events (only if you choose to connect)
+                                    </div>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-check-circle-fill text-success flex-shrink-0 mt-1"></i>
+                                    <div>
+                                        <strong>Usage Information:</strong> How you interact with the app to improve your experience
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- How We Use Data -->
+                    <div class="card bg-base-200 shadow-lg">
+                        <div class="card-body">
+                            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                                <i class="bi bi-gear text-primary"></i>
+                                How We Use Your Data
+                            </h3>
+                            <ul class="space-y-3 text-base-content/80">
+                                <li class="flex gap-3">
+                                    <i class="bi bi-arrow-right-circle text-primary flex-shrink-0 mt-1"></i>
+                                    <div>
+                                        <strong>Provide the Service:</strong> Store and display your tasks, logs, and analytics
+                                    </div>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-arrow-right-circle text-primary flex-shrink-0 mt-1"></i>
+                                    <div>
+                                        <strong>Google Calendar Integration:</strong> Sync events to create activity logs (read-only access)
+                                    </div>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-arrow-right-circle text-primary flex-shrink-0 mt-1"></i>
+                                    <div>
+                                        <strong>Social Features:</strong> Enable sharing with friends you connect with
+                                    </div>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-arrow-right-circle text-primary flex-shrink-0 mt-1"></i>
+                                    <div>
+                                        <strong>Improve Experience:</strong> Analyze usage patterns to enhance functionality
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Google Calendar Specific -->
+                    <div class="card bg-primary/5 border-2 border-primary/20 shadow-lg">
+                        <div class="card-body">
+                            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                                <i class="bi bi-google text-error"></i>
+                                Google Calendar Integration
+                            </h3>
+                            <div class="space-y-3 text-base-content/80">
+                                <p>
+                                    <strong>Purpose:</strong> VisMatrix requests access to your Google Calendar to automatically 
+                                    sync calendar events as activity logs, helping you track time spent on scheduled activities.
+                                </p>
+                                <div class="divider"></div>
+                                <div class="grid sm:grid-cols-2 gap-4">
+                                    <div>
+                                        <p class="font-semibold text-success mb-2">✓ What We DO:</p>
+                                        <ul class="space-y-1 text-sm">
+                                            <li>• Read your calendar events</li>
+                                            <li>• Sync events to your logs</li>
+                                            <li>• Store encrypted OAuth tokens</li>
+                                            <li>• Allow you to disconnect anytime</li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-error mb-2">✗ What We DON'T DO:</p>
+                                        <ul class="space-y-1 text-sm">
+                                            <li>• Modify or delete your events</li>
+                                            <li>• Share your calendar data</li>
+                                            <li>• Create new calendar events</li>
+                                            <li>• Access other Google services</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="alert alert-info mt-4">
+                                    <i class="bi bi-info-circle"></i>
+                                    <div class="text-sm">
+                                        VisMatrix's use of information received from Google APIs adheres to the 
+                                        <a href="https://developers.google.com/terms/api-services-user-data-policy" 
+                                           target="_blank" class="link font-semibold">
+                                            Google API Services User Data Policy
+                                        </a>, including the Limited Use requirements.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Your Rights -->
+                    <div class="card bg-base-200 shadow-lg">
+                        <div class="card-body">
+                            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                                <i class="bi bi-person-check text-primary"></i>
+                                Your Rights & Control
+                            </h3>
+                            <div class="grid sm:grid-cols-2 gap-4 text-base-content/80">
+                                <div class="flex gap-3">
+                                    <i class="bi bi-check-lg text-success text-xl flex-shrink-0"></i>
+                                    <div>
+                                        <strong>Access & Export</strong><br>
+                                        <span class="text-sm">Download your data anytime</span>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3">
+                                    <i class="bi bi-check-lg text-success text-xl flex-shrink-0"></i>
+                                    <div>
+                                        <strong>Delete Account</strong><br>
+                                        <span class="text-sm">Remove all your data permanently</span>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3">
+                                    <i class="bi bi-check-lg text-success text-xl flex-shrink-0"></i>
+                                    <div>
+                                        <strong>Privacy Controls</strong><br>
+                                        <span class="text-sm">Choose what friends can see</span>
+                                    </div>
+                                </div>
+                                <div class="flex gap-3">
+                                    <i class="bi bi-check-lg text-success text-xl flex-shrink-0"></i>
+                                    <div>
+                                        <strong>Disconnect Integrations</strong><br>
+                                        <span class="text-sm">Revoke Google Calendar access instantly</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Security -->
+                    <div class="card bg-base-200 shadow-lg">
+                        <div class="card-body">
+                            <h3 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                                <i class="bi bi-lock-fill text-primary"></i>
+                                Security Measures
+                            </h3>
+                            <ul class="space-y-2 text-base-content/80">
+                                <li class="flex gap-3">
+                                    <i class="bi bi-shield-check text-primary flex-shrink-0 mt-1"></i>
+                                    <span>All passwords are encrypted using industry-standard hashing</span>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-shield-check text-primary flex-shrink-0 mt-1"></i>
+                                    <span>OAuth tokens are stored securely and encrypted</span>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-shield-check text-primary flex-shrink-0 mt-1"></i>
+                                    <span>HTTPS encryption for all data transmission</span>
+                                </li>
+                                <li class="flex gap-3">
+                                    <i class="bi bi-shield-check text-primary flex-shrink-0 mt-1"></i>
+                                    <span>Regular security updates and monitoring</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- We Never Sell Data -->
+                    <div class="alert alert-success shadow-lg">
+                        <i class="bi bi-shield-fill-check text-2xl"></i>
+                        <div>
+                            <h4 class="font-bold text-lg">We Never Sell Your Data</h4>
+                            <div class="text-sm">
+                                VisMatrix does not sell, trade, or rent your personal information to third parties. 
+                                Your data is yours, and we respect your privacy.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Links to Policies -->
+                    <div class="flex flex-wrap gap-4 justify-center pt-6">
+                        <a href="{% url 'privacy_policy' %}" class="btn btn-primary gap-2">
+                            <i class="bi bi-shield-check"></i>
+                            Read Full Privacy Policy
+                        </a>
+                        <a href="{% url 'terms_of_service' %}" class="btn btn-outline gap-2">
+                            <i class="bi bi-file-text"></i>
+                            Terms of Service
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="py-20 gradient-bg text-white">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-4xl font-bold mb-4">Ready to Start Tracking Your Progress?</h2>
+            <p class="text-xl mb-8 opacity-90">Join VisMatrix today and take control of your productivity</p>
+            <div class="flex flex-wrap gap-4 justify-center">
+                {% if not user.is_authenticated %}
+                    <a href="/accounts/signup/" class="btn btn-white btn-lg gap-2">
+                        <i class="bi bi-rocket-takeoff"></i>
+                        Get Started Free
+                    </a>
+                {% else %}
+                    <a href="{% url 'dashboard' %}" class="btn btn-white btn-lg gap-2">
+                        <i class="bi bi-speedometer2"></i>
+                        Go to Dashboard
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer footer-center p-10 bg-base-200 text-base-content">
+        <div>
+            <div class="text-2xl font-bold mb-2">
+                <i class="bi bi-graph-up-arrow text-primary"></i>
+                <span class="gradient-text">VisMatrix</span>
+            </div>
+            <p class="font-semibold">Personal Progress Tracking Platform</p>
+            <p class="text-sm text-base-content/70">Helping you achieve your goals, one day at a time</p>
+        </div>
+        <div>
+            <div class="grid grid-flow-col gap-4">
+                <a href="{% url 'privacy_policy' %}" class="link link-hover">Privacy Policy</a>
+                <a href="{% url 'terms_of_service' %}" class="link link-hover">Terms of Service</a>
+                <a href="mailto:support@vismatrix.space" class="link link-hover">Contact</a>
+            </div>
+        </div>
+        <div>
+            <p class="text-sm text-base-content/60">
+                © 2025 VisMatrix. All rights reserved.<br>
+                Hosted on <strong>vismatrix.space</strong>
+            </p>
+        </div>
+    </footer>
+</body>
+</html>
