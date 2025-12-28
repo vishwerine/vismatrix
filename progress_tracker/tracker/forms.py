@@ -101,14 +101,32 @@ class DailyLogForm(forms.ModelForm):
             )
             self.fields['category'].label_from_instance = self.label_from_instance
             
-            # Filter tasks to user's tasks only - do this before setting initial
-            self.fields['task'].queryset = Task.objects.filter(user=user)
+            # Filter tasks to user's tasks AND global tasks from system_global user
+            try:
+                from django.contrib.auth.models import User
+                system_user = User.objects.get(username='system_global')
+                self.fields['task'].queryset = Task.objects.filter(
+                    Q(user=user) | Q(user=system_user, is_global=True)
+                )
+            except User.DoesNotExist:
+                self.fields['task'].queryset = Task.objects.filter(user=user)
             self.fields['task'].required = True  # Make task selection required
 
     def label_from_instance(self, obj):
         if obj.is_global:
             return f"🌐 {obj.name}"
         return obj.name
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Auto-set category from task if task is selected
+        if instance.task and instance.task.category:
+            instance.category = instance.task.category
+        
+        if commit:
+            instance.save()
+        return instance
 
 
 class CategoryForm(forms.ModelForm):
@@ -184,8 +202,16 @@ class PlanNodeForm(forms.ModelForm):
         super(PlanNodeForm, self).__init__(*args, **kwargs)
         
         if user:
-            # Only show user's tasks
-            self.fields['task'].queryset = Task.objects.filter(user=user)
+            # Show user's tasks AND global tasks from system_global user
+            from django.db.models import Q
+            try:
+                from django.contrib.auth.models import User
+                system_user = User.objects.get(username='system_global')
+                self.fields['task'].queryset = Task.objects.filter(
+                    Q(user=user) | Q(user=system_user, is_global=True)
+                )
+            except User.DoesNotExist:
+                self.fields['task'].queryset = Task.objects.filter(user=user)
         
         if plan:
             # Only show nodes from the same plan as dependencies

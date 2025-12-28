@@ -40,11 +40,7 @@ class Task(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', db_index=True)
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
-    
-    # Global task flags
-    is_global = models.BooleanField(default=False, help_text="Global tasks are shared across all users")
-    is_editable = models.BooleanField(default=True, help_text="Whether the task can be edited by users")
-    is_deletable = models.BooleanField(default=True, help_text="Whether the task can be deleted by users")
+    is_default = models.BooleanField(default=False, help_text="Default tasks cannot be deleted by users")
     
     # Time tracking
     estimated_duration = models.IntegerField(help_text="Estimated time in minutes", null=True, blank=True)

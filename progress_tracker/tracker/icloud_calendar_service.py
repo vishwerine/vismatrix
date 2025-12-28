@@ -8,7 +8,8 @@ from django.utils import timezone
 from django.db import transaction
 import logging
 
-from .models import ICloudCalendarIntegration, DailyLog, Category
+from .models import ICloudCalendarIntegration, DailyLog, Category, Task
+from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
 
@@ -99,6 +100,27 @@ class ICloudCalendarService:
             # Get default category for calendar events
             default_category = self.integration.default_category
             
+            # Get system user for global tasks
+            try:
+                system_user = User.objects.get(username='system_global')
+                has_global_tasks = True
+            except User.DoesNotExist:
+                system_user = None
+                has_global_tasks = False
+                logger.warning("System user 'system_global' not found. Will not use semantic classification.")
+            
+            # Import semantic classifier
+            if has_global_tasks:
+                try:
+                    from .management.commands.semantic_classifier import classify_text
+                    use_semantic = True
+                    logger.info("Semantic classifier loaded successfully")
+                except Exception as e:
+                    use_semantic = False
+                    logger.warning(f"Failed to load semantic classifier: {str(e)}. Will use default category.")
+            else:
+                use_semantic = False
+            
             with transaction.atomic():
                 for calendar in calendars:
                     try:
@@ -148,6 +170,45 @@ class ICloudCalendarService:
                                     skipped_count += 1
                                     continue
                                 
+                                # Use semantic classification to determine category and task
+                                assigned_category = default_category
+                                assigned_task = None
+                                
+                                if use_semantic and system_user:
+                                    try:
+                                        # Classify the event text
+                                        predicted_category, top_scores = classify_text(summary)
+                                        
+                                        if predicted_category and predicted_category != "Uncategorized":
+                                            # Find matching global category
+                                            matching_category = Category.objects.filter(
+                                                name__iexact=predicted_category,
+                                                is_global=True
+                                            ).first()
+                                            
+                                            if matching_category:
+                                                assigned_category = matching_category
+                                                
+                                                # Find the corresponding global task
+                                                global_task = Task.objects.filter(
+                                                    user=system_user,
+                                                    category=matching_category,
+                                                    is_global=True
+                                                ).first()
+                                                
+                                                if global_task:
+                                                    assigned_task = global_task
+                                                    logger.debug(f"Classified '{summary}' as {predicted_category}, assigned to task '{global_task.title}'")
+                                                else:
+                                                    logger.debug(f"No global task found for category {predicted_category}")
+                                            else:
+                                                logger.debug(f"Category '{predicted_category}' not found in global categories")
+                                        else:
+                                            logger.debug(f"Event '{summary}' classified as Uncategorized, using default")
+                                    
+                                    except Exception as e:
+                                        logger.warning(f"Semantic classification failed for '{summary}': {str(e)}")
+                                
                                 # Create or update DailyLog
                                 log, created = DailyLog.objects.update_or_create(
                                     user=self.user,
@@ -155,7 +216,8 @@ class ICloudCalendarService:
                                     activity=summary[:200],  # Limit to 200 chars
                                     defaults={
                                         'duration': duration_minutes,
-                                        'category': default_category,
+                                        'category': assigned_category,
+                                        'task': assigned_task,
                                         'description': f'Synced from iCloud Calendar: {calendar.name}',
                                     }
                                 )

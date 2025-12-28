@@ -737,6 +737,7 @@ def task_list(request):
     priority_filter = request.GET.get('priority', '')
     search_query = request.GET.get('search', '').strip()
     
+    # Get only user's own tasks (exclude global default tasks)
     tasks = Task.objects.filter(user=request.user).select_related('category')
     
     # Apply status filter
@@ -841,6 +842,11 @@ def task_update(request, pk):
     """Update an existing task"""
     task = get_object_or_404(Task, pk=pk, user=request.user)
     
+    # Prevent editing of global tasks that are marked as non-editable
+    if hasattr(task, 'is_global') and task.is_global and not task.is_editable:
+        messages.error(request, f"Cannot edit '{task.title}'. This is a global default task that cannot be modified.")
+        return redirect('task_list')
+    
     if request.method == 'POST':
         form = TaskForm(request.POST, instance=task, user=request.user)
         if form.is_valid():
@@ -863,7 +869,12 @@ def task_delete(request, pk):
     """Delete a task"""
     task = get_object_or_404(Task, pk=pk, user=request.user)
     
-    # Prevent deletion of the default task
+    # Prevent deletion of global tasks that are marked as non-deletable
+    if hasattr(task, 'is_global') and task.is_global and not task.is_deletable:
+        messages.error(request, f"Cannot delete '{task.title}'. This is a global default task that cannot be removed.")
+        return redirect('task_list')
+    
+    # Prevent deletion of the default task (legacy check)
     if task.title == 'General Activity':
         messages.error(request, "Cannot delete the default 'General Activity' task. It's required for time tracking.")
         return redirect('task_list')
@@ -930,6 +941,9 @@ def log_create(request):
             try:
                 log = form.save(commit=False)
                 log.user = request.user
+                # Ensure category is set from task if task has a category
+                if log.task and log.task.category:
+                    log.category = log.task.category
                 log.save()
                 messages.success(request, "Activity logged successfully!")
                 return redirect("log_list")
@@ -973,7 +987,12 @@ def log_update(request, pk):
     if request.method == "POST":
         form = DailyLogForm(request.POST, instance=log, user=request.user)
         if form.is_valid():
-            form.save()
+            updated_log = form.save(commit=False)
+            # Ensure category is set from task if task has a category
+            if updated_log.task and updated_log.task.category:
+                updated_log.category = updated_log.task.category
+            updated_log.save()
+            messages.success(request, "Activity updated successfully!")
             return redirect("log_list")
     else:
         form = DailyLogForm(instance=log, user=request.user)
