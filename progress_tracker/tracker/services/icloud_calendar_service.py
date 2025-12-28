@@ -112,12 +112,16 @@ class ICloudCalendarService:
             # Check if semantic classifier is available
             if has_global_tasks:
                 try:
-                    from .semantic_classifier import classify_text, MODEL_AVAILABLE
-                    use_semantic = MODEL_AVAILABLE
-                    if use_semantic:
-                        logger.info("Semantic classifier available")
+                    from .semantic_classifier_remote import classify_text, MODEL_AVAILABLE, is_model_loaded
+                    use_semantic = MODEL_AVAILABLE and is_model_loaded()
+                    if MODEL_AVAILABLE and not is_model_loaded():
+                        logger.info("Semantic classifier files exist but model not loaded yet. "
+                                  "Classification will be skipped for this sync. "
+                                  "Run 'python manage.py preload_classifier' to pre-load the model.")
+                    elif use_semantic:
+                        logger.info("Semantic classifier loaded and ready")
                     else:
-                        logger.warning("Semantic classifier model not loaded. Will use default category.")
+                        logger.warning("Semantic classifier not available. Will use default category.")
                 except Exception as e:
                     use_semantic = False
                     logger.warning(f"Failed to import semantic classifier: {str(e)}. Will use default category.")

@@ -86,17 +86,28 @@ _KV = None
 _PROTOS = None
 _META = None
 _LOAD_ATTEMPTED = False
+_LOADING_IN_PROGRESS = False
 
 
 def _ensure_loaded():
     """Ensure model is loaded (lazy loading with caching)"""
-    global _KV, _PROTOS, _META, _LOAD_ATTEMPTED
+    global _KV, _PROTOS, _META, _LOAD_ATTEMPTED, _LOADING_IN_PROGRESS
     
-    if _LOAD_ATTEMPTED:
+    if _LOAD_ATTEMPTED or _LOADING_IN_PROGRESS:
         return
     
+    _LOADING_IN_PROGRESS = True
     _LOAD_ATTEMPTED = True
-    _KV, _PROTOS, _META = _load_model()
+    
+    try:
+        _KV, _PROTOS, _META = _load_model()
+    finally:
+        _LOADING_IN_PROGRESS = False
+
+
+def is_model_loaded() -> bool:
+    """Check if model is actually loaded in memory (not just files exist)"""
+    return _KV is not None and _PROTOS is not None and _META is not None
 
 
 def is_model_available() -> bool:
@@ -120,8 +131,7 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def _text_to_vec(text: str) -> Optional[np.ndarray]:
-    _ensure_loaded()
-    
+    # Model must be loaded before calling this
     if _KV is None:
         return None
         
@@ -136,8 +146,18 @@ def classify_text(
     text: str,
     top_k: int = 3,
     unknown_threshold: Optional[float] = 0.25,
+    load_if_needed: bool = False,
 ) -> Tuple[str, List[Tuple[str, float]]]:
     """
+    Classify text into a category.
+    
+    Args:
+        text: Text to classify
+        top_k: Number of top scores to return
+        unknown_threshold: Minimum similarity threshold
+        load_if_needed: If True, will load model if not loaded (blocks for 30-180s).
+                        If False, returns "Uncategorized" if model not loaded yet.
+    
     Returns:
       best_label, top_scores
 
@@ -145,8 +165,17 @@ def classify_text(
       If best similarity < threshold, returns "Uncategorized".
       Tune 0.20–0.35 depending on how strict you want it.
     """
-    _ensure_loaded()
+    # Check if model is already loaded
+    if not is_model_loaded():
+        if load_if_needed:
+            # Load model (this will block for 30-180 seconds!)
+            _ensure_loaded()
+        else:
+            # Model not loaded and we're not allowed to load it
+            logger.info(f"Semantic classifier not loaded yet, skipping classification for: '{text[:50]}...'")
+            return "Uncategorized", []
     
+    # At this point model must be loaded
     if _KV is None or not _PROTOS:
         logger.warning("Semantic classifier model not available")
         return "Uncategorized", []
@@ -170,8 +199,25 @@ def get_category_metadata() -> Dict:
     Optional helper: returns meta.json content (colors etc.)
     """
     _ensure_loaded()
+    if not is_model_loaded():
+        _ensure_loaded()
     
     if _META is None:
         logger.warning("Semantic classifier model not available")
         return {}
     return _META
+
+
+def preload_model():
+    """
+    Explicitly load the model (blocking call, takes 30-180 seconds).
+    Use this in a management command or background task to pre-warm the model.
+    """
+    logger.info("Preloading semantic classifier model...")
+    _ensure_loaded()
+    if is_model_loaded():
+        logger.info("✅ Semantic classifier model loaded successfully")
+        return True
+    else:
+        logger.error("❌ Failed to load semantic classifier model")
+        return False
