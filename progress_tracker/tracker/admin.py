@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode
+from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -61,3 +61,19 @@ class MessageAdmin(admin.ModelAdmin):
 @admin.register(ConversationMember)
 class ConversationMemberAdmin(admin.ModelAdmin):
     list_display = ("conversation", "user", "last_read_at", "last_read_message")
+
+
+@admin.register(GoogleCalendarIntegration)
+class GoogleCalendarIntegrationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'is_active', 'auto_sync', 'last_sync_at']
+    list_filter = ['is_active', 'auto_sync']
+    search_fields = ['user__username', 'user__email']
+    readonly_fields = ['created_at', 'updated_at', 'last_sync_at']
+
+
+@admin.register(ICloudCalendarIntegration)
+class ICloudCalendarIntegrationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'apple_id', 'is_active', 'auto_sync', 'last_sync_at']
+    list_filter = ['is_active', 'auto_sync']
+    search_fields = ['user__username', 'user__email', 'apple_id']
+    readonly_fields = ['created_at', 'updated_at', 'last_sync_at']

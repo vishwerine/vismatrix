@@ -443,4 +443,67 @@ class GoogleCalendarIntegration(models.Model):
         self.save()
 
 
-
+class ICloudCalendarIntegration(models.Model):
+    """Store iCloud Calendar credentials and sync preferences for each user"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='icloud_calendar')
+    
+    # iCloud credentials (uses app-specific password)
+    apple_id = models.EmailField(help_text="Apple ID email address")
+    app_specific_password = models.CharField(max_length=255, help_text="App-specific password generated from appleid.apple.com")
+    
+    # CalDAV server details
+    caldav_url = models.CharField(max_length=500, default='https://caldav.icloud.com', help_text="CalDAV server URL")
+    principal_url = models.CharField(max_length=500, blank=True, help_text="Principal URL for calendar access")
+    
+    # Sync settings
+    is_active = models.BooleanField(default=True, help_text="Enable/disable sync")
+    auto_sync = models.BooleanField(default=True, help_text="Automatically sync calendar events")
+    sync_interval_hours = models.IntegerField(default=1, help_text="How often to sync (in hours)")
+    sync_days_back = models.IntegerField(default=7, help_text="Number of days in the past to sync")
+    sync_days_forward = models.IntegerField(default=0, help_text="Number of days in the future to sync")
+    
+    # Sync state
+    last_sync_at = models.DateTimeField(null=True, blank=True, help_text="Last successful sync")
+    sync_error = models.TextField(blank=True, help_text="Last sync error message")
+    
+    # Filtering preferences
+    sync_calendars = models.TextField(blank=True, help_text="Comma-separated calendar names to sync (empty = all)")
+    min_event_duration = models.IntegerField(default=15, help_text="Minimum event duration in minutes to sync")
+    exclude_all_day_events = models.BooleanField(default=False, help_text="Skip all-day events")
+    
+    # Default category for synced events
+    default_category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, help_text="Default category for calendar events")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "iCloud Calendar Integration"
+        verbose_name_plural = "iCloud Calendar Integrations"
+    
+    def __str__(self):
+        status = "Active" if self.is_active else "Inactive"
+        return f"{self.user.username} - iCloud Calendar ({status})"
+    
+    def should_sync(self):
+        """Check if it's time to sync based on interval"""
+        if not self.is_active or not self.auto_sync:
+            return False
+        if not self.last_sync_at:
+            return True
+        
+        from datetime import timedelta
+        next_sync = self.last_sync_at + timedelta(hours=self.sync_interval_hours)
+        return timezone.now() >= next_sync
+    
+    def mark_sync_success(self):
+        """Update last sync timestamp"""
+        self.last_sync_at = timezone.now()
+        self.sync_error = ''
+        self.save()
+    
+    def mark_sync_error(self, error_message):
+        """Record sync error"""
+        self.sync_error = error_message
+        self.save()

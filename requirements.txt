@@ -103,6 +103,7 @@ Django==5.2.8
 django-allauth==65.13.1
 django-environ==0.12.0
 django-widget-tweaks==1.5.0
+caldav==1.3.9
 dmglib @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_c274akzxeo/croot/dmglib_1719996269027/work
 docstring-to-markdown @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/docstring-to-markdown_1699248259185/work
 docutils @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/docutils_1699240610068/work

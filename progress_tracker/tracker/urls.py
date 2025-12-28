@@ -87,6 +87,12 @@ urlpatterns = [
     path("calendar/update_settings/", views.calendar_update_settings, name="calendar_update_settings"),
     path("api/calendar/list/", views.calendar_list_calendars, name="calendar_list_calendars"),
 
+    # iCloud Calendar Integration
+    path("calendar/icloud/connect/", views.icloud_calendar_connect, name="icloud_calendar_connect"),
+    path("calendar/icloud/disconnect/", views.icloud_calendar_disconnect, name="icloud_calendar_disconnect"),
+    path("calendar/icloud/sync/", views.icloud_calendar_sync, name="icloud_calendar_sync"),
+    path("calendar/icloud/update_settings/", views.icloud_calendar_update_settings, name="icloud_calendar_update_settings"),
+
     # Profile Settings
     path("profile/settings/", views.profile_settings, name="profile_settings"),
 

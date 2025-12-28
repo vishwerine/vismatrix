@@ -16,6 +16,7 @@ from django.views.decorators.http import require_http_methods
 import logging
 
 from .decorators import rate_limit, validate_ajax, validate_json, log_errors
+from .icloud_calendar_service import ICloudCalendarService
 
 import json
 import calendar
@@ -2706,7 +2707,7 @@ def shared_plan_view(request, token):
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from .models import GoogleCalendarIntegration
+from .models import GoogleCalendarIntegration, ICloudCalendarIntegration
 from .calendar_service import GoogleCalendarService
 from django.conf import settings
 
@@ -2719,11 +2720,16 @@ SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 @login_required
 def calendar_settings(request):
-    """Calendar integration settings page"""
+    """Calendar integration settings page - supports Google and iCloud calendars"""
     try:
-        integration = GoogleCalendarIntegration.objects.get(user=request.user)
+        google_integration = GoogleCalendarIntegration.objects.get(user=request.user)
     except GoogleCalendarIntegration.DoesNotExist:
-        integration = None
+        google_integration = None
+    
+    try:
+        icloud_integration = ICloudCalendarIntegration.objects.get(user=request.user)
+    except ICloudCalendarIntegration.DoesNotExist:
+        icloud_integration = None
     
     # Get all categories for default category selection
     categories = Category.objects.filter(
@@ -2731,7 +2737,8 @@ def calendar_settings(request):
     ).order_by('-is_global', 'name')
     
     context = {
-        'integration': integration,
+        'google_integration': google_integration,
+        'icloud_integration': icloud_integration,
         'categories': categories,
         'google_configured': bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET),
     }
@@ -3045,3 +3052,134 @@ def calendar_list_calendars(request):
             'success': False,
             'error': str(e)
         }, status=400)
+
+
+# ============================================
+# iCloud Calendar Integration Views
+# ============================================
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def icloud_calendar_connect(request):
+    """Connect or update iCloud Calendar integration"""
+    if request.method == 'POST':
+        apple_id = request.POST.get('apple_id', '').strip()
+        app_password = request.POST.get('app_password', '').strip()
+        
+        if not apple_id or not app_password:
+            messages.error(request, "Apple ID and App-Specific Password are required.")
+            return redirect('calendar_settings')
+        
+        try:
+            # Create or update integration
+            integration, created = ICloudCalendarIntegration.objects.update_or_create(
+                user=request.user,
+                defaults={
+                    'apple_id': apple_id,
+                    'app_specific_password': app_password,
+                    'is_active': True,
+                }
+            )
+            
+            action = "connected" if created else "updated"
+            messages.success(request, f"iCloud Calendar successfully {action}!")
+            
+        except Exception as e:
+            logger.error(f"iCloud Calendar connection error for user {request.user.id}: {str(e)}")
+            messages.error(request, f"Failed to connect iCloud Calendar: {str(e)}")
+        
+        return redirect('calendar_settings')
+    
+    # GET request - show connection form
+    try:
+        integration = ICloudCalendarIntegration.objects.get(user=request.user)
+        apple_id = integration.apple_id
+    except ICloudCalendarIntegration.DoesNotExist:
+        apple_id = ''
+    
+    context = {
+        'apple_id': apple_id,
+    }
+    return render(request, 'tracker/icloud_connect.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def icloud_calendar_disconnect(request):
+    """Disconnect iCloud Calendar integration"""
+    try:
+        integration = ICloudCalendarIntegration.objects.get(user=request.user)
+        integration.delete()
+        messages.success(request, "iCloud Calendar disconnected successfully.")
+    except ICloudCalendarIntegration.DoesNotExist:
+        messages.info(request, "iCloud Calendar was not connected.")
+    
+    return redirect('calendar_settings')
+
+
+@login_required
+@require_http_methods(["POST"])
+def icloud_calendar_sync(request):
+    """Manually trigger iCloud Calendar sync"""
+    try:
+        integration = ICloudCalendarIntegration.objects.get(user=request.user)
+        
+        if not integration.is_active:
+            messages.warning(request, "iCloud Calendar sync is disabled. Enable it in settings.")
+            return redirect('calendar_settings')
+        
+        # Use the CalDAV service to sync events
+        service = ICloudCalendarService(request.user)
+        result = service.sync_events(
+            days_back=integration.sync_days_back,
+            days_forward=integration.sync_days_forward
+        )
+        
+        messages.success(
+            request,
+            f"iCloud Calendar sync completed! Synced {result['synced_count']} events "
+            f"from {result['calendars_synced']} calendar(s). "
+            f"Skipped {result['skipped_count']} events."
+        )
+        
+    except ICloudCalendarIntegration.DoesNotExist:
+        messages.error(request, "iCloud Calendar is not connected.")
+    except Exception as e:
+        messages.error(request, f"iCloud Calendar sync failed: {str(e)}")
+        logger.error(f"iCloud sync error for user {request.user.id}: {str(e)}")
+    
+    return redirect('calendar_settings')
+
+
+@login_required
+@require_http_methods(["POST"])
+def icloud_calendar_update_settings(request):
+    """Update iCloud Calendar sync settings"""
+    try:
+        integration = ICloudCalendarIntegration.objects.get(user=request.user)
+        
+        # Update settings from POST data
+        integration.auto_sync = request.POST.get('auto_sync') == 'on'
+        integration.sync_interval_hours = int(request.POST.get('sync_interval_hours', 1))
+        integration.min_event_duration = int(request.POST.get('min_event_duration', 15))
+        integration.exclude_all_day_events = request.POST.get('exclude_all_day_events') == 'on'
+        
+        # Update default category if provided
+        category_id = request.POST.get('default_category')
+        if category_id:
+            try:
+                category = Category.objects.get(pk=category_id)
+                integration.default_category = category
+            except Category.DoesNotExist:
+                pass
+        
+        integration.save()
+        messages.success(request, "iCloud Calendar settings updated successfully!")
+        
+    except ICloudCalendarIntegration.DoesNotExist:
+        messages.error(request, "iCloud Calendar is not connected.")
+    except Exception as e:
+        logger.error(f"Error updating iCloud Calendar settings for user {request.user.id}: {str(e)}")
+        messages.error(request, f"Failed to update settings: {str(e)}")
+    
+    return redirect('calendar_settings')

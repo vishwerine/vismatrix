@@ -1,0 +1,144 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Connect iCloud Calendar - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="space-y-6 max-w-2xl mx-auto">
+  
+  <header class="card border border-base-200 bg-base-100">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex items-center justify-between">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-bold">Connect iCloud Calendar</h1>
+          <p class="text-base-content/70 mt-1">Sync your Apple Calendar events</p>
+        </div>
+        <a href="{% url 'calendar_settings' %}" class="btn btn-outline btn-sm gap-2">
+          <i class="bi bi-arrow-left" aria-hidden="true"></i>
+          <span>Back</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-6">
+      <h2 class="card-title text-xl font-bold mb-4">
+        <i class="bi bi-apple text-primary" aria-hidden="true"></i>
+        iCloud Credentials
+      </h2>
+
+      <form method="post" class="space-y-5" novalidate>
+        {% csrf_token %}
+
+        {% if messages %}
+        <div class="space-y-2" role="alert">
+          {% for message in messages %}
+          <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %} shadow-sm">
+            <i class="bi {% if message.tags == 'success' %}bi-check-circle{% elif message.tags == 'error' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>
+            <span>{{ message }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Apple ID Field -->
+        <div class="form-control w-full">
+          <label for="apple_id" class="label">
+            <span class="label-text font-semibold">Apple ID</span>
+          </label>
+          <input 
+            type="email" 
+            id="apple_id" 
+            name="apple_id" 
+            class="input input-bordered w-full" 
+            placeholder="your.email@icloud.com"
+            value="{{ apple_id }}"
+            required
+          />
+          <label class="label">
+            <span class="label-text-alt text-base-content/60">Your Apple ID email address</span>
+          </label>
+        </div>
+
+        <!-- App-Specific Password Field -->
+        <div class="form-control w-full">
+          <label for="app_password" class="label">
+            <span class="label-text font-semibold">App-Specific Password</span>
+          </label>
+          <input 
+            type="password" 
+            id="app_password" 
+            name="app_password" 
+            class="input input-bordered w-full font-mono" 
+            placeholder="xxxx-xxxx-xxxx-xxxx"
+            required
+          />
+          <label class="label">
+            <span class="label-text-alt text-base-content/60">
+              Generate at <a href="https://appleid.apple.com" target="_blank" class="link link-primary">appleid.apple.com</a>
+            </span>
+          </label>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex gap-3 pt-2">
+          <button type="submit" class="btn btn-primary gap-2">
+            <i class="bi bi-check-circle" aria-hidden="true"></i>
+            <span>Connect</span>
+          </button>
+          <a href="{% url 'calendar_settings' %}" class="btn btn-outline gap-2">
+            <i class="bi bi-x-circle" aria-hidden="true"></i>
+            <span>Cancel</span>
+          </a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- Instructions Card -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-6">
+      <h2 class="card-title text-lg font-bold mb-3">
+        <i class="bi bi-lightbulb text-warning" aria-hidden="true"></i>
+        How to Generate an App-Specific Password
+      </h2>
+      <div class="space-y-3 text-sm text-base-content/80">
+        <ol class="list-decimal list-inside space-y-2">
+          <li>
+            Go to <a href="https://appleid.apple.com" target="_blank" class="link link-primary">appleid.apple.com</a> and sign in
+          </li>
+          <li>
+            Navigate to <strong>Security</strong> section
+          </li>
+          <li>
+            Under <strong>App-Specific Passwords</strong>, click <strong>Generate</strong>
+          </li>
+          <li>
+            Enter a label like "VisMatrix Calendar Sync"
+          </li>
+          <li>
+            Copy the generated password (format: xxxx-xxxx-xxxx-xxxx)
+          </li>
+          <li>
+            Paste it in the field above
+          </li>
+        </ol>
+        
+        <div class="divider"></div>
+        
+        <div class="space-y-2">
+          <p>
+            <i class="bi bi-shield-check text-success mr-2" aria-hidden="true"></i>
+            <strong>Security:</strong> Your credentials are stored securely and never shared.
+          </p>
+          <p>
+            <i class="bi bi-info-circle text-info mr-2" aria-hidden="true"></i>
+            <strong>Note:</strong> Standard iCloud passwords don't work. You must use an app-specific password.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+{% endblock %}
