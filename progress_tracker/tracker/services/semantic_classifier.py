@@ -48,7 +48,7 @@ _word_re = re.compile(r"[a-zA-Z][a-zA-Z']+")
 
 def _load_model():
     """
-    Load the semantic classifier model at import time.
+    Load the semantic classifier model lazily on first use.
     Returns (kv, protos, meta) or (None, None, None) if loading fails.
     """
     try:
@@ -81,11 +81,31 @@ def _load_model():
         return None, None, None
 
 
-# Load at module import time (eager loading)
-_KV, _PROTOS, _META = _load_model()
+# Lazy-loaded globals (loaded on first use, not at import time)
+_KV = None
+_PROTOS = None
+_META = None
+_LOAD_ATTEMPTED = False
 
-# Flag to check if the model loaded successfully
-MODEL_AVAILABLE = bool(_KV is not None and _PROTOS and _META)
+
+def _ensure_loaded():
+    """Ensure model is loaded (lazy loading with caching)"""
+    global _KV, _PROTOS, _META, _LOAD_ATTEMPTED
+    
+    if _LOAD_ATTEMPTED:
+        return
+    
+    _LOAD_ATTEMPTED = True
+    _KV, _PROTOS, _META = _load_model()
+
+
+def is_model_available() -> bool:
+    """Check if model files exist (without loading)"""
+    return os.path.exists(NPZ_PATH) and os.path.exists(META_PATH)
+
+
+# For backwards compatibility
+MODEL_AVAILABLE = is_model_available()
 
 
 def _tokenize(text: str) -> List[str]:
@@ -100,7 +120,9 @@ def _cosine(a: np.ndarray, b: np.ndarray) -> float:
 
 
 def _text_to_vec(text: str) -> Optional[np.ndarray]:
-    if not MODEL_AVAILABLE:
+    _ensure_loaded()
+    
+    if _KV is None:
         return None
         
     toks = _tokenize(text)
@@ -123,7 +145,9 @@ def classify_text(
       If best similarity < threshold, returns "Uncategorized".
       Tune 0.20–0.35 depending on how strict you want it.
     """
-    if not MODEL_AVAILABLE:
+    _ensure_loaded()
+    
+    if _KV is None or not _PROTOS:
         logger.warning("Semantic classifier model not available")
         return "Uncategorized", []
 
@@ -145,7 +169,9 @@ def get_category_metadata() -> Dict:
     """
     Optional helper: returns meta.json content (colors etc.)
     """
-    if not MODEL_AVAILABLE:
+    _ensure_loaded()
+    
+    if _META is None:
         logger.warning("Semantic classifier model not available")
         return {}
     return _META

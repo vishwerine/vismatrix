@@ -84,17 +84,19 @@ else:
 
 ## How It Works
 
-1. **At Process Startup**: When Django starts, `semantic_classifier.py` loads:
-   - Category prototype vectors from `prototypes.npz`
-   - Metadata from `meta.json`
-   - FastText embedding model (cached)
+1. **At Process Startup**: When Django starts, the module loads quickly:
+   - Checks if prototype files exist (fast)
+   - Does **NOT** load the model yet (lazy loading)
+   - Server starts in seconds, not minutes
 
-2. **At Runtime**: Classification is fast because models are pre-loaded:
-   - Converts text to embedding vector
-   - Compares with all category prototypes using cosine similarity
-   - Returns best match if similarity > threshold
+2. **On First Use**: When classification is first called:
+   - Loads category prototypes from `prototypes.npz`
+   - Loads FastText embedding model (takes ~30-180s first time)
+   - Model stays in memory for subsequent calls
 
-3. **Graceful Degradation**: If prototypes aren't available:
+3. **Subsequent Calls**: Classification is fast (<1ms) because model is cached in memory
+
+4. **Graceful Degradation**: If prototypes aren't available:
    - `MODEL_AVAILABLE = False`
    - `classify_text()` returns "Uncategorized"
    - No errors or crashes
@@ -109,10 +111,12 @@ To add/modify categories, edit `build_prototypes.py`:
 
 ## Performance Notes
 
-- **First import**: ~2-5 seconds (loads model into memory)
-- **Subsequent calls**: <1ms per classification
+- **Import time**: <2 seconds (no model loading)
+- **First classification**: 30-180 seconds (loads model)
+- **Subsequent calls**: <1ms per classification (model cached)
 - **Memory usage**: ~1GB for FastText model
-- **Thread-safe**: Yes, models loaded once at module level
+- **Thread-safe**: Yes, models loaded once per process
+- **Production**: Works with gunicorn/uwsgi (no worker timeout issues)
 
 ## Troubleshooting
 
@@ -124,9 +128,15 @@ To add/modify categories, edit `build_prototypes.py`:
 - Install: `pip install gensim numpy`
 
 ### Server starts slowly
-- This is expected on first startup after restart
-- Models load once during Django initialization
-- Subsequent requests are fast
+- **This is NOT expected anymore** - server should start quickly
+- Model loads lazily on first classification request
+- First request will be slower (~30-180s), subsequent requests are fast
+
+### First classification is slow
+- This is expected behavior (lazy loading)
+- Model loads on first use (~30-180 seconds)
+- Subsequent classifications are fast (<1ms)
+- Model stays loaded for the lifetime of the worker process
 
 ### Classification returns "Uncategorized"
 - Check similarity threshold (default: 0.25)
