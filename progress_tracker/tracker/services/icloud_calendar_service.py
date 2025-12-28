@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.db import transaction
 import logging
 
-from .models import ICloudCalendarIntegration, DailyLog, Category, Task
+from tracker.models import ICloudCalendarIntegration, DailyLog, Category, Task
 from django.contrib.auth.models import User
 
 logger = logging.getLogger(__name__)
@@ -109,15 +109,18 @@ class ICloudCalendarService:
                 has_global_tasks = False
                 logger.warning("System user 'system_global' not found. Will not use semantic classification.")
             
-            # Import semantic classifier
+            # Check if semantic classifier is available
             if has_global_tasks:
                 try:
-                    from .management.commands.semantic_classifier import classify_text
-                    use_semantic = True
-                    logger.info("Semantic classifier loaded successfully")
+                    from .semantic_classifier import classify_text, MODEL_AVAILABLE
+                    use_semantic = MODEL_AVAILABLE
+                    if use_semantic:
+                        logger.info("Semantic classifier available")
+                    else:
+                        logger.warning("Semantic classifier model not loaded. Will use default category.")
                 except Exception as e:
                     use_semantic = False
-                    logger.warning(f"Failed to load semantic classifier: {str(e)}. Will use default category.")
+                    logger.warning(f"Failed to import semantic classifier: {str(e)}. Will use default category.")
             else:
                 use_semantic = False
             

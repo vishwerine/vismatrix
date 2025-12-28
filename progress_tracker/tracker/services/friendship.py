@@ -1,5 +1,5 @@
 
-from .models import Conversation, ConversationMember, Message, Friendship
+from tracker.models import Conversation, ConversationMember, Message, Friendship
 
 from django.contrib.auth.models import User
 

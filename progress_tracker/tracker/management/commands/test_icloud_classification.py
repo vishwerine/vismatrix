@@ -29,8 +29,13 @@ class Command(BaseCommand):
         
         # Try to load semantic classifier
         try:
-            from .semantic_classifier import classify_text
-            self.stdout.write(self.style.SUCCESS('✅ Semantic classifier loaded'))
+            from tracker.services.semantic_classifier import classify_text, MODEL_AVAILABLE
+            if MODEL_AVAILABLE:
+                self.stdout.write(self.style.SUCCESS('✅ Semantic classifier loaded'))
+            else:
+                self.stdout.write(self.style.ERROR('\n❌ Semantic classifier model not available'))
+                self.stdout.write(self.style.WARNING('   Check that protos/prototypes.npz and protos/meta.json exist'))
+                return
         except Exception as e:
             self.stdout.write(self.style.ERROR(f'\n❌ Failed to load semantic classifier: {str(e)}'))
             self.stdout.write(self.style.WARNING('   Install: pip install gensim numpy'))

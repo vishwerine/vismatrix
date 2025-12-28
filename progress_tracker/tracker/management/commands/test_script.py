@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from .semantic_classifier import classify_text
+from tracker.services.semantic_classifier import classify_text
 
 
 class Command(BaseCommand):

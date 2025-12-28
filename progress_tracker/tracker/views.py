@@ -16,7 +16,7 @@ from django.views.decorators.http import require_http_methods
 import logging
 
 from .decorators import rate_limit, validate_ajax, validate_json, log_errors
-from .icloud_calendar_service import ICloudCalendarService
+from .services import ICloudCalendarService
 
 import json
 import calendar

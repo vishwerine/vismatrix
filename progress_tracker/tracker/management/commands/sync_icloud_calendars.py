@@ -4,7 +4,7 @@ Management command to sync iCloud calendars for all users with auto-sync enabled
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from tracker.models import ICloudCalendarIntegration
-from tracker.icloud_calendar_service import ICloudCalendarService
+from tracker.services import ICloudCalendarService
 import logging
 
 logger = logging.getLogger(__name__)

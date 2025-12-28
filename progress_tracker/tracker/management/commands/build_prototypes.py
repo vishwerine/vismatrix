@@ -5,14 +5,14 @@ Builds category prototype vectors using pretrained FastText word vectors
 and saves them locally for fast runtime classification.
 
 Install:
-  pip install gensim numpy nltk
+  pip install gensim numpy
 
 Run:
-  python build_prototypes.py
+  python manage.py build_prototypes
 
 Outputs:
-  protos/prototypes.npz   (category vectors)
-  protos/meta.json        (category metadata + seeds used)
+  progress_tracker/protos/prototypes.npz   (category vectors)
+  progress_tracker/protos/meta.json        (category metadata + seeds used)
 """
 
 from __future__ import annotations
@@ -23,6 +23,8 @@ from typing import Dict, List, Optional
 
 import numpy as np
 import gensim.downloader as api
+from django.core.management.base import BaseCommand
+from django.conf import settings
 
 # -----------------------------
 # Your categories (given)
@@ -95,46 +97,68 @@ def build_category_proto(cat: str, seeds: List[str], kv) -> Optional[np.ndarray]
         return None
     return np.mean(np.vstack(seed_vecs), axis=0).astype(np.float32)
 
-def main():
-    out_dir = "protos"
-    os.makedirs(out_dir, exist_ok=True)
 
-    # Load pretrained FastText vectors (cached after first download)
-    # Good balance: semantic + broad coverage
-    model_name = "fasttext-wiki-news-subwords-300"
-    kv = api.load(model_name)
+class Command(BaseCommand):
+    help = 'Build category prototype vectors for semantic classification'
 
-    # Safety check: ensure seeds exist for all category names
-    cat_names = [c["name"] for c in global_categories]
-    missing = sorted(set(cat_names) - set(CATEGORY_SEEDS.keys()))
-    if missing:
-        raise ValueError(f"Missing CATEGORY_SEEDS entries for: {missing}")
+    def handle(self, *args, **options):
+        # Use Django's BASE_DIR for consistent paths
+        from django.conf import settings
+        out_dir = os.path.join(settings.BASE_DIR, "protos")
+        os.makedirs(out_dir, exist_ok=True)
 
-    # Build prototypes
-    proto_map: Dict[str, np.ndarray] = {}
-    for cat in cat_names:
-        proto = build_category_proto(cat, CATEGORY_SEEDS[cat], kv)
-        if proto is None:
-            raise RuntimeError(f"Could not build vector for category '{cat}' (no tokens in vocab).")
-        proto_map[cat] = proto
+        self.stdout.write(self.style.SUCCESS('=' * 70))
+        self.stdout.write(self.style.SUCCESS('Building Category Prototypes'))
+        self.stdout.write(self.style.SUCCESS('=' * 70))
+        self.stdout.write(f'\nOutput directory: {out_dir}')
 
-    # Save vectors to NPZ (fast to load)
-    npz_path = os.path.join(out_dir, "prototypes.npz")
-    np.savez_compressed(npz_path, **proto_map)
+        # Load pretrained FastText vectors (cached after first download)
+        # Good balance: semantic + broad coverage
+        model_name = "fasttext-wiki-news-subwords-300"
+        self.stdout.write(f'\nLoading embedding model: {model_name}')
+        self.stdout.write(self.style.WARNING('(This may take a few minutes on first run...)'))
+        kv = api.load(model_name)
+        self.stdout.write(self.style.SUCCESS('✅ Model loaded'))
 
-    # Save metadata (colors, model name, seeds)
-    meta = {
-        "embedding_model": model_name,
-        "vector_dim": int(next(iter(proto_map.values())).shape[0]),
-        "categories": global_categories,
-        "seeds": CATEGORY_SEEDS,
-    }
-    meta_path = os.path.join(out_dir, "meta.json")
-    with open(meta_path, "w", encoding="utf-8") as f:
-        json.dump(meta, f, indent=2)
+        # Safety check: ensure seeds exist for all category names
+        cat_names = [c["name"] for c in global_categories]
+        missing = sorted(set(cat_names) - set(CATEGORY_SEEDS.keys()))
+        if missing:
+            self.stdout.write(self.style.ERROR(f'\n❌ Missing CATEGORY_SEEDS entries for: {missing}'))
+            return
 
-    print(f"Saved prototypes to: {npz_path}")
-    print(f"Saved metadata to:   {meta_path}")
+        # Build prototypes
+        self.stdout.write(f'\nBuilding prototypes for {len(cat_names)} categories...')
+        proto_map: Dict[str, np.ndarray] = {}
+        for cat in cat_names:
+            proto = build_category_proto(cat, CATEGORY_SEEDS[cat], kv)
+            if proto is None:
+                self.stdout.write(self.style.ERROR(
+                    f"❌ Could not build vector for category '{cat}' (no tokens in vocab)."
+                ))
+                return
+            proto_map[cat] = proto
+            self.stdout.write(f'  ✅ {cat}')
 
-if __name__ == "__main__":
-    main()
+        # Save vectors to NPZ (fast to load)
+        npz_path = os.path.join(out_dir, "prototypes.npz")
+        np.savez_compressed(npz_path, **proto_map)
+
+        # Save metadata (colors, model name, seeds)
+        meta = {
+            "embedding_model": model_name,
+            "vector_dim": int(next(iter(proto_map.values())).shape[0]),
+            "categories": global_categories,
+            "seeds": CATEGORY_SEEDS,
+        }
+        meta_path = os.path.join(out_dir, "meta.json")
+        with open(meta_path, "w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2)
+
+        self.stdout.write(self.style.SUCCESS('\n' + '=' * 70))
+        self.stdout.write(self.style.SUCCESS(f'✅ Saved prototypes to: {npz_path}'))
+        self.stdout.write(self.style.SUCCESS(f'✅ Saved metadata to:   {meta_path}'))
+        self.stdout.write(self.style.SUCCESS('=' * 70))
+        self.stdout.write(self.style.SUCCESS('\nPrototypes built successfully!'))
+        self.stdout.write('\nYou can now use semantic classification in your application.')
+
