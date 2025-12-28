@@ -11,7 +11,7 @@ LOG_DIR="$PROJECT_DIR/logs"
 LOG_FILE="$LOG_DIR/icloud_sync_$(date +\%Y\%m\%d).log"
 
 # Virtual environment (adjust path if needed)
-VENV_PATH="$PROJECT_DIR/../../../myenv"  # Adjust to your venv path
+VENV_PATH="$PROJECT_DIR/../../myenv"  # Adjust to your venv path
 
 # Create log directory if it doesn't exist
 mkdir -p "$LOG_DIR"
@@ -44,7 +44,7 @@ cd "$PROJECT_DIR" || {
 
 # Run the sync command
 log "Running: python manage.py sync_icloud_calendars"
-python manage.py sync_icloud_calendars >> "$LOG_FILE" 2>&1
+python manage.py sync_icloud_calendars --force >> "$LOG_FILE" 2>&1
 EXIT_CODE=$?
 
 if [ $EXIT_CODE -eq 0 ]; then
