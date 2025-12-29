@@ -16,21 +16,46 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
+  <!-- Apply theme BEFORE paint (prevents flash + syncs with dashboard) -->
+  <script>
+    (function () {
+      const STORAGE_KEY = 'vm_theme';
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = (saved === 'light' || saved === 'dark') ? saved : (systemPrefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
   <style>
     /* Logout page specific styles - matches base.html design system */
     .logout-hero {
       background: linear-gradient(135deg, rgb(248 250 252 / 0.9) 0%, rgb(241 245 249 / 0.7) 100%);
       backdrop-filter: blur(20px);
+      transition: background 0.3s ease;
+    }
+    [data-theme="dark"] .logout-hero {
+      background: linear-gradient(135deg, rgb(15 23 42 / 0.9) 0%, rgb(30 41 59 / 0.7) 100%);
     }
     
     .logout-card {
       background: rgb(255 255 255 / 0.98);
       border: 1px solid rgb(226 232 240 / 0.8);
       box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.1);
+      transition: all 0.3s ease;
+    }
+    [data-theme="dark"] .logout-card {
+      background: rgb(30 41 59 / 0.98);
+      border: 1px solid rgb(71 85 105 / 0.8);
+      box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.3);
     }
     
     .logout-header {
       background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+      transition: background 0.3s ease;
+    }
+    [data-theme="dark"] .logout-header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
     }
     
     /* Animations matching base.html */
@@ -52,7 +77,10 @@
 </head>
 
 <body class="min-h-screen flex items-center justify-center p-4 lg:p-8 logout-hero">
-  
+  <!-- Theme toggle button (fixed position) -->
+  <button id="themeToggle" class="btn btn-ghost btn-sm btn-circle fixed top-4 right-4 z-50" aria-label="Toggle theme">
+    <i class="bi bi-moon-stars text-lg" id="themeIcon" aria-hidden="true"></i>
+  </button>
 
   <main id="main-logout" class="w-full max-w-sm lg:max-w-md logout-card rounded-3xl overflow-hidden animate-slideUp" role="main" aria-labelledby="logout-title">
     
@@ -105,6 +133,33 @@
   </main>
 
   <script>
+    // Theme toggle functionality (synced with dashboard)
+    (function() {
+      const STORAGE_KEY = 'vm_theme';
+      const htmlEl = document.documentElement;
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+
+      const updateIcon = (theme) => {
+        if (themeIcon) {
+          themeIcon.className = theme === 'dark' ? 'bi bi-sun text-lg' : 'bi bi-moon-stars text-lg';
+        }
+      };
+
+      // Initialize icon based on current theme
+      updateIcon(htmlEl.getAttribute('data-theme') || 'light');
+
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const currentTheme = htmlEl.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          htmlEl.setAttribute('data-theme', newTheme);
+          localStorage.setItem(STORAGE_KEY, newTheme);
+          updateIcon(newTheme);
+        });
+      }
+    })();
+
     // Enhanced accessibility and UX
     document.addEventListener('DOMContentLoaded', () => {
       // Auto-focus logout button

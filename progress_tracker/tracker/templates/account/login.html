@@ -22,11 +22,27 @@
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
+  <!-- Apply theme BEFORE paint (prevents flash + syncs with dashboard) -->
+  <script>
+    (function () {
+      const STORAGE_KEY = 'vm_theme';
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = (saved === 'light' || saved === 'dark') ? saved : (systemPrefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
   <style>
     :root{
       --border: rgba(226,232,240,.9);
       --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 20px 40px rgb(15 23 42 / 0.10);
       --focus: 0 0 0 3px rgb(29 78 216 / 0.25);
+    }
+    [data-theme="dark"] {
+      --border: rgba(71,85,105,.9);
+      --shadow: 0 1px 2px rgb(0 0 0 / 0.2), 0 20px 40px rgb(0 0 0 / 0.3);
+      --focus: 0 0 0 3px rgb(96 165 250 / 0.4);
     }
     body{
       background:
@@ -37,6 +53,14 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.3s ease;
+    }
+    [data-theme="dark"] body{
+      background:
+        radial-gradient(1000px 600px at 20% 12%, rgba(59,130,246,.18) 0%, rgba(59,130,246,0) 60%),
+        radial-gradient(800px 500px at 90% 10%, rgba(16,185,129,.15) 0%, rgba(16,185,129,0) 55%),
+        radial-gradient(900px 600px at 55% 95%, rgba(139,92,246,.12) 0%, rgba(139,92,246,0) 60%),
+        #0f172a;
     }
     :focus-visible { outline: none; box-shadow: var(--focus); border-radius: 12px; }
     @media (prefers-reduced-motion: reduce) {
@@ -50,12 +74,20 @@
       box-shadow: var(--shadow);
       backdrop-filter: blur(14px);
       -webkit-backdrop-filter: blur(14px);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    [data-theme="dark"] .glass{
+      background: rgba(30,41,59,.92);
     }
     .solid{
       background: #ffffff;
       border: 1px solid var(--border);
       border-radius: 18px;
       box-shadow: var(--shadow);
+      transition: background-color 0.3s ease, border-color 0.3s ease;
+    }
+    [data-theme="dark"] .solid{
+      background: #1e293b;
     }
     .tag{
       display:inline-flex;
@@ -69,6 +101,12 @@
       background: rgba(29,78,216,.08);
       color: #0f172a;
       white-space: nowrap;
+      transition: all 0.3s ease;
+    }
+    [data-theme="dark"] .tag{
+      border: 1px solid rgba(96,165,250,.3);
+      background: rgba(96,165,250,.15);
+      color: #e2e8f0;
     }
     .brandmark{
       width: 44px; height: 44px;
@@ -79,11 +117,21 @@
       background: rgba(29,78,216,.10);
       border: 1px solid rgba(29,78,216,.18);
       flex-shrink: 0;
+      transition: all 0.3s ease;
+    }
+    [data-theme="dark"] .brandmark{
+      background: rgba(96,165,250,.15);
+      border: 1px solid rgba(96,165,250,.3);
     }
     .feature{
       border: 1px solid rgba(226,232,240,.9);
       border-radius: 16px;
       background: rgba(255,255,255,.86);
+      transition: all 0.3s ease;
+    }
+    [data-theme="dark"] .feature{
+      border: 1px solid rgba(71,85,105,.9);
+      background: rgba(30,41,59,.86);
     }
     .input:focus { border-color: rgb(29 78 216); box-shadow: var(--focus); }
 
@@ -123,6 +171,9 @@
           <i class="bi bi-stars" aria-hidden="true"></i>
           Agentic AI arriving March 2026
         </span>
+        <button id="themeToggle" class="btn btn-ghost btn-sm btn-circle" aria-label="Toggle theme">
+          <i class="bi bi-moon-stars text-lg" id="themeIcon" aria-hidden="true"></i>
+        </button>
         <a href="{% url 'about' %}" class="btn btn-ghost btn-sm">About</a>
         <a href="#signin" class="btn btn-primary btn-sm gap-2">
           <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
@@ -416,6 +467,33 @@
   </footer>
 
   <script>
+    // Theme toggle functionality (synced with dashboard)
+    (function() {
+      const STORAGE_KEY = 'vm_theme';
+      const htmlEl = document.documentElement;
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+
+      const updateIcon = (theme) => {
+        if (themeIcon) {
+          themeIcon.className = theme === 'dark' ? 'bi bi-sun text-lg' : 'bi bi-moon-stars text-lg';
+        }
+      };
+
+      // Initialize icon based on current theme
+      updateIcon(htmlEl.getAttribute('data-theme') || 'light');
+
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const currentTheme = htmlEl.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          htmlEl.setAttribute('data-theme', newTheme);
+          localStorage.setItem(STORAGE_KEY, newTheme);
+          updateIcon(newTheme);
+        });
+      }
+    })();
+
     document.addEventListener('DOMContentLoaded', () => {
       const firstField = document.querySelector('input[type="text"], input[type="email"]');
       if (firstField) firstField.focus();
