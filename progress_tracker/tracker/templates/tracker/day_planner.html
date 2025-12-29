@@ -1443,7 +1443,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     autoScheduleModal.checked = false;
 
-    events = [];
+    // Preserve calendar events, only clear manual events
+    const calendarEvents = events.filter(ev => ev.isCalendarEvent);
+    events = [...calendarEvents];
 
     const numTasks = Math.min(taskData.length, maxTasks);
     const totalBreakTime = (numTasks - 1) * BREAK_TIME;
@@ -1463,7 +1465,8 @@ document.addEventListener('DOMContentLoaded', function() {
         startMin,
         endMin,
         logged: false,
-        planNames: [...(task.planNames || [])]
+        planNames: [...(task.planNames || [])],
+        isCalendarEvent: false  // Explicitly mark as manual event
       });
 
       currentTime = endMin + BREAK_TIME;
