@@ -97,11 +97,15 @@
       <div class="flex-none gap-2">
         <a href="{% url 'privacy_policy' %}" class="btn btn-ghost btn-sm hidden sm:inline-flex">Privacy</a>
         <a href="{% url 'terms_of_service' %}" class="btn btn-ghost btn-sm hidden sm:inline-flex">Terms</a>
+        <button id="themeToggle" class="btn btn-ghost btn-sm btn-circle" aria-label="Toggle theme" style="display: inline-flex; align-items: center; justify-content: center;">
+          <i class="bi bi-moon-stars text-lg" id="themeIcon" aria-hidden="true"></i>
+        </button>
         {% if user.is_authenticated %}
           <a href="{% url 'dashboard' %}" class="btn btn-primary btn-sm gap-2">
             <i class="bi bi-speedometer2"></i> Dashboard
           </a>
         {% else %}
+
           <a href="/accounts/login/" class="btn btn-ghost btn-sm">Sign In</a>
           <a href="/accounts/signup/" class="btn btn-primary btn-sm">Start Free</a>
         {% endif %}
@@ -490,5 +494,37 @@
       </p>
     </div>
   </footer>
+
+  <script>
+    // Theme toggle functionality (synced with dashboard and login)
+    (function() {
+      const STORAGE_KEY = 'vm_theme';
+      const htmlEl = document.documentElement;
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+
+      const updateIcon = (theme) => {
+        if (themeIcon) {
+          themeIcon.className = theme === 'dark' ? 'bi bi-sun text-lg' : 'bi bi-moon-stars text-lg';
+        }
+      };
+
+      // Initialize icon based on current theme
+      updateIcon(htmlEl.getAttribute('data-theme') || 'light');
+
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const currentTheme = htmlEl.getAttribute('data-theme');
+          const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+          htmlEl.setAttribute('data-theme', newTheme);
+          localStorage.setItem(STORAGE_KEY, newTheme);
+          updateIcon(newTheme);
+        });
+      }
+    })();
+  </script>
+
+
+
 </body>
 </html>
