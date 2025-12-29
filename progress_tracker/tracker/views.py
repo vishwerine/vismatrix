@@ -1056,17 +1056,21 @@ def load_day_schedule(request, schedule_date):
             user=request.user,
             date=schedule_date,
             description__icontains='Calendar'  # Events synced from calendar have "Calendar" in description
-        ).select_related('category', 'task')
+        ).select_related('category', 'task').order_by('created_at')
         
         # Convert DailyLog entries to event format
         calendar_events = []
-        current_time_minutes = 0  # Stack events starting from midnight
         
         for log in calendar_logs:
-            # Calculate start and end times (stack them sequentially)
-            start_min = current_time_minutes
+            # Try to extract time from created_at or distribute events throughout the day
+            # Use created_at hour/minute as the event time
+            event_time = log.created_at.astimezone(timezone.get_current_timezone())
+            start_min = event_time.hour * 60 + event_time.minute
             end_min = start_min + log.duration
-            current_time_minutes = end_min
+            
+            # Clamp to valid day range (0-1440 minutes)
+            start_min = max(0, min(1380, start_min))  # 0-23:00
+            end_min = max(start_min + 15, min(1440, end_min))  # at least 15 min, max 24:00
             
             # Build plan names from task if available
             plan_names = []

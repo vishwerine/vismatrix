@@ -219,6 +219,15 @@
     outline: none;
     transform: translateZ(0);
   }
+  /* Dual-lane layout: manual events on left, calendar events on right */
+  .planner-event:not(.calendar-event) {
+    left: 0;
+    right: 52%;
+  }
+  .planner-event.calendar-event {
+    left: 52%;
+    right: 0;
+  }
   .planner-event:focus-within{
     box-shadow: 0 0 0 4px oklch(var(--p) / 0.20), 0 10px 26px oklch(var(--b1) / 0.22);
   }
