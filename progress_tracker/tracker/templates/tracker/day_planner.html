@@ -744,6 +744,9 @@ document.addEventListener('DOMContentLoaded', function() {
   // ========== CONFIG ==========
   const START_HOUR = 0;
   const END_HOUR = 23;
+  
+  // Get CSRF token from Django template
+  const CSRF_TOKEN = '{{ csrf_token }}';
 
   // ========== STATE ==========
   let events = [];
@@ -836,7 +839,7 @@ document.addEventListener('DOMContentLoaded', function() {
   async function load() {
     try {
       const response = await fetch(`/api/day-schedule/${currentDate}/`, {
-        headers: { 'X-CSRFToken': getCookie('csrftoken') }
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
       });
 
       if (!response.ok) throw new Error('Failed to load schedule');
@@ -870,7 +873,7 @@ document.addEventListener('DOMContentLoaded', function() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCookie('csrftoken')
+          'X-CSRFToken': CSRF_TOKEN
         },
         body: JSON.stringify({
           date: currentDate,
@@ -1207,8 +1210,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const eventEl = document.querySelector(`[data-id="${eventId}"]`);
     if (eventEl) eventEl.classList.add('logging');
 
-    const csrfToken = getCookie('csrftoken');
-    
     // Format activity name with plan information if available
     let activityName = `worked on ${event.title}`;
     if (event.planNames && event.planNames.length > 0) {
@@ -1222,7 +1223,7 @@ document.addEventListener('DOMContentLoaded', function() {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRFToken': csrfToken
+        'X-CSRFToken': CSRF_TOKEN
       },
       body: JSON.stringify({ activity: activityName, duration: duration })
     })
