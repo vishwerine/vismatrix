@@ -864,6 +864,8 @@ document.addEventListener('DOMContentLoaded', function() {
       // Filter out calendar events before saving (they come from DailyLog)
       const manualEvents = events.filter(ev => !ev.isCalendarEvent);
       
+      console.log('Saving events:', manualEvents); // Debug log
+      
       const response = await fetch('/api/day-schedule/save/', {
         method: 'POST',
         headers: {
@@ -877,12 +879,24 @@ document.addEventListener('DOMContentLoaded', function() {
         })
       });
 
-      if (!response.ok) throw new Error('Failed to save schedule');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Save failed:', response.status, errorText);
+        throw new Error(`Failed to save schedule: ${response.status}`);
+      }
 
       const data = await response.json();
-      if (!data.success) console.error('Save failed:', data.error);
+      if (!data.success) {
+        console.error('Save failed:', data.error);
+        throw new Error(data.error || 'Save failed');
+      }
+      
+      console.log('Save successful:', data); // Debug log
     } catch (error) {
       console.error('Error saving schedule:', error);
+      // Show error to user
+      showAlert('Save Error', `Failed to save schedule: ${error.message}`, 'error');
+      throw error; // Re-throw so caller knows it failed
     }
     updateStats();
   }
@@ -1393,7 +1407,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('autoScheduleModal').checked = true;
   }
 
-  document.getElementById('confirmAutoScheduleBtn').addEventListener('click', () => {
+  document.getElementById('confirmAutoScheduleBtn').addEventListener('click', async () => {
     const autoScheduleStartTime = document.getElementById('autoScheduleStartTime');
     const autoScheduleEndTime = document.getElementById('autoScheduleEndTime');
     const autoScheduleModal = document.getElementById('autoScheduleModal');
@@ -1472,7 +1486,9 @@ document.addEventListener('DOMContentLoaded', function() {
       currentTime = endMin + BREAK_TIME;
     }
 
+    // Wait for render and save to complete
     render();
+    await save();
 
     if (taskData.length > numTasks) {
       showAlert(
