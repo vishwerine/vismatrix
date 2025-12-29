@@ -1,0 +1,190 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Friends Feed - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="space-y-6">
+
+  <!-- Header -->
+  <header class="card border border-base-200 bg-base-100">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content flex items-center gap-3">
+            <i class="bi bi-people text-primary"></i>
+            <span>Friends Feed</span>
+          </h1>
+          <p class="text-sm text-base-content/70 mt-1">
+            See what your friends have been up to recently
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm gap-2">
+            <i class="bi bi-arrow-left"></i>
+            <span>Back to Dashboard</span>
+          </a>
+          <a href="{% url 'friends_list' %}" class="btn btn-outline btn-sm gap-2">
+            <i class="bi bi-people"></i>
+            <span>My Friends</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  {% if friends_count == 0 %}
+  <!-- No friends message -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-8 text-center">
+      <i class="bi bi-people text-6xl text-base-content/20 mb-4"></i>
+      <h2 class="text-xl font-bold mb-2">No Friends Yet</h2>
+      <p class="text-base-content/70 mb-6">
+        Add friends to see their activity feed here.
+      </p>
+      <a href="{% url 'user_list' %}" class="btn btn-primary gap-2">
+        <i class="bi bi-person-plus"></i>
+        <span>Find Friends</span>
+      </a>
+    </div>
+  </section>
+  {% elif friends_timeline|length == 0 %}
+  <!-- No activity message -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-8 text-center">
+      <i class="bi bi-clock-history text-6xl text-base-content/20 mb-4"></i>
+      <h2 class="text-xl font-bold mb-2">No Recent Activity</h2>
+      <p class="text-base-content/70">
+        Your friends haven't logged any activity yet. Check back soon!
+      </p>
+    </div>
+  </section>
+  {% else %}
+  <!-- Friends activity feed -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-5 sm:p-6">
+      <div class="flex items-center justify-between gap-3 mb-4">
+        <h2 class="text-lg font-bold flex items-center gap-2">
+          <i class="bi bi-activity"></i>
+          <span>Recent Activity</span>
+          <span class="badge badge-primary badge-sm">{{ friends_timeline|length }}</span>
+        </h2>
+      </div>
+
+      <div class="space-y-3">
+        {% for item in friends_timeline %}
+        <article class="p-4 rounded-2xl border border-base-200 bg-base-100 hover:bg-base-200/40 hover-lift transition cursor-pointer">
+          <div class="flex items-start gap-3">
+            <div class="avatar placeholder">
+              <div class="bg-gradient-to-br from-primary to-secondary text-primary-content rounded-full w-12 h-12 ring-2 ring-primary/20 shadow-lg">
+                <span class="text-base font-bold">{{ item.user.username|first|upper }}</span>
+              </div>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <a href="{% url 'view_friend_profile' item.friendship_id %}"
+                   class="font-bold text-sm link link-primary hover:underline">
+                  {{ item.user.username }}
+                </a>
+                {% if item.type == 'task' %}
+                  <span class="badge badge-success badge-sm gap-1 shadow-sm">
+                    <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                    <span>Task</span>
+                  </span>
+                {% else %}
+                  <span class="badge badge-info badge-sm gap-1 shadow-sm">
+                    <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                    <span>Log</span>
+                  </span>
+                {% endif %}
+              </div>
+
+              <p class="text-sm font-semibold mb-2">
+                {% if item.type == 'task' %}
+                  Completed: {{ item.title }}
+                {% else %}
+                  Logged: {{ item.title }}
+                {% endif %}
+              </p>
+
+              <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-base-content/70">
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-clock" aria-hidden="true"></i>
+                  {{ item.timestamp|date:"M j, g:i A" }}
+                </span>
+                {% if item.duration %}
+                <span class="inline-flex items-center gap-1">
+                  <i class="bi bi-stopwatch" aria-hidden="true"></i>
+                  {{ item.duration }}m
+                </span>
+                {% endif %}
+                {% if item.category %}
+                <span class="inline-flex items-center gap-1 badge badge-outline badge-xs">
+                  <i class="bi bi-tag" aria-hidden="true"></i>
+                  {{ item.category.name }}
+                </span>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Star action -->
+            <button
+              class="star-btn btn btn-ghost btn-sm gap-2 flex-shrink-0"
+              data-activity-type="{{ item.type }}"
+              data-activity-id="{{ item.id }}"
+              aria-label="{% if item.user_starred %}Unstar this activity{% else %}Star this activity{% endif %}">
+              <i class="bi bi-star{% if item.user_starred %}-fill{% endif %} {% if item.user_starred %}text-warning{% endif %} text-lg" aria-hidden="true"></i>
+              <span class="star-count text-sm font-semibold tabular-nums">{{ item.star_count }}</span>
+            </button>
+          </div>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+</main>
+
+<!-- Star toggle script -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('.star-btn').forEach(button => {
+    button.addEventListener('click', async function () {
+      const activityType = this.dataset.activityType;
+      const activityId = this.dataset.activityId;
+      const starIcon = this.querySelector('.bi');
+      const starCount = this.querySelector('.star-count');
+
+      try {
+        const response = await fetch('{% url "toggle_star_reaction" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({ activity_type: activityType, activity_id: activityId })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          const starred = !!data.starred;
+          starIcon.classList.toggle('bi-star-fill', starred);
+          starIcon.classList.toggle('bi-star', !starred);
+          starIcon.classList.toggle('text-warning', starred);
+          this.setAttribute('aria-label', starred ? 'Unstar this activity' : 'Star this activity');
+          starCount.textContent = data.star_count;
+        } else {
+          console.error('Error:', data.error);
+        }
+      } catch (err) {
+        console.error('Network error:', err);
+      }
+    });
+  });
+});
+</script>
+
+{% endblock %}

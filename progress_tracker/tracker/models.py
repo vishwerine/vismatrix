@@ -512,3 +512,23 @@ class ICloudCalendarIntegration(models.Model):
         """Record sync error"""
         self.sync_error = error_message
         self.save()
+
+
+class DaySchedule(models.Model):
+    """Store day planner schedules for users"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='day_schedules', db_index=True)
+    date = models.DateField(db_index=True)
+    title = models.CharField(max_length=255, blank=True, default='')
+    events_data = models.JSONField(default=list, help_text="List of event dictionaries with id, title, startMin, endMin, logged, planNames")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        unique_together = [['user', 'date']]
+        ordering = ['-date']
+        indexes = [
+            models.Index(fields=['user', 'date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.date}"

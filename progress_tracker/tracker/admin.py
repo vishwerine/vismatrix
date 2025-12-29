@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration
+from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -77,3 +77,12 @@ class ICloudCalendarIntegrationAdmin(admin.ModelAdmin):
     list_filter = ['is_active', 'auto_sync']
     search_fields = ['user__username', 'user__email', 'apple_id']
     readonly_fields = ['created_at', 'updated_at', 'last_sync_at']
+
+
+@admin.register(DaySchedule)
+class DayScheduleAdmin(admin.ModelAdmin):
+    list_display = ['user', 'date', 'title', 'created_at', 'updated_at']
+    list_filter = ['user', 'date']
+    search_fields = ['user__username', 'title']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-date']

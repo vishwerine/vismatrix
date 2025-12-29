@@ -10,7 +10,7 @@ from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta, date
-from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode
+from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule
 from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm, UserProfileForm
 from django.views.decorators.http import require_http_methods
 import logging
@@ -26,6 +26,69 @@ logger = logging.getLogger(__name__)
 def landing_page(request):
     """Public landing page - accessible without authentication."""
     return render(request, 'tracker/landing_page.html')
+
+
+@login_required
+def day_planner(request):
+    """Day planner view showing hourly schedule."""
+    today = timezone.now().date()
+    
+    # Get today's tasks
+    pending_tasks_qs = (
+        Task.objects.filter(
+            user=request.user,
+            status__in=["pending", "in_progress"],
+        )
+        .select_related('category')
+        .order_by("due_date", "priority")
+    )
+    
+    # Get plan tasks from active plans and build task->plan mapping
+    from .models import Plan, PlanNode
+    active_plans = Plan.objects.filter(user=request.user, is_active=True)
+    task_to_plans = {}  # Map task_id to list of plan names
+    plan_tasks = []
+    
+    for plan in active_plans:
+        nodes = PlanNode.objects.filter(plan=plan).select_related('task')
+        for node in nodes:
+            if node.task and node.task.status in ["pending", "in_progress"]:
+                # Track which tasks belong to which plans
+                if node.task.id not in task_to_plans:
+                    task_to_plans[node.task.id] = []
+                task_to_plans[node.task.id].append(plan.title)
+                
+                # Add to plan_tasks list (avoiding duplicates)
+                if not any(pt['id'] == node.task.id for pt in plan_tasks):
+                    plan_tasks.append({
+                        'id': node.task.id,
+                        'title': node.task.title,
+                        'plan_name': plan.title,
+                        'category': node.task.category,
+                    })
+    
+    # Annotate pending tasks with plan information
+    pending_tasks = []
+    for task in pending_tasks_qs:
+        task.plan_names = task_to_plans.get(task.id, [])
+        pending_tasks.append(task)
+    
+    # Get today's logs
+    today_logs = (
+        DailyLog.objects.filter(user=request.user, date=today)
+        .select_related("category", "task")
+        .order_by("-date", "-id")
+    )
+    
+    context = {
+        "today": today,
+        "pending_tasks": pending_tasks,
+        "plan_tasks": plan_tasks,
+        "today_logs": today_logs,
+    }
+    
+    return render(request, "tracker/day_planner.html", context)
+
 
 @login_required
 def dashboard(request):
@@ -164,8 +227,8 @@ def dashboard(request):
 
         # Sort combined timeline by timestamp (most recent first)
         friends_timeline.sort(key=lambda x: x["timestamp"], reverse=True)
-        # Limit to 15 most recent items
-        friends_timeline = friends_timeline[:15]
+        # Limit to 5 most recent items for dashboard preview
+        friends_timeline = friends_timeline[:5]
 
     # --- Suggested users (non-friends) ---
     friend_ids = [f.friend_id for f in friends_qs]
@@ -177,67 +240,6 @@ def dashboard(request):
     logs_this_month = DailyLog.objects.filter(
         user=request.user, date__gte=month_start, date__lte=today
     ).count()
-
-    total_time = (
-        DailyLog.objects.filter(user=request.user).aggregate(total=Sum("duration"))[
-            "total"
-        ]
-        or 0
-    )
-
-    # --- Current streak (consecutive days with at least one log, up to today) ---
-    log_dates = (
-        DailyLog.objects.filter(user=request.user, date__lte=today)
-        .values_list("date", flat=True)
-        .distinct()
-        .order_by("-date")
-    )
-    log_dates_set = set(log_dates)
-
-    streak = 0
-    cursor = today
-    while cursor in log_dates_set:
-        streak += 1
-        cursor = cursor - timedelta(days=1)
-
-    current_streak = streak
-
-    # --- Weekly overview for mini bar chart ---
-    # weekly_overview = list of dicts with label, minutes, percent
-    # Use the last 7 days from the most recent log date to show data if available
-    recent_log = DailyLog.objects.filter(user=request.user).order_by('-date').first()
-    if recent_log:
-        base_date = recent_log.date
-    else:
-        base_date = today
-    last_7_days = [base_date - timedelta(days=i) for i in range(6, -1, -1)]
-    
-    day_minutes = []
-
-    for d in last_7_days:
-        minutes = (
-            DailyLog.objects.filter(user=request.user, date=d).aggregate(
-                total=Sum("duration")
-            )["total"]
-            or 0
-        )
-        day_minutes.append((d, minutes))
-
-    max_minutes = max((m for _, m in day_minutes), default=0) or 0
-
-    # If there is no logged time in the last 7 days, leave weekly_overview empty
-    weekly_overview = []
-    if max_minutes > 0:
-        for d, minutes in day_minutes:
-            percent = int(round((minutes / max_minutes) * 100))
-            weekly_overview.append(
-                {
-                    "label": d.strftime("%a")[0],  # M, T, W, ...
-                    "minutes": minutes,
-                    "percent": percent,
-                    "date": d,
-                }
-            )
 
     # --- Mini calendar for current month ---
     import calendar
@@ -262,16 +264,6 @@ def dashboard(request):
 
     # Day names for calendar header
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-
-    # --- Category breakdown for pie chart ---
-    category_data = (
-        DailyLog.objects.filter(user=request.user, date__gte=week_ago, date__lte=today)
-        .values('category__name')
-        .annotate(total=Sum('duration'))
-        .order_by('-total')[:5]
-    )
-    category_labels = [item['category__name'] or 'Uncategorized' for item in category_data]
-    category_values = [item['total'] for item in category_data]
 
     # --- Optional: pending friend requests (for the small card on the right) ---
     # Only if you have a FriendRequest model with to_user/from_user and status='pending'
@@ -304,50 +296,6 @@ def dashboard(request):
             unread_message_count += unread_qs.count()
         except ConversationMember.DoesNotExist:
             pass
-
-    # --- Today's completion rate ---
-    today_completion_rate = 0
-    if today_tasks_count > 0:
-        today_completion_rate = int((today_completed / today_tasks_count) * 100)
-    
-    # --- Week comparison (this week vs last week) ---
-    last_week_start = week_ago - timedelta(days=7)
-    last_week_end = week_ago - timedelta(days=1)
-    
-    week_time = DailyLog.objects.filter(
-        user=request.user, date__gte=week_ago, date__lte=today
-    ).aggregate(total=Sum('duration'))['total'] or 0
-    
-    last_week_time = DailyLog.objects.filter(
-        user=request.user, date__gte=last_week_start, date__lte=last_week_end
-    ).aggregate(total=Sum('duration'))['total'] or 0
-    
-    week_trend = 0
-    if last_week_time > 0:
-        week_trend = int(((week_time - last_week_time) / last_week_time) * 100)
-    elif week_time > 0:
-        week_trend = 100
-    
-    # --- Daily average time ---
-    total_days = DailyLog.objects.filter(user=request.user).values('date').distinct().count()
-    avg_daily_time = int(total_time / total_days) if total_days > 0 else 0
-    
-    # --- Best performing day (highest activity) ---
-    best_day_info = None
-    if log_dates_set:
-        # Get activity for each day in last 30 days
-        thirty_days_ago = today - timedelta(days=30)
-        daily_activity = DailyLog.objects.filter(
-            user=request.user,
-            date__gte=thirty_days_ago,
-            date__lte=today
-        ).values('date').annotate(total_minutes=Sum('duration')).order_by('-total_minutes').first()
-        
-        if daily_activity:
-            best_day_info = {
-                'date': daily_activity['date'],
-                'minutes': daily_activity['total_minutes']
-            }
     
     # --- Active plans with progress ---
     active_plans = Plan.objects.filter(user=request.user, is_active=True).order_by('-updated_at')
@@ -367,7 +315,6 @@ def dashboard(request):
         "today_tasks_count": today_tasks_count,
         "today_completed": today_completed,
         "today_time": today_time,
-        "today_completion_rate": today_completion_rate,
         "pending_tasks": pending_tasks,
         "recent_logs": recent_logs,
         "friends": friends_activity,
@@ -378,14 +325,7 @@ def dashboard(request):
         "star_notifications_count": star_notifications_count,
         "unread_message_count": unread_message_count,
         "active_plans": plans_with_stats,
-        "current_streak": current_streak,
         "logs_this_month": logs_this_month,
-        "total_time": total_time,
-        "week_time": week_time,
-        "week_trend": week_trend,
-        "avg_daily_time": avg_daily_time,
-        "best_day_info": best_day_info,
-        "weekly_overview": weekly_overview,
         "calendar_days": calendar_days,
         "day_names": day_names,
     }
@@ -657,7 +597,7 @@ def analytics(request):
 
     # --- Plan statistics ---
     total_plans = Plan.objects.filter(user=request.user).count()
-    active_plans = Plan.objects.filter(user=request.user, is_active=True).count()
+    active_plans_count = Plan.objects.filter(user=request.user, is_active=True).count()
     
     # Get plan progress data
     plan_stats = []
@@ -678,6 +618,26 @@ def analytics(request):
             'in_progress_tasks': in_progress_tasks,
             'completion_rate': int(completion_rate),
         })
+    
+    # --- Week time (total minutes this week) ---
+    week_time = DailyLog.objects.filter(
+        user=request.user, date__gte=week_ago, date__lte=today
+    ).aggregate(total=Sum('duration'))['total'] or 0
+    
+    # --- Best performing day (highest activity in last 30 days) ---
+    best_day_info = None
+    thirty_days_ago = today - timedelta(days=30)
+    daily_activity = DailyLog.objects.filter(
+        user=request.user,
+        date__gte=thirty_days_ago,
+        date__lte=today
+    ).values('date').annotate(total_minutes=Sum('duration')).order_by('-total_minutes').first()
+    
+    if daily_activity:
+        best_day_info = {
+            'date': daily_activity['date'],
+            'minutes': daily_activity['total_minutes']
+        }
 
     # Handle AJAX requests for calendar updates
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -715,7 +675,7 @@ def analytics(request):
         "next_month": month + 1 if month < 12 else 1,
         "next_year": year if month < 12 else year + 1,
         "total_plans": total_plans,
-        "active_plans": active_plans,
+        "active_plans": active_plans_count,
         "plan_stats": plan_stats,
         # New trend and insights data
         "tasks_trend": round(tasks_trend, 1),
@@ -726,6 +686,8 @@ def analytics(request):
         "best_day": best_day,
         "most_productive_category": most_productive_category,
         "completion_rate_week": completion_rate_week,
+        "week_time": week_time,
+        "best_day_info": best_day_info,
     }
     return render(request, "tracker/analytics.html", context)
 
@@ -997,6 +959,144 @@ def log_update(request, pk):
     else:
         form = DailyLogForm(instance=log, user=request.user)
     return render(request, "tracker/log_form.html", {"form": form})
+
+@login_required
+def quick_log_activity(request):
+    """Quick log activity from day planner via AJAX."""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            activity = data.get('activity')
+            duration = data.get('duration', 30)  # Default 30 minutes
+            
+            if not activity:
+                return JsonResponse({'success': False, 'error': 'Activity name is required'}, status=400)
+            
+            # Get or create General Activity task
+            general_task, _ = Task.objects.get_or_create(
+                user=request.user,
+                title='General Activity',
+                defaults={'status': 'completed', 'is_global': True}
+            )
+            
+            # Create the daily log
+            log = DailyLog.objects.create(
+                user=request.user,
+                activity=activity,
+                duration=duration,
+                date=timezone.now().date(),
+                task=general_task,
+                category=general_task.category if general_task.category else None
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'log_id': log.id,
+                'message': f'Logged: {activity}'
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"Error in quick_log_activity: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
+
+@login_required
+def save_day_schedule(request):
+    """Save day schedule for a specific date via AJAX."""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            schedule_date = data.get('date')
+            title = data.get('title', '')
+            events_data = data.get('events', [])
+            
+            if not schedule_date:
+                return JsonResponse({'success': False, 'error': 'Date is required'}, status=400)
+            
+            # Update or create the schedule
+            schedule, created = DaySchedule.objects.update_or_create(
+                user=request.user,
+                date=schedule_date,
+                defaults={
+                    'title': title,
+                    'events_data': events_data
+                }
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Schedule saved successfully',
+                'schedule_id': schedule.id
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"Error in save_day_schedule: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
+
+@login_required
+def load_day_schedule(request, schedule_date):
+    """Load day schedule for a specific date via AJAX."""
+    try:
+        # Get manually created schedule events
+        try:
+            schedule = DaySchedule.objects.get(user=request.user, date=schedule_date)
+            manual_events = schedule.events_data
+            title = schedule.title
+        except DaySchedule.DoesNotExist:
+            manual_events = []
+            title = ''
+        
+        # Get calendar events from DailyLog for this date (synced from iCloud/Google Calendar)
+        calendar_logs = DailyLog.objects.filter(
+            user=request.user,
+            date=schedule_date,
+            description__icontains='Calendar'  # Events synced from calendar have "Calendar" in description
+        ).select_related('category', 'task')
+        
+        # Convert DailyLog entries to event format
+        calendar_events = []
+        current_time_minutes = 0  # Stack events starting from midnight
+        
+        for log in calendar_logs:
+            # Calculate start and end times (stack them sequentially)
+            start_min = current_time_minutes
+            end_min = start_min + log.duration
+            current_time_minutes = end_min
+            
+            # Build plan names from task if available
+            plan_names = []
+            if log.task and hasattr(log.task, 'plan_name'):
+                plan_names = [log.task.plan_name] if log.task.plan_name else []
+            
+            calendar_events.append({
+                'id': f'cal_{log.id}',  # Prefix to distinguish from manual events
+                'title': f"📅 {log.activity}",  # Add calendar emoji to distinguish
+                'startMin': start_min,
+                'endMin': end_min,
+                'logged': True,  # Calendar events are already logged
+                'planNames': plan_names,
+                'isCalendarEvent': True,  # Flag to identify calendar events
+                'source': 'calendar'
+            })
+        
+        # Combine manual events with calendar events
+        all_events = manual_events + calendar_events
+        
+        return JsonResponse({
+            'success': True,
+            'date': schedule_date,
+            'title': title,
+            'events': all_events
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in load_day_schedule: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @login_required
 def log_delete(request, pk):
@@ -1390,6 +1490,77 @@ def friends_list(request):
     
     context = {'friends_data': friends_data}
     return render(request, 'tracker/friends_list.html', context)
+
+
+@login_required
+def friends_feed(request):
+    """View full friends activity feed"""
+    friends_qs = Friendship.objects.filter(user=request.user).select_related('friend')
+    friend_ids = [f.friend_id for f in friends_qs]
+    friends_timeline = []
+    
+    # Create a mapping of friend_id to friendship_id for quick lookup
+    friendship_map = {f.friend_id: f.id for f in friends_qs}
+    
+    # Get recent completed tasks from friends
+    if friend_ids:
+        recent_friend_tasks = Task.objects.filter(
+            user_id__in=friend_ids,
+            status="completed",
+            completed_at__isnull=False
+        ).select_related("user", "category").order_by("-completed_at")[:50]
+        
+        for task in recent_friend_tasks:
+            # Get reaction info for this task
+            star_count = ActivityReaction.objects.filter(task=task).count()
+            user_starred = ActivityReaction.objects.filter(task=task, user=request.user).exists()
+            
+            friends_timeline.append({
+                "type": "task",
+                "user": task.user,
+                "friendship_id": friendship_map.get(task.user_id),
+                "title": task.title,
+                "category": task.category,
+                "timestamp": task.completed_at,
+                "duration": None,
+                "id": task.id,
+                "star_count": star_count,
+                "user_starred": user_starred,
+            })
+        
+        # Get recent logs from friends
+        recent_friend_logs = DailyLog.objects.filter(
+            user_id__in=friend_ids
+        ).select_related("user", "category").order_by("-date", "-id")[:50]
+        
+        for log in recent_friend_logs:
+            # Get reaction info for this log
+            star_count = ActivityReaction.objects.filter(daily_log=log).count()
+            user_starred = ActivityReaction.objects.filter(daily_log=log, user=request.user).exists()
+            
+            # Create a datetime from the date for sorting
+            timestamp = timezone.datetime.combine(log.date, timezone.datetime.min.time(), tzinfo=timezone.get_current_timezone())
+            friends_timeline.append({
+                "type": "log",
+                "user": log.user,
+                "friendship_id": friendship_map.get(log.user_id),
+                "title": log.activity,
+                "category": log.category,
+                "timestamp": timestamp,
+                "duration": log.duration,
+                "id": log.id,
+                "star_count": star_count,
+                "user_starred": user_starred,
+            })
+        
+        # Sort combined timeline by timestamp (most recent first)
+        friends_timeline.sort(key=lambda x: x["timestamp"], reverse=True)
+    
+    context = {
+        'friends_timeline': friends_timeline,
+        'friends_count': len(friend_ids),
+    }
+    return render(request, 'tracker/friends_feed.html', context)
 
 
 @login_required

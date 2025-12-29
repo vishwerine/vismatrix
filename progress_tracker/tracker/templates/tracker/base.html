@@ -34,23 +34,14 @@
   </script>
 
   <style>
-    /* ============================================================
-       Design tokens used throughout your UI (MUST switch with theme)
-       ============================================================ */
     :root {
-      /* Layout */
       --radius: 14px;
       --radius-sm: 10px;
       --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 10px 18px rgb(15 23 42 / 0.06);
-
-      /* Type */
       --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-
-      /* Focus ring */
       --focus: 0 0 0 3px rgb(29 78 216 / 0.25);
     }
 
-    /* Base */
     * { box-sizing: border-box; }
     html { scroll-behavior: smooth; }
     body {
@@ -85,20 +76,16 @@
     }
     .skip-link:focus { top: 12px; }
 
-    /* ============================================================
-       LIGHT THEME (DaisyUI tokens + your custom tokens)
-       ============================================================ */
     [data-theme="light"] {
-      /* Your tokens */
       --bg: #ffffff;
       --surface: #ffffff;
-      --surface-2: #f8fafc;     /* slate-50 */
-      --border: #e2e8f0;        /* slate-200 */
-      --text: #0f172a;          /* slate-900 */
-      --muted: #475569;         /* slate-600 */
+      --surface-2: #f8fafc;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #475569;
 
-      --primary: #1d4ed8;       /* blue-700 */
-      --primary-hover: #1e40af; /* blue-800 */
+      --primary: #1d4ed8;
+      --primary-hover: #1e40af;
       --primary-ink: #ffffff;
 
       --success: #15803d;
@@ -106,7 +93,6 @@
       --error: #b91c1c;
       --info: #1d4ed8;
 
-      /* DaisyUI tokens */
       --p: 220 85% 47%;
       --pc: 0 0% 100%;
       --b1: 0 0% 100%;
@@ -122,20 +108,16 @@
       --rounded-badge: 9999px;
     }
 
-    /* ============================================================
-       DARK THEME (DaisyUI tokens + your custom tokens)
-       ============================================================ */
     [data-theme="dark"] {
-      /* Your tokens */
-      --bg: #0b1220;            /* deep slate */
-      --surface: #0f172a;       /* slate-900 */
-      --surface-2: #111c33;     /* slightly lighter */
-      --border: rgb(148 163 184 / 0.22); /* slate-400/22 */
-      --text: #e5e7eb;          /* gray-200 */
-      --muted: #94a3b8;         /* slate-400 */
+      --bg: #0b1220;
+      --surface: #0f172a;
+      --surface-2: #111c33;
+      --border: rgb(148 163 184 / 0.22);
+      --text: #e5e7eb;
+      --muted: #94a3b8;
 
-      --primary: #60a5fa;       /* blue-400 */
-      --primary-hover: #3b82f6; /* blue-500 */
+      --primary: #60a5fa;
+      --primary-hover: #3b82f6;
       --primary-ink: #0b1220;
 
       --success: #22c55e;
@@ -143,7 +125,6 @@
       --error: #ef4444;
       --info: #60a5fa;
 
-      /* DaisyUI tokens */
       --p: 220 85% 60%;
       --pc: 222 47% 11%;
       --b1: 222 47% 11%;
@@ -159,9 +140,6 @@
       --rounded-badge: 9999px;
     }
 
-    /* ============================================================
-       UI primitives
-       ============================================================ */
     .btn {
       min-height: 44px;
       border-radius: 12px;
@@ -170,17 +148,15 @@
       transition: all 0.2s ease;
     }
     .btn:focus-visible { box-shadow: var(--focus); }
-    .btn-ghost:hover { 
-      background: var(--surface-2); 
+    .btn-ghost:hover {
+      background: var(--surface-2);
       transform: translateY(-1px);
     }
     .btn-primary:hover {
       transform: translateY(-2px);
       box-shadow: 0 10px 20px rgb(29 78 216 / 0.3);
     }
-    .btn-primary:active {
-      transform: translateY(0);
-    }
+    .btn-primary:active { transform: translateY(0); }
 
     .input, .select, .textarea {
       border-radius: 12px;
@@ -197,9 +173,7 @@
       box-shadow: var(--focus);
       transform: translateY(-1px);
     }
-    .input:hover, .select:hover, .textarea:hover {
-      border-color: var(--primary);
-    }
+    .input:hover, .select:hover, .textarea:hover { border-color: var(--primary); }
 
     .card {
       border: 1px solid var(--border);
@@ -228,7 +202,6 @@
       box-shadow: inset 0 -2px 0 var(--primary);
     }
 
-    /* Toasts */
     .toast .alert {
       border: 1px solid var(--border);
       box-shadow: var(--shadow);
@@ -239,20 +212,17 @@
     .alert-warning { background: rgb(161 98 7 / 0.10); color: var(--text); border-color: rgb(161 98 7 / 0.25); }
     .alert-error { background: rgb(185 28 28 / 0.08); color: var(--text); border-color: rgb(185 28 28 / 0.25); }
 
-    /* Bottom nav */
     .vm-bottomnav {
       background: var(--surface);
       border-top: 1px solid var(--border);
       box-shadow: 0 -4px 12px rgb(0 0 0 / 0.08);
       backdrop-filter: blur(10px);
     }
-    .vm-bottomnav a { 
-      min-height: 64px; 
+    .vm-bottomnav a {
+      min-height: 64px;
       transition: all 0.2s ease;
     }
-    .vm-bottomnav a:active {
-      transform: scale(0.95);
-    }
+    .vm-bottomnav a:active { transform: scale(0.95); }
     .vm-bottomnav .vm-fab {
       width: 48px;
       height: 48px;
@@ -273,7 +243,6 @@
       transform: scale(1.05);
     }
 
-    /* Dropdown */
     .vm-dropdown {
       border: 1px solid rgb(226 232 240 / 0.8);
       border-radius: var(--radius);
@@ -282,7 +251,6 @@
       background: rgb(255 255 255 / 0.95);
       color: var(--text);
     }
-
     [data-theme="dark"] .vm-dropdown {
       border: 1px solid rgb(148 163 184 / 0.25);
       background: rgb(15 23 42 / 0.92);
@@ -297,7 +265,6 @@
       border-bottom: 1px solid rgb(226 232 240 / 0.5);
       margin: 0;
     }
-
     [data-theme="dark"] .vm-dropdown .menu-title {
       color: rgb(226 232 240);
       border-bottom: 1px solid rgb(148 163 184 / 0.2);
@@ -347,7 +314,6 @@
     .safe-area-pt { padding-top: env(safe-area-inset-top); }
     .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
 
-    /* Animations and transitions */
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -360,12 +326,8 @@
       0% { background-position: -1000px 0; }
       100% { background-position: 1000px 0; }
     }
-    .animate-fadeIn {
-      animation: fadeIn 0.5s ease-out;
-    }
-    .animate-slideUp {
-      animation: slideUp 0.6s ease-out;
-    }
+    .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
+    .animate-slideUp { animation: slideUp 0.6s ease-out; }
     .skeleton {
       background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
       background-size: 1000px 100%;
@@ -373,16 +335,9 @@
       border-radius: 8px;
     }
 
-    /* Hover lift effect for interactive cards */
-    .hover-lift {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .hover-lift:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 28px rgb(0 0 0 / 0.12);
-    }
+    .hover-lift { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgb(0 0 0 / 0.12); }
 
-    /* Gradient text */
     .gradient-text {
       background: linear-gradient(135deg, var(--primary) 0%, #60a5fa 100%);
       -webkit-background-clip: text;
@@ -390,15 +345,8 @@
       background-clip: text;
     }
 
-    /* Badge improvements */
-    .badge {
-      font-weight: 600;
-      letter-spacing: 0.3px;
-      transition: all 0.2s ease;
-    }
-    .badge:hover {
-      transform: scale(1.05);
-    }
+    .badge { font-weight: 600; letter-spacing: 0.3px; transition: all 0.2s ease; }
+    .badge:hover { transform: scale(1.05); }
   </style>
 </head>
 
@@ -436,7 +384,11 @@
         <span class="ml-1">Dashboard</span>
       </a>
 
-
+      <a href="{% url 'day_planner' %}"
+         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'day_planner' %}vm-nav-active{% endif %}">
+        <i class="bi bi-calendar-check" aria-hidden="true"></i>
+        <span class="ml-1">Day Planner</span>
+      </a>
 
       <a href="{% url 'analytics' %}"
          class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'analytics' %}vm-nav-active{% endif %}">
@@ -445,7 +397,7 @@
       </a>
 
       <a href="{% url 'plan_list' %}"
-         class="btn btn-ghost btn-sm px-3 {% if 'plan' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
+         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'plan_list' or request.resolver_match.url_name == 'plan_create' or request.resolver_match.url_name == 'plan_detail' or request.resolver_match.url_name == 'plan_update' or request.resolver_match.url_name == 'plan_delete' %}vm-nav-active{% endif %}">
         <i class="bi bi-diagram-3" aria-hidden="true"></i>
         <span class="ml-1">Plans</span>
       </a>
@@ -461,8 +413,6 @@
         <i class="bi bi-clock-history" aria-hidden="true"></i>
         <span class="ml-1">Logs</span>
       </a>
-
-
 
       <a href="{% url 'friends_list' %}"
          class="btn btn-ghost btn-sm px-3 {% if 'friend' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
@@ -501,7 +451,10 @@
             Profile Settings
           </a></li>
 
-
+          <li><a href="{% url 'day_planner' %}">
+            <i class="bi bi-calendar-check text-lg opacity-80" aria-hidden="true"></i>
+            Day Planner
+          </a></li>
 
           <!-- Dark mode toggle -->
           <li>
@@ -655,14 +608,14 @@
 
       <a href="{% url 'plan_list' %}"
          class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/60 transition
-                {% if 'plan' in request.resolver_match.url_name %}vm-active{% endif %}">
-        <i class="bi bi-check2-square text-xl" aria-hidden="true"></i>
+                {% if request.resolver_match.url_name == 'plan_list' or request.resolver_match.url_name == 'plan_create' or request.resolver_match.url_name == 'plan_detail' or request.resolver_match.url_name == 'plan_update' or request.resolver_match.url_name == 'plan_delete' %}vm-active{% endif %}">
+        <i class="bi bi-diagram-3 text-xl" aria-hidden="true"></i>
         <span>Plans</span>
       </a>
 
-      <a href="{% url 'inbox' %}" class="flex flex-col items-center justify-center" aria-label="Add log">
+      <a href="{% url 'day_planner' %}" class="flex flex-col items-center justify-center" aria-label="Day Planner">
         <div class="vm-fab flex items-center justify-center -translate-y-4">
-          <i class="bi bi-plus-lg text-2xl" aria-hidden="true"></i>
+          <i class="bi bi-calendar-check text-2xl" aria-hidden="true"></i>
         </div>
       </a>
 
@@ -676,8 +629,8 @@
   </nav>
   {% endif %}
 
+  <!-- ✅ FIXED: toasts + user menu + theme toggle -->
   <script>
-    // Auto-dismiss toasts
     setTimeout(() => {
       const toast = document.querySelector('.toast');
       if (!toast) return;
@@ -685,7 +638,6 @@
       setTimeout(() => toast.remove(), 550);
     }, 4000);
 
-    // Navigation menu and theme toggle - wrapped to prevent memory leaks
     (function () {
       const menu = document.getElementById('userMenu');
       const btn = document.getElementById('userMenuButton');
@@ -716,15 +668,17 @@
         if (e.key === 'Escape') closeMenu();
       };
 
+      const handleMenuItemClick = (e) => {
+        const el = e.target.closest('a,button');
+        if (!el) return;
+        if (el.id === 'themeToggleBtn') return; // keep open for theme toggle
+        closeMenu();
+      };
+
       btn.addEventListener('click', toggleMenu);
       document.addEventListener('click', handleDocumentClick);
       document.addEventListener('keydown', handleEscapeKey);
-
-      // Clean up event listeners on page unload
-      window.addEventListener('beforeunload', function() {
-        document.removeEventListener('click', handleDocumentClick);
-        document.removeEventListener('keydown', handleEscapeKey);
-      });
+      dropdown.addEventListener('click', handleMenuItemClick);
 
       // ----------------------------
       // Dark mode toggle (site-wide)
@@ -749,37 +703,27 @@
           toggleIcon.classList.add(isDark ? 'bi-sun' : 'bi-moon-stars');
         }
 
-        // Optional: update browser theme color for nicer mobile UI
         const metaTheme = document.querySelector('meta[name="theme-color"]');
         if (metaTheme) metaTheme.setAttribute('content', isDark ? '#0b1220' : '#1d4ed8');
       };
 
-      // Init UI state from whatever head script applied
       applyTheme(htmlEl.getAttribute('data-theme') || 'light');
 
       const handleThemeToggle = (e) => {
         e.preventDefault();
         e.stopPropagation();
-
         const next = htmlEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
         localStorage.setItem(STORAGE_KEY, next);
         applyTheme(next);
+        btn.setAttribute('aria-expanded', 'true'); // keep dropdown open
       };
 
-      // Toggle on click (keep dropdown open)
-      if (toggleBtn) {
-        toggleBtn.addEventListener('click', handleThemeToggle);
-        
-        // Clean up theme toggle on unload
-        window.addEventListener('beforeunload', function() {
-          toggleBtn.removeEventListener('click', handleThemeToggle);
-        });
-      }
+      if (toggleBtn) toggleBtn.addEventListener('click', handleThemeToggle);
     })();
   </script>
 
   {% if user.is_authenticated %}
-  <!-- Desktop mini chat script (global) -->
+  <!-- ✅ FIXED: mini chat script (robust CSRF + safer fetch + openFull link restore) -->
   <script>
   document.addEventListener('DOMContentLoaded', function () {
     const friendsEl = document.getElementById('miniChatFriends');
@@ -796,9 +740,14 @@
     const formEl = document.getElementById('miniChatForm');
     const inputEl = document.getElementById('miniChatInput');
 
-    if (!friendsEl) return; // mobile -> dock hidden
+    if (!friendsEl) return;
 
-    const CSRF_TOKEN = '{{ csrf_token }}';
+    function getCsrfToken() {
+      const meta = document.querySelector('meta[name="csrf-token"]');
+      const token = meta ? meta.getAttribute('content') : '';
+      return token && token !== 'NOTPROVIDED' ? token : '';
+    }
+
     const MINI_CHAT_MINIMISED_KEY = 'miniChatMinimised';
     let currentConvId = null;
     let currentUserId = null;
@@ -806,12 +755,14 @@
     let minimised = localStorage.getItem(MINI_CHAT_MINIMISED_KEY) === 'true';
 
     function escapeHtml(str) {
-      return (str || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+      const s = String(str ?? '');
+      return s.replace(/[&<>"']/g, (ch) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      }[ch]));
     }
 
     function renderMessage(m) {
@@ -829,89 +780,97 @@
     }
 
     async function loadFriends(showLoading=true) {
-      if (showLoading) {
-        friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">Loading friends…</div>`;
-      }
+      try {
+        if (showLoading) {
+          friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">Loading friends…</div>`;
+        }
 
-      const res = await fetch('{% url "mini_chat_friends" %}');
-      if (!res.ok) {
-        friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Could not load friends.</div>`;
-        return;
-      }
-      const data = await res.json();
+        const res = await fetch('{% url "mini_chat_friends" %}', { credentials: 'same-origin' });
+        if (!res.ok) {
+          friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Could not load friends.</div>`;
+          return;
+        }
+        const data = await res.json();
 
-      const totalUnread = (data.friends || []).reduce((acc, f) => acc + (f.unread || 0), 0);
-      if (totalUnread > 0) {
-        unreadBadge.textContent = totalUnread;
-        unreadBadge.classList.remove('hidden');
-      } else {
-        unreadBadge.classList.add('hidden');
-      }
+        const totalUnread = (data.friends || []).reduce((acc, f) => acc + (f.unread || 0), 0);
+        if (totalUnread > 0) {
+          unreadBadge.textContent = totalUnread;
+          unreadBadge.classList.remove('hidden');
+        } else {
+          unreadBadge.classList.add('hidden');
+        }
 
-      if (!data.friends || data.friends.length === 0) {
-        friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">No friends yet.</div>`;
-        return;
-      }
+        if (!data.friends || data.friends.length === 0) {
+          friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">No friends yet.</div>`;
+          return;
+        }
 
-      friendsEl.innerHTML = data.friends.map(f => {
-        const badge = f.unread > 0 ? `<span class="badge badge-warning badge-sm">${f.unread}</span>` : ``;
+        friendsEl.innerHTML = data.friends.map(f => {
+          const badge = f.unread > 0 ? `<span class="badge badge-warning badge-sm">${f.unread}</span>` : ``;
 
-        return `
-          <button type="button"
-                  class="w-full text-left p-3 hover:bg-base-200/40 transition flex items-center justify-between gap-3"
-                  data-conv="${f.conversation_id || ''}" data-user="${f.username}" data-user-id="${f.id}">
-            <span class="flex items-center gap-2 min-w-0">
-              <span class="avatar placeholder">
-                <span class="bg-neutral text-neutral-content rounded-full w-8 h-8 flex items-center justify-center">
-                  <span class="text-xs">${(f.username || '?').slice(0,1).toUpperCase()}</span>
+          return `
+            <button type="button"
+                    class="w-full text-left p-3 hover:bg-base-200/40 transition flex items-center justify-between gap-3"
+                    data-conv="${f.conversation_id || ''}" data-user="${escapeHtml(f.username)}" data-user-id="${f.id}">
+              <span class="flex items-center gap-2 min-w-0">
+                <span class="avatar placeholder">
+                  <span class="bg-neutral text-neutral-content rounded-full w-8 h-8 flex items-center justify-center">
+                    <span class="text-xs">${escapeHtml((f.username || '?').slice(0,1).toUpperCase())}</span>
+                  </span>
                 </span>
+                <span class="text-sm font-semibold truncate">${escapeHtml(f.username)}</span>
               </span>
-              <span class="text-sm font-semibold truncate">${f.username}</span>
-            </span>
-            ${badge}
-          </button>
-        `;
-      }).join('');
+              ${badge}
+            </button>
+          `;
+        }).join('');
 
-      friendsEl.querySelectorAll('button').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const convId = btn.getAttribute('data-conv');
-          const uname = btn.getAttribute('data-user');
-          const userId = btn.getAttribute('data-user-id');
-          if (convId) {
-            openConversation(convId, uname, userId);
-          } else {
-            openConversation(null, uname, userId);
-          }
+        friendsEl.querySelectorAll('button').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const convId = btn.getAttribute('data-conv');
+            const uname = btn.getAttribute('data-user');
+            const userId = btn.getAttribute('data-user-id');
+            openConversation(convId || null, uname, userId);
+          });
         });
-      });
+      } catch (err) {
+        friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Network error loading friends.</div>`;
+      }
     }
 
     async function loadMessages(conversationId, scrollToBottom=true) {
-      if (!conversationId) {
-        msgsEl.innerHTML = `<div class="p-2 text-sm text-base-content/70">No messages yet. Say hello!</div>`;
-        return;
-      }
-      const res = await fetch(`/api/mini-chat/${conversationId}/messages/`);
-      if (!res.ok) {
-        msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Could not load messages.</div>`;
-        return;
-      }
-      const data = await res.json();
+      try {
+        if (!conversationId) {
+          msgsEl.innerHTML = `<div class="p-2 text-sm text-base-content/70">No messages yet. Say hello!</div>`;
+          return;
+        }
+        const res = await fetch(`/api/mini-chat/${conversationId}/messages/`, { credentials: 'same-origin' });
+        if (!res.ok) {
+          msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Could not load messages.</div>`;
+          return;
+        }
+        const data = await res.json();
 
-      msgsEl.innerHTML = (data.messages || []).map(renderMessage).join('')
-        || `<div class="p-2 text-sm text-base-content/70">No messages yet.</div>`;
+        msgsEl.innerHTML = (data.messages || []).map(renderMessage).join('')
+          || `<div class="p-2 text-sm text-base-content/70">No messages yet.</div>`;
 
-      if (scrollToBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
-      loadFriends(false);
+        if (scrollToBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+        loadFriends(false);
+      } catch (err) {
+        msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Network error loading messages.</div>`;
+      }
     }
 
     async function openConversation(conversationId, username, userId) {
       currentConvId = conversationId;
       currentUserId = userId;
+
       withEl.textContent = username;
+
+      // FIX: always restore/hide correctly
       if (conversationId) {
         openFullEl.href = `/messages/${conversationId}/`;
+        openFullEl.style.display = '';
       } else {
         openFullEl.href = '#';
         openFullEl.style.display = 'none';
@@ -946,7 +905,6 @@
       localStorage.setItem(MINI_CHAT_MINIMISED_KEY, minimised);
     });
 
-    // Apply initial minimized state on page load
     if (minimised) {
       bodyEl.classList.add('hidden');
       minimiseBtn.innerHTML = '<i class="bi bi-plus-lg" aria-hidden="true"></i>';
@@ -954,7 +912,7 @@
 
     formEl.addEventListener('submit', async (e) => {
       e.preventDefault();
-      
+
       const body = (inputEl.value || "").trim();
       if (!body) return;
 
@@ -967,63 +925,62 @@
       }));
       msgsEl.scrollTop = msgsEl.scrollHeight;
 
-      let url, res;
-      if (currentConvId) {
-        // Existing conversation
-        url = `/api/mini-chat/${currentConvId}/send/`;
-        res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-          body: JSON.stringify({ body })
-        });
-      } else if (currentUserId) {
-        // New conversation - need to create it
-        url = `/api/mini-chat/start/${currentUserId}/`;
-        res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-          body: JSON.stringify({ body })
-        });
-      } else {
+      const csrf = getCsrfToken();
+      if (!csrf) {
+        if (currentConvId) await loadMessages(currentConvId, true);
         return;
       }
 
-      if (!res.ok) {
+      try {
+        let url, res;
+
         if (currentConvId) {
-          await loadMessages(currentConvId, true);
+          url = `/api/mini-chat/${currentConvId}/send/`;
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ body })
+          });
+        } else if (currentUserId) {
+          url = `/api/mini-chat/start/${currentUserId}/`;
+          res = await fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+            body: JSON.stringify({ body })
+          });
+        } else {
+          return;
         }
-        return;
-      }
 
-      const data = await res.json();
-      
-      // If this was a new conversation, update currentConvId and openFullEl
-      if (!currentConvId && data.conversation_id) {
-        currentConvId = data.conversation_id;
-        openFullEl.href = `/messages/${currentConvId}/`;
-        openFullEl.style.display = '';
-      }
-      
-      if (currentConvId) {
-        await loadMessages(currentConvId, true);
+        if (!res.ok) {
+          if (currentConvId) await loadMessages(currentConvId, true);
+          return;
+        }
+
+        const data = await res.json();
+
+        if (!currentConvId && data.conversation_id) {
+          currentConvId = data.conversation_id;
+          openFullEl.href = `/messages/${currentConvId}/`;
+          openFullEl.style.display = '';
+        }
+
+        if (currentConvId) await loadMessages(currentConvId, true);
+      } catch (err) {
+        if (currentConvId) await loadMessages(currentConvId, true);
       }
     });
 
     loadFriends(true);
     startPolling();
 
-    // Clean up polling when navigating away from the page
-    window.addEventListener('beforeunload', function() {
-      stopPolling();
-    });
+    window.addEventListener('beforeunload', stopPolling);
 
-    // Clean up polling when page becomes hidden (e.g., switching tabs or navigating)
     document.addEventListener('visibilitychange', function() {
-      if (document.hidden) {
-        stopPolling();
-      } else {
-        startPolling();
-      }
+      if (document.hidden) stopPolling();
+      else startPolling();
     });
   });
   </script>

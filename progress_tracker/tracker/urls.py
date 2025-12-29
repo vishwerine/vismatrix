@@ -7,6 +7,7 @@ urlpatterns = [
     # Dashboard (requires login)
     path("dashboard/", views.dashboard, name="dashboard"),
     path("analytics/", views.analytics, name="analytics"),
+    path("day-planner/", views.day_planner, name="day_planner"),
 
     path("tasks/", views.task_list, name="task_list"),
     path("tasks/new/", views.task_create, name="task_create"),
@@ -18,6 +19,11 @@ urlpatterns = [
     path("logs/new/", views.log_create, name="log_create"),
     path("logs/<int:pk>/edit/", views.log_update, name="log_update"),
     path("logs/<int:pk>/delete/", views.log_delete, name="log_delete"),
+    path("logs/quick/", views.quick_log_activity, name="quick_log_activity"),
+    
+    # Day schedule API endpoints
+    path("api/day-schedule/save/", views.save_day_schedule, name="save_day_schedule"),
+    path("api/day-schedule/<str:schedule_date>/", views.load_day_schedule, name="load_day_schedule"),
 
     path("progress/", views.progress_view, name="progress"),
 
@@ -29,6 +35,7 @@ urlpatterns = [
     path("users/", views.user_list, name="user_list"),
     path("users/<int:user_id>/profile/", views.view_user_profile, name="view_user_profile"),
     path("friends/", views.friends_list, name="friends_list"),
+    path("friends/feed/", views.friends_feed, name="friends_feed"),
     path("friends/<int:friendship_id>/profile/", views.view_friend_profile, name="view_friend_profile"),
 
     path("users/<int:user_id>/send_request/", views.send_friend_request, name="send_friend_request"),

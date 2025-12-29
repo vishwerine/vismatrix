@@ -85,11 +85,7 @@
         </div>
 
         <div class="flex items-center gap-2 text-sm text-base-content/70">
-                <a href="{% url 'dashboard' %}"
-         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'analytics' %}vm-nav-active{% endif %}">
-        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
-        <span class="ml-1">Dashboard</span>
-      </a>
+
           <i class="bi bi-calendar-event text-primary text-lg" aria-hidden="true"></i>
           <span class="font-semibold">{{ today|date:"l, F j, Y" }}</span>
         </div>
@@ -258,6 +254,54 @@
           </div>
         </div>
         {% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+
+  {% if best_day_info or weekly_overview %}
+  <!-- Activity Insights -->
+  <section class="card border border-base-200 bg-base-100" aria-label="Activity insights">
+    <div class="card-body p-5 sm:p-6">
+      <h2 class="text-lg font-bold flex items-center gap-2">
+        <i class="bi bi-lightbulb" aria-hidden="true"></i>
+        <span>Activity Insights</span>
+      </h2>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {% if best_day_info %}
+        <!-- Best Day -->
+        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-success/5 to-transparent">
+          <div class="flex items-start gap-3">
+            <i class="bi bi-trophy-fill text-success text-2xl" aria-hidden="true"></i>
+            <div>
+              <p class="text-xs font-semibold text-base-content/60 uppercase">Most Productive Day</p>
+              <p class="text-base font-bold mt-1">{{ best_day_info.date|date:"F j, Y" }}</p>
+              <p class="text-sm text-base-content/70 mt-1">{{ best_day_info.minutes }} minutes logged</p>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        {% if weekly_overview %}
+        <!-- Weekly Activity Pattern -->
+        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
+          <p class="text-xs font-semibold text-base-content/60 uppercase mb-3">Last 7 Days</p>
+          <div class="flex items-end justify-between gap-1 h-20">
+            {% for day in weekly_overview %}
+            <div class="flex-1 flex flex-col items-center gap-1">
+              <div class="w-full rounded-t transition-all" 
+                   style="height: {% if day.percent > 0 %}{{ day.percent }}%{% else %}8px{% endif %}; background-color: {% if day.minutes > 0 %}oklch(var(--p)){% else %}oklch(var(--b2)){% endif %};"
+                   title="{{ day.label }}: {{ day.minutes }}m"></div>
+              <span class="text-xs text-base-content/60">{{ day.label }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
       </div>
     </div>
   </section>
