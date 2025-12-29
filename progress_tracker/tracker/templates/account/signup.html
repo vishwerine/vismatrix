@@ -136,6 +136,22 @@
       border: 1px solid rgba(71,85,105,.9);
       background: rgba(30,41,59,.86);
     }
+    [data-theme="dark"] header{
+      background: rgba(15,23,42,0.70);
+      border-color: rgba(71,85,105,.9);
+    }
+    [data-theme="dark"] footer{
+      background: rgba(15,23,42,0.60);
+      border-color: rgba(71,85,105,.9);
+    }
+    .theme-text-primary { color: #0f172a; }
+    [data-theme="dark"] .theme-text-primary { color: #e2e8f0; }
+    .theme-text-secondary { color: #475569; }
+    [data-theme="dark"] .theme-text-secondary { color: #94a3b8; }
+    .theme-text-muted { color: #64748b; }
+    [data-theme="dark"] .theme-text-muted { color: #94a3b8; }
+    .theme-bg-logo { background: #ffffff; border-color: #e2e8f0; }
+    [data-theme="dark"] .theme-bg-logo { background: #1e293b; border-color: #475569; }
 
     .input:focus { border-color: rgb(29 78 216); box-shadow: var(--focus); }
 
@@ -163,20 +179,20 @@
   </a>
 
   <!-- Top bar (matches landing/login styling) -->
-  <header class="sticky top-0 z-40 bg-white/70 backdrop-blur border-b border-slate-200">
+  <header class="sticky top-0 z-40 bg-white/70 backdrop-blur border-b border-slate-200 transition-colors duration-300">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
       <a href="{% url 'account_login' %}" class="flex items-center gap-3 hover:opacity-90 transition">
         <img
           src="{% static 'branding/vismatrixicon.png' %}"
           alt="VisMatrix icon"
-          class="w-9 h-9 rounded-xl ring-1 ring-slate-200 bg-white p-1 object-contain"
+          class="w-9 h-9 rounded-xl ring-1 theme-bg-logo p-1 object-contain transition-colors duration-300"
           loading="eager"
         />
         <div class="leading-tight">
-          <div class="text-base sm:text-lg font-black tracking-tight">
+          <div class="text-base sm:text-lg font-black tracking-tight theme-text-primary transition-colors duration-300">
             VisMatrix<span class="text-primary">.space</span>
           </div>
-          <div class="text-xs text-slate-600 hidden sm:block">AI-powered personal achievement</div>
+          <div class="text-xs theme-text-muted hidden sm:block transition-colors duration-300">AI-powered personal achievement</div>
         </div>
       </a>
 
@@ -205,12 +221,12 @@
 
         <div class="min-w-0">
           <div class="flex items-center gap-3 mb-4">
-            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm flex items-center justify-center">
+            <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl theme-bg-logo ring-1 shadow-sm flex items-center justify-center transition-colors duration-300">
               <img src="{% static 'branding/vismatrixicon.png' %}" alt="VisMatrix icon" class="w-8 h-8 sm:w-9 sm:h-9 object-contain">
             </div>
             <div class="leading-tight">
-              <div class="text-sm font-extrabold text-slate-900">Create your account</div>
-              <div class="text-xs text-slate-600">Start building momentum today</div>
+              <div class="text-sm font-extrabold theme-text-primary transition-colors duration-300">Create your account</div>
+              <div class="text-xs theme-text-muted transition-colors duration-300">Start building momentum today</div>
             </div>
             <span class="tag lg:hidden ml-auto">
               <i class="bi bi-stars" aria-hidden="true"></i>
@@ -218,11 +234,11 @@
             </span>
           </div>
 
-          <h1 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+          <h1 class="text-3xl sm:text-5xl font-black tracking-tight leading-tight theme-text-primary transition-colors duration-300">
             Join VisMatrix<span class="text-primary">.space</span> — make progress measurable.
           </h1>
 
-          <p class="mt-4 text-base sm:text-lg text-slate-600 leading-relaxed max-w-3xl">
+          <p class="mt-4 text-base sm:text-lg theme-text-secondary leading-relaxed max-w-3xl transition-colors duration-300">
             Track goals, log effort, and learn from your trends. Friends keep you accountable — and AI agents (coming soon) help you execute step-by-step.
           </p>
 
@@ -249,14 +265,14 @@
               <i class="bi bi-infinity text-primary text-xl" aria-hidden="true"></i>
             </div>
             <div>
-              <div class="font-extrabold text-slate-900">Free to start</div>
-              <p class="text-sm text-slate-600 mt-1">
+              <div class="font-extrabold theme-text-primary transition-colors duration-300">Free to start</div>
+              <p class="text-sm theme-text-secondary mt-1 transition-colors duration-300">
                 Create unlimited tasks and logs. Keep things simple, consistent, and visible.
               </p>
             </div>
           </div>
 
-          <div class="mt-4 space-y-2 text-sm">
+          <div class="mt-4 space-y-2 text-sm theme-text-secondary transition-colors duration-300">
             <div class="flex items-start gap-2">
               <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
               <span>Unlimited tasks, logs & categories</span>
@@ -280,8 +296,8 @@
           <div class="flex items-center gap-3">
             <div class="brandmark"><i class="bi bi-heart-pulse text-primary text-xl" aria-hidden="true"></i></div>
             <div>
-              <div class="font-extrabold">Health goals</div>
-              <div class="text-sm text-slate-600">Build habits and track outcomes.</div>
+              <div class="font-extrabold theme-text-primary transition-colors duration-300">Health goals</div>
+              <div class="text-sm theme-text-muted transition-colors duration-300">Build habits and track outcomes.</div>
             </div>
           </div>
         </div>
@@ -289,8 +305,8 @@
           <div class="flex items-center gap-3">
             <div class="brandmark"><i class="bi bi-book text-primary text-xl" aria-hidden="true"></i></div>
             <div>
-              <div class="font-extrabold">Study goals</div>
-              <div class="text-sm text-slate-600">Consistency-driven learning.</div>
+              <div class="font-extrabold theme-text-primary transition-colors duration-300">Study goals</div>
+              <div class="text-sm theme-text-muted transition-colors duration-300">Consistency-driven learning.</div>
             </div>
           </div>
         </div>
@@ -298,8 +314,8 @@
           <div class="flex items-center gap-3">
             <div class="brandmark"><i class="bi bi-briefcase text-primary text-xl" aria-hidden="true"></i></div>
             <div>
-              <div class="font-extrabold">Work goals</div>
-              <div class="text-sm text-slate-600">Execution and measurable wins.</div>
+              <div class="font-extrabold theme-text-primary transition-colors duration-300">Work goals</div>
+              <div class="text-sm theme-text-muted transition-colors duration-300">Execution and measurable wins.</div>
             </div>
           </div>
         </div>
@@ -310,12 +326,12 @@
     <section id="signup" class="solid p-6 sm:p-8">
       <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-2xl bg-white ring-1 ring-slate-200 shadow-sm flex items-center justify-center">
+          <div class="w-12 h-12 rounded-2xl theme-bg-logo ring-1 shadow-sm flex items-center justify-center transition-colors duration-300">
             <img src="{% static 'branding/vismatrixicon.png' %}" alt="VisMatrix icon" class="w-8 h-8 object-contain">
           </div>
           <div>
-            <h2 class="text-2xl sm:text-3xl font-black tracking-tight">Create account</h2>
-            <p class="text-sm text-slate-600">It only takes a minute.</p>
+            <h2 class="text-2xl sm:text-3xl font-black tracking-tight theme-text-primary transition-colors duration-300">Create account</h2>
+            <p class="text-sm theme-text-muted transition-colors duration-300">It only takes a minute.</p>
           </div>
         </div>
 
@@ -328,12 +344,12 @@
       {% if socialaccount_providers %}
       <div class="mt-6">
         <a href="{% provider_login_url 'google' %}"
-           class="btn btn-outline w-full gap-3 normal-case h-12 border-slate-200 hover:border-slate-300 hover:bg-slate-50 shadow-sm hover:shadow-md transition-all duration-200 text-base font-semibold"
+           class="btn btn-outline w-full gap-3 normal-case h-12 shadow-sm hover:shadow-md transition-all duration-200 text-base font-semibold"
            role="button" aria-label="Continue with Google to create account">
           <i class="bi bi-google text-lg" aria-hidden="true"></i>
           <span>Continue with Google</span>
         </a>
-        <div class="divider text-sm text-slate-500 before:bg-slate-200 after:bg-slate-200 mt-5">
+        <div class="divider text-sm theme-text-muted mt-5 transition-colors duration-300">
           or create account with email
         </div>
       </div>
@@ -404,17 +420,17 @@
           <span>Create my account</span>
         </button>
 
-        <p class="text-xs text-slate-500 leading-relaxed">
+        <p class="text-xs theme-text-muted leading-relaxed transition-colors duration-300">
           By creating an account you agree to behave respectfully and keep your content appropriate. (You can add your formal terms later.)
         </p>
       </form>
 
-      <div class="mt-6 pt-6 border-t border-slate-200 text-center space-y-2">
-        <p class="text-sm text-slate-600">
+      <div class="mt-6 pt-6 border-t solid text-center space-y-2 transition-colors duration-300">
+        <p class="text-sm theme-text-muted transition-colors duration-300">
           Already have an account?
           <a href="{% url 'account_login' %}" class="link link-hover font-extrabold text-primary">Sign in</a>
         </p>
-        <p class="text-xs text-slate-500">
+        <p class="text-xs theme-text-muted transition-colors duration-300">
           Built for clarity, momentum, and accountability.
         </p>
       </div>
@@ -422,9 +438,9 @@
 
   </main>
 
-  <footer class="border-t border-slate-200 bg-white/60 backdrop-blur">
+  <footer class="border-t border-slate-200 bg-white/60 backdrop-blur transition-colors duration-300">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-      <div class="text-sm text-slate-600">
+      <div class="text-sm theme-text-muted transition-colors duration-300">
         © {% now "Y" %} VisMatrix.Space · AI-powered personal achievement
       </div>
       <div class="flex flex-wrap gap-2">
