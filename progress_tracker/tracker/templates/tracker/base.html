@@ -724,266 +724,310 @@
 
   {% if user.is_authenticated %}
   <!-- ✅ FIXED: mini chat script (robust CSRF + safer fetch + openFull link restore) -->
-  <script>
-  document.addEventListener('DOMContentLoaded', function () {
-    const friendsEl = document.getElementById('miniChatFriends');
-    const unreadBadge = document.getElementById('miniChatUnreadBadge');
-    const minimiseBtn = document.getElementById('miniChatMinimise');
-    const bodyEl = document.getElementById('miniChatBody');
+ <script>
+document.addEventListener('DOMContentLoaded', function () {
+  // Prevent accidental double-init (e.g., if this template is injected/reloaded)
+  if (window.__vmMiniChatInit) return;
+  window.__vmMiniChatInit = true;
 
-    const emptyEl = document.getElementById('miniChatEmpty');
-    const convEl = document.getElementById('miniChatConversation');
-    const msgsEl = document.getElementById('miniChatMessages');
-    const withEl = document.getElementById('miniChatWith');
-    const openFullEl = document.getElementById('miniChatOpenFull');
+  const friendsEl = document.getElementById('miniChatFriends');
+  const unreadBadge = document.getElementById('miniChatUnreadBadge');
+  const minimiseBtn = document.getElementById('miniChatMinimise');
+  const bodyEl = document.getElementById('miniChatBody');
 
-    const formEl = document.getElementById('miniChatForm');
-    const inputEl = document.getElementById('miniChatInput');
+  const emptyEl = document.getElementById('miniChatEmpty');
+  const convEl = document.getElementById('miniChatConversation');
+  const msgsEl = document.getElementById('miniChatMessages');
+  const withEl = document.getElementById('miniChatWith');
+  const openFullEl = document.getElementById('miniChatOpenFull');
 
-    if (!friendsEl) return;
+  const formEl = document.getElementById('miniChatForm');
+  const inputEl = document.getElementById('miniChatInput');
 
-    function getCsrfToken() {
-      const meta = document.querySelector('meta[name="csrf-token"]');
-      const token = meta ? meta.getAttribute('content') : '';
-      return token && token !== 'NOTPROVIDED' ? token : '';
-    }
+  if (!friendsEl) return;
 
-    const MINI_CHAT_MINIMISED_KEY = 'miniChatMinimised';
-    let currentConvId = null;
-    let currentUserId = null;
-    let pollTimer = null;
-    let minimised = localStorage.getItem(MINI_CHAT_MINIMISED_KEY) === 'true';
+  function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const token = meta ? meta.getAttribute('content') : '';
+    return token && token !== 'NOTPROVIDED' ? token : '';
+  }
 
-    function escapeHtml(str) {
-      const s = String(str ?? '');
-      return s.replace(/[&<>"']/g, (ch) => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;',
-      }[ch]));
-    }
+  const MINI_CHAT_MINIMISED_KEY = 'miniChatMinimised';
+  let currentConvId = null;
+  let currentUserId = null;
 
-    function renderMessage(m) {
-      const side = m.is_me ? "chat-end" : "chat-start";
-      const bubble = m.is_me ? "chat-bubble chat-bubble-primary" : "chat-bubble";
-      return `
-        <div class="chat ${side}">
-          <div class="chat-header text-xs opacity-70">
-            ${m.is_me ? "You" : escapeHtml(m.sender)}
-            <time class="ml-2">${escapeHtml(m.created_at)}</time>
-          </div>
-          <div class="${bubble} text-sm whitespace-pre-wrap">${escapeHtml(m.body)}</div>
+  let pollTimer = null;
+  let minimised = localStorage.getItem(MINI_CHAT_MINIMISED_KEY) === 'true';
+
+  // Abort controllers to prevent overlapping requests piling up
+  let friendsAbort = null;
+  let messagesAbort = null;
+
+  // Cache to avoid re-rendering identical message payloads
+  let lastMessagesSig = '';
+
+  function escapeHtml(str) {
+    const s = String(str ?? '');
+    return s.replace(/[&<>"']/g, (ch) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;',
+    }[ch]));
+  }
+
+  function renderMessage(m) {
+    const side = m.is_me ? "chat-end" : "chat-start";
+    const bubble = m.is_me ? "chat-bubble chat-bubble-primary" : "chat-bubble";
+    return `
+      <div class="chat ${side}">
+        <div class="chat-header text-xs opacity-70">
+          ${m.is_me ? "You" : escapeHtml(m.sender)}
+          <time class="ml-2">${escapeHtml(m.created_at)}</time>
         </div>
-      `;
-    }
+        <div class="${bubble} text-sm whitespace-pre-wrap">${escapeHtml(m.body)}</div>
+      </div>
+    `;
+  }
 
-    async function loadFriends(showLoading=true) {
-      try {
-        if (showLoading) {
-          friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">Loading friends…</div>`;
-        }
+  async function loadFriends(showLoading = true) {
+    try {
+      if (friendsAbort) friendsAbort.abort();
+      friendsAbort = new AbortController();
 
-        const res = await fetch('{% url "mini_chat_friends" %}', { credentials: 'same-origin' });
-        if (!res.ok) {
-          friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Could not load friends.</div>`;
-          return;
-        }
-        const data = await res.json();
-
-        const totalUnread = (data.friends || []).reduce((acc, f) => acc + (f.unread || 0), 0);
-        if (totalUnread > 0) {
-          unreadBadge.textContent = totalUnread;
-          unreadBadge.classList.remove('hidden');
-        } else {
-          unreadBadge.classList.add('hidden');
-        }
-
-        if (!data.friends || data.friends.length === 0) {
-          friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">No friends yet.</div>`;
-          return;
-        }
-
-        friendsEl.innerHTML = data.friends.map(f => {
-          const badge = f.unread > 0 ? `<span class="badge badge-warning badge-sm">${f.unread}</span>` : ``;
-
-          return `
-            <button type="button"
-                    class="w-full text-left p-3 hover:bg-base-200/40 transition flex items-center justify-between gap-3"
-                    data-conv="${f.conversation_id || ''}" data-user="${escapeHtml(f.username)}" data-user-id="${f.id}">
-              <span class="flex items-center gap-2 min-w-0">
-                <span class="avatar placeholder">
-                  <span class="bg-neutral text-neutral-content rounded-full w-8 h-8 flex items-center justify-center">
-                    <span class="text-xs">${escapeHtml((f.username || '?').slice(0,1).toUpperCase())}</span>
-                  </span>
-                </span>
-                <span class="text-sm font-semibold truncate">${escapeHtml(f.username)}</span>
-              </span>
-              ${badge}
-            </button>
-          `;
-        }).join('');
-
-        friendsEl.querySelectorAll('button').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const convId = btn.getAttribute('data-conv');
-            const uname = btn.getAttribute('data-user');
-            const userId = btn.getAttribute('data-user-id');
-            openConversation(convId || null, uname, userId);
-          });
-        });
-      } catch (err) {
-        friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Network error loading friends.</div>`;
+      if (showLoading) {
+        friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">Loading friends…</div>`;
       }
-    }
 
-    async function loadMessages(conversationId, scrollToBottom=true) {
-      try {
-        if (!conversationId) {
-          msgsEl.innerHTML = `<div class="p-2 text-sm text-base-content/70">No messages yet. Say hello!</div>`;
-          return;
-        }
-        const res = await fetch(`/api/mini-chat/${conversationId}/messages/`, { credentials: 'same-origin' });
-        if (!res.ok) {
-          msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Could not load messages.</div>`;
-          return;
-        }
-        const data = await res.json();
+      const res = await fetch('{% url "mini_chat_friends" %}', {
+        credentials: 'same-origin',
+        signal: friendsAbort.signal
+      });
 
-        msgsEl.innerHTML = (data.messages || []).map(renderMessage).join('')
-          || `<div class="p-2 text-sm text-base-content/70">No messages yet.</div>`;
-
-        if (scrollToBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
-        loadFriends(false);
-      } catch (err) {
-        msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Network error loading messages.</div>`;
+      if (!res.ok) {
+        friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Could not load friends.</div>`;
+        return;
       }
-    }
 
-    async function openConversation(conversationId, username, userId) {
-      currentConvId = conversationId;
-      currentUserId = userId;
+      const data = await res.json();
+      const friends = data.friends || [];
 
-      withEl.textContent = username;
-
-      // FIX: always restore/hide correctly
-      if (conversationId) {
-        openFullEl.href = `/messages/${conversationId}/`;
-        openFullEl.style.display = '';
+      const totalUnread = friends.reduce((acc, f) => acc + (f.unread || 0), 0);
+      if (totalUnread > 0) {
+        unreadBadge.textContent = totalUnread;
+        unreadBadge.classList.remove('hidden');
       } else {
-        openFullEl.href = '#';
-        openFullEl.style.display = 'none';
+        unreadBadge.classList.add('hidden');
       }
 
-      emptyEl.classList.add('hidden');
-      convEl.classList.remove('hidden');
+      if (friends.length === 0) {
+        friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">No friends yet.</div>`;
+        return;
+      }
 
-      await loadMessages(conversationId, true);
-      inputEl.focus();
+      friendsEl.innerHTML = friends.map(f => {
+        const badge = (f.unread || 0) > 0 ? `<span class="badge badge-warning badge-sm">${f.unread}</span>` : ``;
+        const uname = escapeHtml(f.username || '?');
+        return `
+          <button type="button"
+                  class="w-full text-left p-3 hover:bg-base-200/40 transition flex items-center justify-between gap-3"
+                  data-conv="${f.conversation_id || ''}"
+                  data-user="${uname}"
+                  data-user-id="${f.id}">
+            <span class="flex items-center gap-2 min-w-0">
+              <span class="avatar placeholder">
+                <span class="bg-neutral text-neutral-content rounded-full w-8 h-8 flex items-center justify-center">
+                  <span class="text-xs">${uname.slice(0,1).toUpperCase()}</span>
+                </span>
+              </span>
+              <span class="text-sm font-semibold truncate">${uname}</span>
+            </span>
+            ${badge}
+          </button>
+        `;
+      }).join('');
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Network error loading friends.</div>`;
+    }
+  }
+
+  async function loadMessages(conversationId, scrollToBottom = true) {
+    try {
+      if (!conversationId) {
+        msgsEl.innerHTML = `<div class="p-2 text-sm text-base-content/70">No messages yet. Say hello!</div>`;
+        return;
+      }
+
+      if (messagesAbort) messagesAbort.abort();
+      messagesAbort = new AbortController();
+
+      const res = await fetch(`/api/mini-chat/${conversationId}/messages/`, {
+        credentials: 'same-origin',
+        signal: messagesAbort.signal
+      });
+
+      if (!res.ok) {
+        msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Could not load messages.</div>`;
+        return;
+      }
+
+      const data = await res.json();
+      const messages = data.messages || [];
+
+      // signature to avoid rerendering same content
+      const sig = JSON.stringify(messages.map(m => [m.id || '', m.created_at, m.body, m.is_me]));
+      if (sig !== lastMessagesSig) {
+        lastMessagesSig = sig;
+        msgsEl.innerHTML = messages.map(renderMessage).join('')
+          || `<div class="p-2 text-sm text-base-content/70">No messages yet.</div>`;
+        if (scrollToBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
+      }
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Network error loading messages.</div>`;
+    }
+  }
+
+  async function openConversation(conversationId, username, userId) {
+    currentConvId = conversationId || null;
+    currentUserId = userId || null;
+    lastMessagesSig = ''; // force refresh
+
+    withEl.textContent = username || '';
+
+    if (currentConvId) {
+      openFullEl.href = `/messages/${currentConvId}/`;
+      openFullEl.style.display = '';
+    } else {
+      openFullEl.href = '#';
+      openFullEl.style.display = 'none';
     }
 
-    function startPolling() {
-      stopPolling();
-      pollTimer = setInterval(() => {
-        loadFriends(false);
-        if (currentConvId) loadMessages(currentConvId, false);
-      }, 7000);
+    emptyEl.classList.add('hidden');
+    convEl.classList.remove('hidden');
+
+    await loadMessages(currentConvId, true);
+    inputEl && inputEl.focus();
+  }
+
+  // Event delegation: one handler for all friend buttons
+  friendsEl.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-user-id]');
+    if (!btn) return;
+    const convId = btn.getAttribute('data-conv');
+    const uname = btn.getAttribute('data-user');
+    const userId = btn.getAttribute('data-user-id');
+    openConversation(convId || null, uname, userId);
+  });
+
+  function startPolling() {
+    stopPolling();
+    pollTimer = setInterval(async () => {
+      // always refresh unread count/friends
+      await loadFriends(false);
+
+      // only fetch messages when: not minimised and a conversation is open
+      if (!minimised && currentConvId) {
+        await loadMessages(currentConvId, false);
+      }
+    }, 7000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+  }
+
+  minimiseBtn && minimiseBtn.addEventListener('click', () => {
+    minimised = !minimised;
+    bodyEl.classList.toggle('hidden', minimised);
+    minimiseBtn.innerHTML = minimised
+      ? '<i class="bi bi-plus-lg" aria-hidden="true"></i>'
+      : '<i class="bi bi-dash-lg" aria-hidden="true"></i>';
+    localStorage.setItem(MINI_CHAT_MINIMISED_KEY, minimised);
+  });
+
+  if (minimised) {
+    bodyEl.classList.add('hidden');
+    minimiseBtn.innerHTML = '<i class="bi bi-plus-lg" aria-hidden="true"></i>';
+  }
+
+  formEl && formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = (inputEl.value || "").trim();
+    if (!body) return;
+
+    inputEl.value = "";
+    msgsEl.insertAdjacentHTML('beforeend', renderMessage({
+      sender: "{{ user.username }}",
+      is_me: true,
+      body,
+      created_at: "now"
+    }));
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+
+    const csrf = getCsrfToken();
+    if (!csrf) {
+      if (currentConvId) await loadMessages(currentConvId, true);
+      return;
     }
 
-    function stopPolling() {
-      if (pollTimer) clearInterval(pollTimer);
-      pollTimer = null;
-    }
+    try {
+      let url, res;
 
-    minimiseBtn.addEventListener('click', () => {
-      minimised = !minimised;
-      bodyEl.classList.toggle('hidden', minimised);
-      minimiseBtn.innerHTML = minimised
-        ? '<i class="bi bi-plus-lg" aria-hidden="true"></i>'
-        : '<i class="bi bi-dash-lg" aria-hidden="true"></i>';
-      localStorage.setItem(MINI_CHAT_MINIMISED_KEY, minimised);
-    });
+      if (currentConvId) {
+        url = `/api/mini-chat/${currentConvId}/send/`;
+        res = await fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+          body: JSON.stringify({ body })
+        });
+      } else if (currentUserId) {
+        url = `/api/mini-chat/start/${currentUserId}/`;
+        res = await fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
+          body: JSON.stringify({ body })
+        });
+      } else {
+        return;
+      }
 
-    if (minimised) {
-      bodyEl.classList.add('hidden');
-      minimiseBtn.innerHTML = '<i class="bi bi-plus-lg" aria-hidden="true"></i>';
-    }
-
-    formEl.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const body = (inputEl.value || "").trim();
-      if (!body) return;
-
-      inputEl.value = "";
-      msgsEl.insertAdjacentHTML('beforeend', renderMessage({
-        sender: "{{ user.username }}",
-        is_me: true,
-        body,
-        created_at: "now"
-      }));
-      msgsEl.scrollTop = msgsEl.scrollHeight;
-
-      const csrf = getCsrfToken();
-      if (!csrf) {
+      if (!res.ok) {
         if (currentConvId) await loadMessages(currentConvId, true);
         return;
       }
 
-      try {
-        let url, res;
-
-        if (currentConvId) {
-          url = `/api/mini-chat/${currentConvId}/send/`;
-          res = await fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-            body: JSON.stringify({ body })
-          });
-        } else if (currentUserId) {
-          url = `/api/mini-chat/start/${currentUserId}/`;
-          res = await fetch(url, {
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-            body: JSON.stringify({ body })
-          });
-        } else {
-          return;
-        }
-
-        if (!res.ok) {
-          if (currentConvId) await loadMessages(currentConvId, true);
-          return;
-        }
-
-        const data = await res.json();
-
-        if (!currentConvId && data.conversation_id) {
-          currentConvId = data.conversation_id;
-          openFullEl.href = `/messages/${currentConvId}/`;
-          openFullEl.style.display = '';
-        }
-
-        if (currentConvId) await loadMessages(currentConvId, true);
-      } catch (err) {
-        if (currentConvId) await loadMessages(currentConvId, true);
+      const data = await res.json();
+      if (!currentConvId && data.conversation_id) {
+        currentConvId = data.conversation_id;
+        openFullEl.href = `/messages/${currentConvId}/`;
+        openFullEl.style.display = '';
       }
-    });
 
-    loadFriends(true);
-    startPolling();
-
-    window.addEventListener('beforeunload', stopPolling);
-
-    document.addEventListener('visibilitychange', function() {
-      if (document.hidden) stopPolling();
-      else startPolling();
-    });
+      if (currentConvId) await loadMessages(currentConvId, true);
+      await loadFriends(false);
+    } catch (err) {
+      if (currentConvId) await loadMessages(currentConvId, true);
+    }
   });
-  </script>
+
+  // start
+  loadFriends(true);
+  startPolling();
+
+  window.addEventListener('beforeunload', stopPolling);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopPolling();
+    else startPolling();
+  });
+});
+</script>
+
   {% endif %}
 </body>
 </html>
