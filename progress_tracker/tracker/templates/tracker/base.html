@@ -154,12 +154,26 @@
     const menu = document.getElementById('profileDropdownMenu');
     
     if (toggle && menu) {
+      let isOpen = false;
+      
       toggle.addEventListener('click', (e) => {
-        // Toggle by removing focus from menu if it's currently focused
-        if (document.activeElement === menu) {
-          menu.blur();
-          toggle.blur();
-        }
+        // Use setTimeout to check state after DaisyUI processes the click
+        setTimeout(() => {
+          if (isOpen) {
+            // Was already open, close it
+            menu.blur();
+            toggle.blur();
+            isOpen = false;
+          } else {
+            // Just opened
+            isOpen = true;
+          }
+        }, 0);
+      });
+      
+      // Track when dropdown closes naturally
+      menu.addEventListener('blur', () => {
+        isOpen = false;
       });
 
       // Close dropdown when clicking outside
@@ -168,6 +182,7 @@
         if (dropdown && !dropdown.contains(e.target)) {
           menu.blur();
           toggle.blur();
+          isOpen = false;
         }
       });
     }
