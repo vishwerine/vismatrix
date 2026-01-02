@@ -215,7 +215,7 @@
 
 .timeline-grid {
   position: relative;
-  height: 2880px; /* 24 hours * 60px */
+  height: 1440px; /* 24 hours * 60px */
   min-height: 100%;
 }
 
@@ -593,10 +593,6 @@
     max-height: 600px;
   }
 
-  .timeline-grid {
-    height: 1440px; /* Adjusted for smaller height */
-  }
-
   .event-card {
     font-size: 12px;
   }
@@ -660,14 +656,8 @@
   }
 
   .hour-slot {
-    height: 50px;
     font-size: 10px;
     color: var(--muted);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .timeline-grid {
-    height: 1200px;
   }
 
   .event-card {
@@ -794,11 +784,6 @@
 
   .hour-slot {
     font-size: 9px;
-    height: 40px;
-  }
-
-  .timeline-grid {
-    height: 960px;
   }
 
   .event-card {
@@ -1177,7 +1162,7 @@ function startDrag(e) {
   
   const rect = card.getBoundingClientRect();
   const container = document.querySelector('.planner-container');
-  const gridRect = document.getElementById('grid').getBoundingClientRect();
+  const grid = document.getElementById('grid');
   
   // Track if drag has actually started (threshold-based)
   let isDragging = false;
@@ -1214,7 +1199,9 @@ function startDrag(e) {
       e.preventDefault();
     }
     
-    const y = moveY - gridRect.top + container.scrollTop - dragState.offsetY;
+    // Calculate position relative to the grid, accounting for scroll
+    const containerRect = container.getBoundingClientRect();
+    const y = moveY - containerRect.top + container.scrollTop - dragState.offsetY;
     const mins = Math.round((y / HOUR_HEIGHT) * 60 / 15) * 15;
     const duration = dragState.origEndMin - dragState.origStartMin;
     
