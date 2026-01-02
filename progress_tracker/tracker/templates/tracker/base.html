@@ -3,64 +3,44 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="VisMatrix - Track your progress with friends">
   <meta name="theme-color" content="#1d4ed8">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}VisMatrix.Space{% endblock %}</title>
 
-  <!-- App Icons / Favicon -->
-  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'branding/vismatrixicon.png' %}">
-  <link rel="icon" type="image/png" sizes="192x192" href="{% static 'branding/vismatrixicon.png' %}">
-  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'branding/vismatrixicon.png' %}">
-  <meta name="apple-mobile-web-app-title" content="VisMatrix">
-  <meta name="application-name" content="VisMatrix">
+  <!-- Icons -->
+  <link rel="icon" type="image/png" href="{% static 'branding/vismatrixicon.png' %}">
 
-  <!-- Tailwind + DaisyUI -->
+  <!-- Tailwind + DaisyUI (CDN OK for now) -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet" type="text/css" />
-  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
 
-  <!-- Apply theme BEFORE paint (prevents flash + makes it site-wide) -->
+  <!-- THEME BOOTSTRAP (before paint) -->
   <script>
     (function () {
-      const STORAGE_KEY = 'vm_theme';
-      const saved = localStorage.getItem(STORAGE_KEY);
-      const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const theme = (saved === 'light' || saved === 'dark') ? saved : (systemPrefersDark ? 'dark' : 'light');
+      const key = 'vm_theme';
+      const saved = localStorage.getItem(key);
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = saved || (prefersDark ? 'dark' : 'light');
       document.documentElement.setAttribute('data-theme', theme);
-      
-      // Detect localhost and disable heavy animations for better dev performance
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        document.documentElement.setAttribute('data-env', 'development');
-        console.log('🚀 Development mode: Performance optimizations enabled');
-      }
     })();
   </script>
 
+  <!-- DESIGN TOKENS ONLY -->
   <style>
     :root {
       --radius: 14px;
-      --radius-sm: 10px;
-      --shadow: 0 1px 2px rgb(15 23 42 / 0.06), 0 10px 18px rgb(15 23 42 / 0.06);
-      --font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      --focus: 0 0 0 3px rgb(29 78 216 / 0.25);
+      --font: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      --focus: 0 0 0 3px rgb(29 78 216 / .3);
     }
 
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
     body {
       font-family: var(--font);
-      background: var(--bg);
-      color: var(--text);
       -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-      * { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
+      background-color: hsl(var(--b1));
+      color: hsl(var(--bc));
     }
 
     :focus-visible {
@@ -68,1092 +48,104 @@
       box-shadow: var(--focus);
       border-radius: 10px;
     }
-
-    .skip-link {
-      position: absolute;
-      top: -48px;
-      left: 12px;
-      z-index: 1000;
-      background: var(--text);
-      color: #fff;
-      padding: 10px 12px;
-      border-radius: 10px;
-      text-decoration: none;
-    }
-    .skip-link:focus { top: 12px; }
-
-    [data-theme="light"] {
-      --bg: #ffffff;
-      --surface: #ffffff;
-      --surface-2: #f8fafc;
-      --border: #e2e8f0;
-      --text: #0f172a;
-      --muted: #475569;
-
-      --primary: #1d4ed8;
-      --primary-hover: #1e40af;
-      --primary-ink: #ffffff;
-
-      --success: #15803d;
-      --warning: #a16207;
-      --error: #b91c1c;
-      --info: #1d4ed8;
-
-      --p: 220 85% 47%;
-      --pc: 0 0% 100%;
-      --b1: 0 0% 100%;
-      --b2: 210 40% 98%;
-      --b3: 214 32% 91%;
-      --bc: 222 47% 11%;
-      --er: 0 74% 42%;
-      --su: 142 72% 29%;
-      --wa: 45 93% 34%;
-      --in: 220 85% 47%;
-      --rounded-box: 14px;
-      --rounded-btn: 12px;
-      --rounded-badge: 9999px;
-    }
-
-    [data-theme="dark"] {
-      --bg: #0b1220;
-      --surface: #0f172a;
-      --surface-2: #111c33;
-      --border: rgb(148 163 184 / 0.22);
-      --text: #e5e7eb;
-      --muted: #94a3b8;
-
-      --primary: #60a5fa;
-      --primary-hover: #3b82f6;
-      --primary-ink: #0b1220;
-
-      --success: #22c55e;
-      --warning: #f59e0b;
-      --error: #ef4444;
-      --info: #60a5fa;
-
-      --p: 220 85% 60%;
-      --pc: 222 47% 11%;
-      --b1: 222 47% 11%;
-      --b2: 222 47% 9%;
-      --b3: 222 47% 7%;
-      --bc: 210 40% 98%;
-      --er: 0 74% 58%;
-      --su: 142 72% 45%;
-      --wa: 45 93% 55%;
-      --in: 220 85% 60%;
-      --rounded-box: 14px;
-      --rounded-btn: 12px;
-      --rounded-badge: 9999px;
-    }
-
-    .btn {
-      min-height: 44px;
-      border-radius: 12px;
-      font-weight: 600;
-      letter-spacing: 0.2px;
-      transition: all 0.2s ease;
-    }
-    .btn:focus-visible { box-shadow: var(--focus); }
-    .btn-ghost:hover {
-      background: var(--surface-2);
-      transform: translateY(-1px);
-    }
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 20px rgb(29 78 216 / 0.3);
-    }
-    .btn-primary:active { transform: translateY(0); }
-
-    .input, .select, .textarea {
-      border-radius: 12px;
-      border-width: 1px;
-      border-color: var(--border);
-      background: var(--surface);
-      min-height: 44px;
-      color: var(--text);
-      transition: all 0.2s ease;
-    }
-    .input:focus, .select:focus, .textarea:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: var(--focus);
-      transform: translateY(-1px);
-    }
-    .input:hover, .select:hover, .textarea:hover { border-color: var(--primary); }
-
-    .card {
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
-      background: var(--surface);
-      color: var(--text);
-      transition: all 0.3s ease;
-    }
-    .card:hover {
-      box-shadow: 0 10px 25px rgb(0 0 0 / 0.08);
-      transform: translateY(-2px);
-    }
-
-    .vm-navbar {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
-      backdrop-filter: blur(10px);
-    }
-
-    .vm-nav-active {
-      background: rgb(29 78 216 / 0.10);
-      color: var(--primary) !important;
-      font-weight: 700;
-      box-shadow: inset 0 -2px 0 var(--primary);
-    }
-
-    .toast .alert {
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      border-radius: 14px;
-    }
-    .alert-info { background: rgb(29 78 216 / 0.08); color: var(--text); border-color: rgb(29 78 216 / 0.25); }
-    .alert-success { background: rgb(21 128 61 / 0.08); color: var(--text); border-color: rgb(21 128 61 / 0.25); }
-    .alert-warning { background: rgb(161 98 7 / 0.10); color: var(--text); border-color: rgb(161 98 7 / 0.25); }
-    .alert-error { background: rgb(185 28 28 / 0.08); color: var(--text); border-color: rgb(185 28 28 / 0.25); }
-
-    .vm-bottomnav {
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      box-shadow: 0 -4px 12px rgb(0 0 0 / 0.08);
-      backdrop-filter: blur(10px);
-    }
-    .vm-bottomnav a {
-      min-height: 64px;
-      transition: all 0.2s ease;
-    }
-    .vm-bottomnav a:active { transform: scale(0.95); }
-    .vm-bottomnav .vm-fab {
-      width: 48px;
-      height: 48px;
-      border-radius: 9999px;
-      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
-      color: var(--primary-ink);
-      box-shadow: 0 8px 20px rgb(29 78 216 / 0.4);
-      border: 3px solid var(--surface);
-      transition: all 0.3s ease;
-    }
-    .vm-bottomnav .vm-fab:hover {
-      transform: scale(1.1) translateY(-4px);
-      box-shadow: 0 12px 24px rgb(29 78 216 / 0.5);
-    }
-    .vm-bottomnav .vm-active {
-      color: var(--primary);
-      font-weight: 700;
-      transform: scale(1.05);
-    }
-
-    .vm-dropdown {
-      border: 1px solid rgb(226 232 240 / 0.8);
-      border-radius: var(--radius);
-      box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
-      backdrop-filter: blur(10px);
-      background: rgb(255 255 255 / 0.95);
-      color: var(--text);
-      position: relative;
-      z-index: 100;
-    }
-    [data-theme="dark"] .vm-dropdown {
-      border: 1px solid rgb(148 163 184 / 0.25);
-      background: rgb(15 23 42 / 0.92);
-      color: rgb(226 232 240);
-    }
-
-    .vm-dropdown .menu-title {
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--text);
-      padding: 0.75rem 1rem;
-      border-bottom: 1px solid rgb(226 232 240 / 0.5);
-      margin: 0;
-    }
-    [data-theme="dark"] .vm-dropdown .menu-title {
-      color: rgb(226 232 240);
-      border-bottom: 1px solid rgb(148 163 184 / 0.2);
-    }
-
-    .vm-dropdown li > a,
-    .vm-dropdown li > button {
-      padding: 0.75rem 1rem;
-      border-radius: 10px;
-      margin: 0.125rem 0;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      font-weight: 500;
-      width: 100%;
-      text-align: left;
-      color: inherit;
-    }
-
-    .vm-dropdown li > a:hover,
-    .vm-dropdown li > button:hover {
-      background: rgb(29 78 216 / 0.08);
-      color: var(--primary);
-      transform: translateX(2px);
-    }
-
-    [data-theme="dark"] .vm-dropdown li > a:hover,
-    [data-theme="dark"] .vm-dropdown li > button:hover {
-      background: rgb(59 130 246 / 0.14);
-      color: rgb(226 232 240);
-    }
-
-    .vm-dropdown .divider {
-      margin: 0.5rem 0;
-      border-color: rgb(226 232 240 / 0.5);
-    }
-    [data-theme="dark"] .vm-dropdown .divider {
-      border-color: rgb(148 163 184 / 0.2);
-    }
-
-    .vm-dropdown li > a.text-error:hover {
-      background: rgb(185 28 28 / 0.08);
-      color: var(--error);
-    }
-
-    .safe-area-pt { padding-top: env(safe-area-inset-top); }
-    .safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes slideUp {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
-    }
-    @keyframes shimmer {
-      0% { background-position: -1000px 0; }
-      100% { background-position: 1000px 0; }
-    }
-    .animate-fadeIn { 
-      animation: fadeIn 0.5s ease-out;
-      animation-fill-mode: both;
-      will-change: transform, opacity;
-    }
-    .animate-slideUp { 
-      animation: slideUp 0.6s ease-out;
-      animation-fill-mode: both;
-      will-change: transform, opacity;
-    }
-    .skeleton {
-      background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
-      background-size: 1000px 100%;
-      animation: shimmer 2s infinite linear;
-      border-radius: 8px;
-      will-change: background-position;
-    }
-
-    .hover-lift { 
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      will-change: transform;
-    }
-    .hover-lift:hover { 
-      transform: translateY(-4px); 
-      box-shadow: 0 12px 28px rgb(0 0 0 / 0.12); 
-    }
-    
-    /* Prevent layout shifts and jank */
-    * {
-      backface-visibility: hidden;
-      -webkit-backface-visibility: hidden;
-    }
-    
-    /* Optimize for development mode */
-    @media (prefers-reduced-motion: reduce) {
-      .animate-fadeIn,
-      .animate-slideUp,
-      .skeleton,
-      .hover-lift {
-        animation: none !important;
-        transition: none !important;
-      }
-    }
-    
-    /* Disable heavy animations on localhost for better performance */
-    [data-env="development"] .animate-fadeIn,
-    [data-env="development"] .animate-slideUp {
-      animation-duration: 0.1s !important;
-    }
-    
-    [data-env="development"] .hover-lift {
-      transition-duration: 0.1s !important;
-    }
-    
-    [data-env="development"] .skeleton {
-      animation: none !important;
-      background: var(--surface-2) !important;
-    }
-    
-    /* PERFORMANCE: Optimize for data-heavy pages */
-    body.data-heavy * {
-      /* Disable ALL transitions and animations */
-      transition: none !important;
-      animation: none !important;
-    }
-    
-    body.data-heavy article,
-    body.data-heavy .card,
-    body.data-heavy .btn {
-      /* Disable expensive effects */
-      box-shadow: none !important;
-    }
-    
-    body.data-heavy .avatar {
-      /* Simplify avatars */
-      box-shadow: none !important;
-      background: var(--primary) !important;
-    }
-    
-    body.data-heavy article:hover,
-    body.data-heavy .card:hover,
-    body.data-heavy a:hover {
-      /* Disable ALL hover effects */
-      background-color: inherit !important;
-      border-color: inherit !important;
-      transform: none !important;
-    }
-    
-    /* Disable hover during scroll for ultra-smooth scrolling */
-    body.is-scrolling * {
-      pointer-events: none !important;
-    }
-
-    .gradient-text {
-      background: linear-gradient(135deg, var(--primary) 0%, #60a5fa 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-
-    .badge { font-weight: 600; letter-spacing: 0.3px; transition: all 0.2s ease; }
-    .badge:hover { transform: scale(1.05); }
-
-    /* ==========================================
-       Z-INDEX HIERARCHY (for reference)
-       ==========================================
-       - Skip link: 1000 (accessibility, must be on top)
-       - DaisyUI Modals: 9999+ (built-in, highest layer)
-       - Toasts: 9999 (notifications)
-       - User Menu Dropdown: 100 (vm-dropdown)
-       - Task Dropdowns: 90 (task menus)
-       - Task Cards (open): 85 (raised cards)
-       - Navbar: 60 (top navigation)
-       - Mini Chat: 60 (desktop chat widget)
-       - Day Planner Current Time: 50
-       - Mobile Bottom Nav: 40
-       - Day Planner Events (hover): 35
-       - Day Planner Scroll Nav: 30
-       - Day Planner Events Layer: 30
-       - Day Planner Drag Select: 25
-       - Day Planner Ghost: 20
-       - Day Planner Sticky Toolbar: 10
-       - Default/Cards: 1
-       ========================================== */
   </style>
 </head>
 
 <body class="min-h-screen flex flex-col">
-  <a href="#main-content" class="skip-link">Skip to main content</a>
 
-  <!-- Top Navigation -->
-  <nav class="navbar vm-navbar sticky top-0 z-[60] safe-area-pt" role="navigation" aria-label="Main navigation">
-    <div class="flex-1">
-      <a href="{% url 'dashboard' %}" class="flex items-center gap-3 hover:opacity-90 transition">
-        <div class="flex items-center gap-2">
-          <img
-            src="{% static 'branding/vismatrixicon.png' %}"
-            alt="VisMatrix icon"
-            class="w-9 h-9 rounded-xl ring-1 ring-slate-200 bg-white p-1 object-contain"
-            loading="eager"
-          />
-        </div>
+<!-- ================= NAVBAR ================= -->
+<nav class="navbar bg-base-100 sticky top-0 z-50 border-b border-base-300">
+  <div class="flex-1">
+    <a href="{% url 'dashboard' %}" class="flex items-center gap-3 font-black">
+      <img src="{% static 'branding/vismatrixicon.png' %}" class="w-9 h-9 rounded-xl">
+      VisMatrix<span class="text-primary">.space</span>
+    </a>
+  </div>
 
-        <div class="leading-tight">
-          <div class="text-base sm:text-lg font-black tracking-tight">
-            VisMatrix<span class="text-primary">.space</span>
-          </div>
-          <div class="text-xs text-slate-600 hidden sm:block">AI-powered personal achievement</div>
-        </div>
-      </a>
-    </div>
-
-    <!-- Desktop nav -->
-    <div class="hidden lg:flex items-center gap-1 px-2">
-
-      <a href="{% url 'dashboard' %}"
-         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'dashboard' %}vm-nav-active{% endif %}">
-        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
-        <span class="ml-1">Dashboard</span>
-      </a>
-
-      <a href="{% url 'day_planner' %}"
-         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'day_planner' %}vm-nav-active{% endif %}">
-        <i class="bi bi-calendar-check" aria-hidden="true"></i>
-        <span class="ml-1">Day Planner</span>
-      </a>
-
-      <a href="{% url 'analytics' %}"
-         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'analytics' %}vm-nav-active{% endif %}">
-        <i class="bi bi-bar-chart-line" aria-hidden="true"></i>
-        <span class="ml-1">Analytics</span>
-      </a>
-
-      <a href="{% url 'plan_list' %}"
-         class="btn btn-ghost btn-sm px-3 {% if request.resolver_match.url_name == 'plan_list' or request.resolver_match.url_name == 'plan_create' or request.resolver_match.url_name == 'plan_detail' or request.resolver_match.url_name == 'plan_update' or request.resolver_match.url_name == 'plan_delete' %}vm-nav-active{% endif %}">
-        <i class="bi bi-diagram-3" aria-hidden="true"></i>
-        <span class="ml-1">Plans</span>
-      </a>
-
-      <a href="{% url 'task_list' %}"
-         class="btn btn-ghost btn-sm px-3 {% if 'task' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
-        <i class="bi bi-check2-square" aria-hidden="true"></i>
-        <span class="ml-1">Tasks</span>
-      </a>
-
-      <a href="{% url 'log_list' %}"
-         class="btn btn-ghost btn-sm px-3 {% if 'log' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
-        <i class="bi bi-clock-history" aria-hidden="true"></i>
-        <span class="ml-1">Logs</span>
-      </a>
-
-      <a href="{% url 'friends_list' %}"
-         class="btn btn-ghost btn-sm px-3 {% if 'friend' in request.resolver_match.url_name %}vm-nav-active{% endif %}">
-        <i class="bi bi-people" aria-hidden="true"></i>
-        <span class="ml-1">Friends</span>
-      </a>
-    </div>
-
-    <!-- User / Auth -->
-    <div class="flex-none gap-2 pr-2">
-      {% if user.is_authenticated %}
-      <div class="dropdown dropdown-end" id="userMenu">
-        <div
-          id="userMenuButton"
-          tabindex="0"
-          role="button"
-          class="btn btn-ghost btn-circle avatar w-10 h-10 bg-base-200 hover:bg-base-300 transition-all duration-200 shadow-sm hover:shadow-md hover:scale-[1.05]"
-          aria-label="User menu"
-          aria-haspopup="true"
-          aria-expanded="false"
-        >
-          <div class="w-10 h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm shadow-md ring-1 ring-white/20">
-            {{ user.username|first|upper }}
-          </div>
-        </div>
-
-        <ul
-          id="userMenuDropdown"
-          class="vm-dropdown dropdown-content z-[100] menu p-0 mt-2 w-64 hidden"
-          role="menu"
-        >
-          <li class="menu-title">Hi, {{ user.username }}</li>
-
-          <li><a href="{% url 'profile_settings' %}">
-            <i class="bi bi-person-circle text-lg opacity-80" aria-hidden="true"></i>
-            Profile Settings
-          </a></li>
-
-
-          <!-- Dark mode toggle -->
-          <li>
-            <button type="button" id="themeToggleBtn" class="w-full text-left" role="menuitem">
-              <i id="themeToggleIcon" class="bi bi-moon-stars text-lg opacity-80" aria-hidden="true"></i>
-              <span id="themeToggleText">Dark mode</span>
-              <span class="ml-auto flex items-center gap-2">
-                <span id="themeToggleBadge" class="badge badge-outline">Off</span>
-              </span>
-            </button>
-          </li>
-
-          <div class="divider mx-4 my-2"></div>
-
-          <li><a href="{% url 'about' %}">
-            <i class="bi bi-info-circle text-lg opacity-80" aria-hidden="true"></i>
-            About VisMatrix
-          </a></li>
-
-          <li><a href="{% url 'privacy_policy' %}">
-            <i class="bi bi-shield-check text-lg opacity-80" aria-hidden="true"></i>
-            Privacy Policy
-          </a></li>
-
-          <li><a href="{% url 'terms_of_service' %}">
-            <i class="bi bi-file-text text-lg opacity-80" aria-hidden="true"></i>
-            Terms of Service
-          </a></li>
-
-          <li>
-            <a href="/accounts/logout/" class="text-error hover:text-error font-medium">
-              <i class="bi bi-box-arrow-right text-lg opacity-90" aria-hidden="true"></i>
-              Sign out
-            </a>
-          </li>
-        </ul>
-      </div>
-      {% else %}
-      <a href="/accounts/login/" class="btn btn-primary btn-sm gap-2">
-        <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-        <span>Login</span>
-      </a>
-      {% endif %}
-    </div>
-  </nav>
-
-  <!-- Page content -->
-  <main id="main-content"
-        class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24 lg:pb-8"
-        role="main">
-    {% block toast %}
-    {% if messages %}
-    <div class="toast toast-top toast-center z-50 w-full max-w-md top-16 px-4">
-      {% for message in messages %}
-      <div class="alert alert-{{ message.tags|default:'info' }}">
-        <span>{{ message }}</span>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-    {% endblock %}
-
-    {% block content %}{% endblock %}
-  </main>
+  <div class="hidden lg:flex gap-1">
+    <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'dashboard' %}btn-active{% endif %}">
+      <i class="bi bi-bar-chart"></i> Dashboard
+    </a>
+    <a href="{% url 'day_planner' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'day_planner' %}btn-active{% endif %}">
+      <i class="bi bi-calendar-check"></i> Day Planner
+    </a>
+    <a href="{% url 'analytics' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'analytics' %}btn-active{% endif %}">
+      <i class="bi bi-graph-up"></i> Analytics
+    </a>
+  </div>
 
   {% if user.is_authenticated %}
-  <!-- Desktop Mini Chat Dock (hidden on mobile) -->
-  <div id="miniChat" class="hidden lg:block fixed bottom-5 right-5 z-[60] w-[380px]">
-    <div class="card border border-base-200 bg-base-100 shadow-xl">
-      <div class="card-body p-3">
-
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 font-bold">
-            <i class="bi bi-chat-dots" aria-hidden="true"></i>
-            <span>Messages</span>
-            <span id="miniChatUnreadBadge" class="badge badge-warning hidden">0</span>
-          </div>
-
-          <div class="flex items-center gap-1">
-            <a href="{% url 'inbox' %}" class="btn btn-ghost btn-xs" aria-label="Open inbox">
-              <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
-            </a>
-            <button id="miniChatMinimise" class="btn btn-ghost btn-xs" aria-label="Minimise chat">
-              <i class="bi bi-dash-lg" aria-hidden="true"></i>
-            </button>
-          </div>
-        </div>
-
-        <div id="miniChatBody" class="mt-3 grid grid-cols-5 gap-3">
-          <!-- Friends list -->
-          <div class="col-span-2">
-            <div class="text-xs font-semibold text-base-content/60 mb-2">Friends</div>
-            <div id="miniChatFriends" class="max-h-72 overflow-auto rounded-xl border border-base-200">
-              <div class="p-3 text-sm text-base-content/70">Loading friends…</div>
-            </div>
-          </div>
-
-          <!-- Conversation -->
-          <div class="col-span-3">
-            <div id="miniChatEmpty"
-                 class="h-full rounded-xl border border-base-200 p-3 flex items-center justify-center text-sm text-base-content/70">
-              Select a friend to start chatting.
-            </div>
-
-            <div id="miniChatConversation" class="hidden">
-              <div class="flex items-center justify-between gap-2">
-                <div class="min-w-0">
-                  <div class="text-xs text-base-content/60">Chatting with</div>
-                  <div class="font-bold truncate" id="miniChatWith"></div>
-                </div>
-                <a id="miniChatOpenFull" href="#" class="btn btn-ghost btn-xs" aria-label="Open full chat">
-                  <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
-                </a>
-              </div>
-
-              <div id="miniChatMessages"
-                   class="mt-2 h-56 overflow-auto rounded-xl border border-base-200 bg-base-100 p-2 space-y-2">
-              </div>
-
-              <form id="miniChatForm" class="mt-2 flex gap-2">
-                {% csrf_token %}
-                <input id="miniChatInput"
-                       type="text"
-                       class="input input-bordered input-sm w-full"
-                       placeholder="Type a message…"
-                       maxlength="2000" />
-                <button class="btn btn-primary btn-sm" type="submit" aria-label="Send">
-                  <i class="bi bi-send" aria-hidden="true"></i>
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-
+  <!-- DaisyUI handles dropdown -->
+  <div class="dropdown dropdown-end">
+    <label tabindex="0" class="btn btn-ghost btn-circle avatar">
+      <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
+        {{ user.username|first|upper }}
       </div>
+    </label>
+
+    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-64">
+      <li class="menu-title">Hi, {{ user.username }}</li>
+
+      <li>
+        <button id="themeToggleBtn">
+          <i class="bi bi-moon-stars"></i>
+          <span id="themeToggleText">Dark mode</span>
+        </button>
+      </li>
+
+      <div class="divider"></div>
+
+      <li><a href="{% url 'profile_settings' %}"><i class="bi bi-person"></i> Profile</a></li>
+      <li><a href="{% url 'about' %}"><i class="bi bi-info-circle"></i> About</a></li>
+      <li><a href="/accounts/logout/" class="text-error"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+    </ul>
+  </div>
+  {% else %}
+  <a href="/accounts/login/" class="btn btn-primary btn-sm">
+    <i class="bi bi-box-arrow-in-right"></i> Login
+  </a>
+  {% endif %}
+</nav>
+
+<!-- ================= MAIN ================= -->
+<main class="flex-1 w-full max-w-7xl mx-auto px-4 py-6">
+  {% if messages %}
+  <div class="toast toast-top toast-center">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }}">
+      {{ message }}
     </div>
+    {% endfor %}
   </div>
   {% endif %}
 
-  {% if user.is_authenticated %}
-  <!-- Mobile bottom nav -->
-  <nav class="lg:hidden fixed bottom-0 left-0 right-0 vm-bottomnav safe-area-pb z-40"
-       aria-label="Primary navigation">
-    <div class="grid grid-cols-4 h-16 text-xs">
-      <a href="{% url 'dashboard' %}"
-         class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/60 transition
-                {% if request.resolver_match.url_name == 'dashboard' %}vm-active{% endif %}">
-        <i class="bi bi-house-door text-xl" aria-hidden="true"></i>
-        <span>Home</span>
-      </a>
+  {% block content %}{% endblock %}
+</main>
 
-      <a href="{% url 'plan_list' %}"
-         class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/60 transition
-                {% if request.resolver_match.url_name == 'plan_list' or request.resolver_match.url_name == 'plan_create' or request.resolver_match.url_name == 'plan_detail' or request.resolver_match.url_name == 'plan_update' or request.resolver_match.url_name == 'plan_delete' %}vm-active{% endif %}">
-        <i class="bi bi-diagram-3 text-xl" aria-hidden="true"></i>
-        <span>Plans</span>
-      </a>
-
-      <a href="{% url 'day_planner' %}" class="flex flex-col items-center justify-center" aria-label="Day Planner">
-        <div class="vm-fab flex items-center justify-center -translate-y-4">
-          <i class="bi bi-calendar-check text-2xl" aria-hidden="true"></i>
-        </div>
-      </a>
-
-      <a href="{% url 'friends_list' %}"
-         class="flex flex-col items-center justify-center gap-1 hover:bg-base-200/60 transition
-                {% if 'friend' in request.resolver_match.url_name %}vm-active{% endif %}">
-        <i class="bi bi-people text-xl" aria-hidden="true"></i>
-        <span>Friends</span>
-      </a>
-    </div>
-  </nav>
-  {% endif %}
-
-  <!-- ✅ FIXED: toasts + user menu + theme toggle -->
-  <script>
-    setTimeout(() => {
-      const toast = document.querySelector('.toast');
-      if (!toast) return;
-      toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
-      setTimeout(() => toast.remove(), 550);
-    }, 4000);
-
-    (function () {
-      const menu = document.getElementById('userMenu');
-      const btn = document.getElementById('userMenuButton');
-      const dropdown = document.getElementById('userMenuDropdown');
-      if (!menu || !btn || !dropdown) return;
-
-      const openMenu = () => {
-        dropdown.classList.remove('hidden');
-        btn.setAttribute('aria-expanded', 'true');
-      };
-
-      const closeMenu = () => {
-        dropdown.classList.add('hidden');
-        btn.setAttribute('aria-expanded', 'false');
-      };
-
-      const toggleMenu = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        dropdown.classList.contains('hidden') ? openMenu() : closeMenu();
-      };
-
-      const handleDocumentClick = (e) => {
-        if (!menu.contains(e.target)) closeMenu();
-      };
-
-      const handleEscapeKey = (e) => {
-        if (e.key === 'Escape') closeMenu();
-      };
-
-      const handleMenuItemClick = (e) => {
-        const el = e.target.closest('a,button');
-        if (!el) return;
-        if (el.id === 'themeToggleBtn') return; // keep open for theme toggle
-        closeMenu();
-      };
-
-      btn.addEventListener('click', toggleMenu);
-      document.addEventListener('click', handleDocumentClick);
-      document.addEventListener('keydown', handleEscapeKey);
-      dropdown.addEventListener('click', handleMenuItemClick);
-
-      // ----------------------------
-      // Dark mode toggle (site-wide)
-      // ----------------------------
-      const htmlEl = document.documentElement;
-      const toggleBtn = document.getElementById('themeToggleBtn');
-      const toggleText = document.getElementById('themeToggleText');
-      const toggleIcon = document.getElementById('themeToggleIcon');
-      const toggleBadge = document.getElementById('themeToggleBadge');
-
-      const STORAGE_KEY = 'vm_theme';
-
-      const applyTheme = (theme) => {
-        htmlEl.setAttribute('data-theme', theme);
-
-        const isDark = theme === 'dark';
-        if (toggleText) toggleText.textContent = isDark ? 'Light mode' : 'Dark mode';
-        if (toggleBadge) toggleBadge.textContent = isDark ? 'On' : 'Off';
-
-        if (toggleIcon) {
-          toggleIcon.classList.remove('bi-moon-stars', 'bi-sun');
-          toggleIcon.classList.add(isDark ? 'bi-sun' : 'bi-moon-stars');
-        }
-
-        const metaTheme = document.querySelector('meta[name="theme-color"]');
-        if (metaTheme) metaTheme.setAttribute('content', isDark ? '#0b1220' : '#1d4ed8');
-      };
-
-      applyTheme(htmlEl.getAttribute('data-theme') || 'light');
-
-      const handleThemeToggle = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const next = htmlEl.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-        localStorage.setItem(STORAGE_KEY, next);
-        applyTheme(next);
-        btn.setAttribute('aria-expanded', 'true'); // keep dropdown open
-      };
-
-      if (toggleBtn) toggleBtn.addEventListener('click', handleThemeToggle);
-    })();
-  </script>
-
-  {% if user.is_authenticated %}
-  <!-- ✅ FIXED: mini chat script (robust CSRF + safer fetch + openFull link restore) -->
- <script>
-document.addEventListener('DOMContentLoaded', function () {
-  // Prevent accidental double-init (e.g., if this template is injected/reloaded)
-  if (window.__vmMiniChatInit) return;
-  window.__vmMiniChatInit = true;
-
-  const friendsEl = document.getElementById('miniChatFriends');
-  const unreadBadge = document.getElementById('miniChatUnreadBadge');
-  const minimiseBtn = document.getElementById('miniChatMinimise');
-  const bodyEl = document.getElementById('miniChatBody');
-
-  const emptyEl = document.getElementById('miniChatEmpty');
-  const convEl = document.getElementById('miniChatConversation');
-  const msgsEl = document.getElementById('miniChatMessages');
-  const withEl = document.getElementById('miniChatWith');
-  const openFullEl = document.getElementById('miniChatOpenFull');
-
-  const formEl = document.getElementById('miniChatForm');
-  const inputEl = document.getElementById('miniChatInput');
-
-  if (!friendsEl) return;
-
-  function getCsrfToken() {
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    const token = meta ? meta.getAttribute('content') : '';
-    return token && token !== 'NOTPROVIDED' ? token : '';
-  }
-
-  const MINI_CHAT_MINIMISED_KEY = 'miniChatMinimised';
-  let currentConvId = null;
-  let currentUserId = null;
-
-  let pollTimer = null;
-  let minimised = localStorage.getItem(MINI_CHAT_MINIMISED_KEY) === 'true';
-
-  // Abort controllers to prevent overlapping requests piling up
-  let friendsAbort = null;
-  let messagesAbort = null;
-
-  // Cache to avoid re-rendering identical message payloads
-  let lastMessagesSig = '';
-
-  function escapeHtml(str) {
-    const s = String(str ?? '');
-    return s.replace(/[&<>"']/g, (ch) => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      '"': '&quot;',
-      "'": '&#039;',
-    }[ch]));
-  }
-
-  function renderMessage(m) {
-    const side = m.is_me ? "chat-end" : "chat-start";
-    const bubble = m.is_me ? "chat-bubble chat-bubble-primary" : "chat-bubble";
-    return `
-      <div class="chat ${side}">
-        <div class="chat-header text-xs opacity-70">
-          ${m.is_me ? "You" : escapeHtml(m.sender)}
-          <time class="ml-2">${escapeHtml(m.created_at)}</time>
-        </div>
-        <div class="${bubble} text-sm whitespace-pre-wrap">${escapeHtml(m.body)}</div>
-      </div>
-    `;
-  }
-
-  async function loadFriends(showLoading = true) {
-    try {
-      if (friendsAbort) friendsAbort.abort();
-      friendsAbort = new AbortController();
-
-      if (showLoading) {
-        friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">Loading friends…</div>`;
-      }
-
-      const res = await fetch('{% url "mini_chat_friends" %}', {
-        credentials: 'same-origin',
-        signal: friendsAbort.signal
-      });
-
-      if (!res.ok) {
-        friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Could not load friends.</div>`;
-        return;
-      }
-
-      const data = await res.json();
-      const friends = data.friends || [];
-
-      const totalUnread = friends.reduce((acc, f) => acc + (f.unread || 0), 0);
-      if (totalUnread > 0) {
-        unreadBadge.textContent = totalUnread;
-        unreadBadge.classList.remove('hidden');
-      } else {
-        unreadBadge.classList.add('hidden');
-      }
-
-      if (friends.length === 0) {
-        friendsEl.innerHTML = `<div class="p-3 text-sm text-base-content/70">No friends yet.</div>`;
-        return;
-      }
-
-      friendsEl.innerHTML = friends.map(f => {
-        const badge = (f.unread || 0) > 0 ? `<span class="badge badge-warning badge-sm">${f.unread}</span>` : ``;
-        const uname = escapeHtml(f.username || '?');
-        return `
-          <button type="button"
-                  class="w-full text-left p-3 hover:bg-base-200/40 transition flex items-center justify-between gap-3"
-                  data-conv="${f.conversation_id || ''}"
-                  data-user="${uname}"
-                  data-user-id="${f.id}">
-            <span class="flex items-center gap-2 min-w-0">
-              <span class="avatar placeholder">
-                <span class="bg-neutral text-neutral-content rounded-full w-8 h-8 flex items-center justify-center">
-                  <span class="text-xs">${uname.slice(0,1).toUpperCase()}</span>
-                </span>
-              </span>
-              <span class="text-sm font-semibold truncate">${uname}</span>
-            </span>
-            ${badge}
-          </button>
-        `;
-      }).join('');
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-      friendsEl.innerHTML = `<div class="p-3 text-sm text-error">Network error loading friends.</div>`;
-    }
-  }
-
-  async function loadMessages(conversationId, scrollToBottom = true) {
-    try {
-      if (!conversationId) {
-        msgsEl.innerHTML = `<div class="p-2 text-sm text-base-content/70">No messages yet. Say hello!</div>`;
-        return;
-      }
-
-      if (messagesAbort) messagesAbort.abort();
-      messagesAbort = new AbortController();
-
-      const res = await fetch(`/api/mini-chat/${conversationId}/messages/`, {
-        credentials: 'same-origin',
-        signal: messagesAbort.signal
-      });
-
-      if (!res.ok) {
-        msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Could not load messages.</div>`;
-        return;
-      }
-
-      const data = await res.json();
-      const messages = data.messages || [];
-
-      // signature to avoid rerendering same content
-      const sig = JSON.stringify(messages.map(m => [m.id || '', m.created_at, m.body, m.is_me]));
-      if (sig !== lastMessagesSig) {
-        lastMessagesSig = sig;
-        msgsEl.innerHTML = messages.map(renderMessage).join('')
-          || `<div class="p-2 text-sm text-base-content/70">No messages yet.</div>`;
-        if (scrollToBottom) msgsEl.scrollTop = msgsEl.scrollHeight;
-      }
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-      msgsEl.innerHTML = `<div class="p-2 text-sm text-error">Network error loading messages.</div>`;
-    }
-  }
-
-  async function openConversation(conversationId, username, userId) {
-    currentConvId = conversationId || null;
-    currentUserId = userId || null;
-    lastMessagesSig = ''; // force refresh
-
-    withEl.textContent = username || '';
-
-    if (currentConvId) {
-      openFullEl.href = `/messages/${currentConvId}/`;
-      openFullEl.style.display = '';
-    } else {
-      openFullEl.href = '#';
-      openFullEl.style.display = 'none';
-    }
-
-    emptyEl.classList.add('hidden');
-    convEl.classList.remove('hidden');
-
-    await loadMessages(currentConvId, true);
-    inputEl && inputEl.focus();
-  }
-
-  // Event delegation: one handler for all friend buttons
-  friendsEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('button[data-user-id]');
+<!-- ================= THEME TOGGLE ================= -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('themeToggleBtn');
     if (!btn) return;
-    const convId = btn.getAttribute('data-conv');
-    const uname = btn.getAttribute('data-user');
-    const userId = btn.getAttribute('data-user-id');
-    openConversation(convId || null, uname, userId);
+
+    const html = document.documentElement;
+    const label = document.getElementById('themeToggleText');
+
+    const apply = (t) => {
+      html.setAttribute('data-theme', t);
+      localStorage.setItem('vm_theme', t);
+      if (label) label.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+    };
+
+    apply(html.getAttribute('data-theme'));
+
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+      apply(next);
+    });
   });
-
-  function startPolling() {
-    stopPolling();
-    pollTimer = setInterval(async () => {
-      // Check if we're still authenticated and page is active
-      if (document.hidden) return;
-      
-      // always refresh unread count/friends
-      await loadFriends(false);
-
-      // only fetch messages when: not minimised and a conversation is open
-      if (!minimised && currentConvId) {
-        await loadMessages(currentConvId, false);
-      }
-    }, 7000);
-  }
-
-  function stopPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer);
-      pollTimer = null;
-    }
-    // Also abort any in-flight requests
-    if (friendsAbort) friendsAbort.abort();
-    if (messagesAbort) messagesAbort.abort();
-  }
-
-  minimiseBtn && minimiseBtn.addEventListener('click', () => {
-    minimised = !minimised;
-    bodyEl.classList.toggle('hidden', minimised);
-    minimiseBtn.innerHTML = minimised
-      ? '<i class="bi bi-plus-lg" aria-hidden="true"></i>'
-      : '<i class="bi bi-dash-lg" aria-hidden="true"></i>';
-    localStorage.setItem(MINI_CHAT_MINIMISED_KEY, minimised);
-  });
-
-  if (minimised) {
-    bodyEl.classList.add('hidden');
-    minimiseBtn.innerHTML = '<i class="bi bi-plus-lg" aria-hidden="true"></i>';
-  }
-
-  formEl && formEl.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const body = (inputEl.value || "").trim();
-    if (!body) return;
-
-    inputEl.value = "";
-    msgsEl.insertAdjacentHTML('beforeend', renderMessage({
-      sender: "{{ user.username }}",
-      is_me: true,
-      body,
-      created_at: "now"
-    }));
-    msgsEl.scrollTop = msgsEl.scrollHeight;
-
-    const csrf = getCsrfToken();
-    if (!csrf) {
-      if (currentConvId) await loadMessages(currentConvId, true);
-      return;
-    }
-
-    try {
-      let url, res;
-
-      if (currentConvId) {
-        url = `/api/mini-chat/${currentConvId}/send/`;
-        res = await fetch(url, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-          body: JSON.stringify({ body })
-        });
-      } else if (currentUserId) {
-        url = `/api/mini-chat/start/${currentUserId}/`;
-        res = await fetch(url, {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrf },
-          body: JSON.stringify({ body })
-        });
-      } else {
-        return;
-      }
-
-      if (!res.ok) {
-        if (currentConvId) await loadMessages(currentConvId, true);
-        return;
-      }
-
-      const data = await res.json();
-      if (!currentConvId && data.conversation_id) {
-        currentConvId = data.conversation_id;
-        openFullEl.href = `/messages/${currentConvId}/`;
-        openFullEl.style.display = '';
-      }
-
-      if (currentConvId) await loadMessages(currentConvId, true);
-      await loadFriends(false);
-    } catch (err) {
-      if (currentConvId) await loadMessages(currentConvId, true);
-    }
-  });
-
-  // start
-  loadFriends(true);
-  startPolling();
-
-  // Properly cleanup on page unload/hide
-  const cleanup = () => {
-    stopPolling();
-    if (friendsAbort) friendsAbort.abort();
-    if (messagesAbort) messagesAbort.abort();
-  };
-  
-  window.addEventListener('beforeunload', cleanup, { once: true, passive: true });
-  
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      stopPolling();
-    } else if (!pollTimer) {
-      startPolling();
-    }
-  }, { passive: true });
-});
 </script>
 
-  {% endif %}
 </body>
 </html>
