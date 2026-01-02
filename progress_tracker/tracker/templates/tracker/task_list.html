@@ -255,10 +255,10 @@
               <span class="hidden sm:inline">Low</span>
             </a>
 
-            <a href="?status=completed{% if q %}&search={{ q }}{% endif %}{% if p %}&priority={{ p }}{% endif %}"
-               class="btn btn-outline btn-sm gap-1 sm:gap-2 {% if s == 'completed' %}btn-active{% endif %}">
-              <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-              <span class="hidden sm:inline">Done</span>
+            <a href="?status=pending{% if q %}&search={{ q }}{% endif %}{% if p %}&priority={{ p }}{% endif %}"
+               class="btn btn-outline btn-sm gap-1 sm:gap-2 {% if s == 'pending' %}btn-active{% endif %}">
+              <i class="bi bi-circle" aria-hidden="true"></i>
+              <span class="hidden sm:inline">Undone</span>
             </a>
 
             <a href="{% url 'task_list' %}" class="btn btn-ghost btn-sm gap-1 sm:gap-2">
