@@ -58,7 +58,7 @@
   <div class="flex-1">
     <a href="{% url 'dashboard' %}" class="flex items-center gap-3 font-black">
       <img src="{% static 'branding/vismatrixicon.png' %}" class="w-9 h-9 rounded-xl">
-      VisMatrix<span class="text-primary">.space</span>
+         VisMatrix<span class="text-primary">.space</span>
     </a>
   </div>
 
@@ -76,14 +76,14 @@
 
   {% if user.is_authenticated %}
   <!-- DaisyUI handles dropdown -->
-  <div class="dropdown dropdown-end">
-    <label tabindex="0" class="btn btn-ghost btn-circle avatar">
+  <div class="dropdown dropdown-end" id="profileDropdown">
+    <label tabindex="0" class="btn btn-ghost btn-circle avatar" id="profileDropdownToggle">
       <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
         {{ user.username|first|upper }}
       </div>
     </label>
 
-    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-64">
+    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-64" id="profileDropdownMenu">
       <li class="menu-title">Hi, {{ user.username }}</li>
 
       <li>
@@ -144,6 +144,33 @@
       const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       apply(next);
     });
+  });
+</script>
+
+<!-- ================= DROPDOWN TOGGLE ================= -->
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('profileDropdownToggle');
+    const menu = document.getElementById('profileDropdownMenu');
+    
+    if (toggle && menu) {
+      toggle.addEventListener('click', (e) => {
+        // Toggle by removing focus from menu if it's currently focused
+        if (document.activeElement === menu) {
+          menu.blur();
+          toggle.blur();
+        }
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('profileDropdown');
+        if (dropdown && !dropdown.contains(e.target)) {
+          menu.blur();
+          toggle.blur();
+        }
+      });
+    }
   });
 </script>
 
