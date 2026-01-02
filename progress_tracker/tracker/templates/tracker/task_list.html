@@ -182,6 +182,10 @@
           </div>
 
           <div class="flex items-center gap-2">
+            <a href="{% url 'category_list' %}" class="btn btn-ghost btn-sm gap-2" aria-label="Manage categories">
+              <i class="bi bi-tags" aria-hidden="true"></i>
+              <span class="hidden sm:inline">Categories</span>
+            </a>
             <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm gap-2" aria-label="Create a new task">
               <i class="bi bi-plus-square" aria-hidden="true"></i>
               <span>New task</span>
