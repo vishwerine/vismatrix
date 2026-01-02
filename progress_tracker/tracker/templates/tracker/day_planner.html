@@ -1,1595 +1,1460 @@
 {% extends 'tracker/base.html' %}
-
 {% block title %}Day Planner - VisMatrix{% endblock %}
-
 {% block content %}
 <style>
-  /* Scope all planner styles to prevent global CSS pollution */
-  #dayPlannerPage {
-    --planner-hour-height: 84px;
-    --planner-time-col: 84px;
-    --planner-gutter: 12px;
+/* ===== ENHANCED DAY PLANNER - Uses base.html theme system ===== */
+* { box-sizing: border-box; }
 
-    --dp-radius: 18px;
-    --dp-shadow: 0 10px 30px oklch(var(--b1) / 0.12);
-    --dp-border: 1px solid oklch(var(--bc) / 0.10);
+.planner-wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* ===== HEADER SECTION ===== */
+.planner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-bottom: 32px;
+  padding: 24px;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.planner-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--primary);
+  color: var(--primary-ink);
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ===== BUTTON STYLES ===== */
+.btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: var(--rounded-btn);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+}
+
+.btn-secondary {
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--surface);
+  border-color: var(--primary);
+}
+
+.btn-success {
+  background: var(--success);
+  color: white;
+}
+
+.btn-success:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+}
+
+.btn-sm {
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ===== CONTROLS SECTION ===== */
+.planner-controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.date-picker-wrapper {
+  position: relative;
+}
+
+.date-picker-wrapper input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--rounded-btn);
+  font-size: 14px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.date-picker-wrapper input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus);
+}
+
+.stats-display {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+  padding: 0 16px;
+  border-left: 1px solid var(--border);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ===== PLANNER GRID ===== */
+.planner-container {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--surface);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+  height: 80vh;
+  max-height: 1500px;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-behavior: smooth;
+}
+
+.time-labels {
+  background: var(--surface-2);
+  border-right: 1px solid var(--border);
+}
+
+.hour-slot {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+
+.hour-slot:last-child {
+  border-bottom: none;
+}
+
+.timeline {
+  position: relative;
+  background: var(--surface);
+}
+
+.timeline-grid {
+  position: relative;
+  height: 2880px; /* 24 hours * 60px */
+  min-height: 100%;
+}
+
+
+.grid-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--border);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.working-hours-bg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  background: var(--primary);
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 1;
+  border-top: 2px solid var(--primary);
+  border-bottom: 2px solid var(--primary);
+  border-opacity: 0.2;
+}
+
+.event-card {
+  position: absolute;
+  left: 5px;
+  right: 5px;
+  background: var(--primary);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: move;
+  color: white;
+  overflow: visible;
+  min-width: 200px;
+  min-height: 50px;
+  transition: all 0.2s ease;
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.1);
+}
+
+
+
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.15);
+  z-index: 20;
+}
+
+.event-card.dragging {
+  opacity: 0.85;
+  cursor: grabbing;
+  z-index: 30;
+  box-shadow: 0 15px 35px rgb(0 0 0 / 0.25);
+}
+
+.event-card.conflict {
+  background: var(--warning);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.event-card.complete {
+  opacity: 0.65;
+  border-style: dashed;
+  filter: grayscale(0.3);
+}
+
+.event-card.calendar-event {
+  background: #8b5cf6;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.event-card.calendar-event .event-badge {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.event-title {
+  font-weight: 700;
+  font-size: 14px;
+  flex: 1;
+  line-height: 1.4;
+  word-wrap: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.2px;
+  padding-right: 60px;
+}
+
+.event-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  backdrop-filter: blur(4px);
+}
+
+.event-time {
+  font-size: 12px;
+  opacity: 0.95;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.3px;
+}
+
+.event-time::before {
+  content: '🕐';
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.event-duration {
+  font-size: 11px;
+  opacity: 0.85;
+  font-weight: 500;
+  margin-left: auto;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.event-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  opacity: 0.6;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.event-card:hover .event-actions {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.event-btn {
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  padding: 6px 9px;
+  cursor: pointer;
+  font-size: 13px;
+  color: white;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.event-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+.event-btn:active {
+  transform: scale(0.95);
+}
+
+/* ===== NOW LINE ===== */
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--error);
+  z-index: 25;
+  pointer-events: none;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+}
+
+.now-line::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: -4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--error);
+  border: 3px solid var(--surface);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+
+/* ===== MODAL STYLES ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(2px);
+}
+
+.modal-overlay.active {
+  display: flex;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-content {
+  background: var(--surface);
+  padding: 32px;
+  border-radius: var(--radius);
+  width: 90%;
+  max-width: 520px;
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.3);
+  border: 1px solid var(--border);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.modal-close {
+  background: var(--surface-2);
+  border: none;
+  border-radius: var(--rounded-btn);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.modal-close:hover {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* ===== FORM STYLES ===== */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--rounded-btn);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--focus);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 28px;
+  justify-content: flex-end;
+}
+
+.btn-delete {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--error);
+  margin-right: auto;
+}
+
+.btn-delete:hover {
+  background: var(--error);
+  color: white;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .planner-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  /* Page spacing */
-  #dayPlannerPage main { padding-bottom: 28px; }
+  .header-right {
+    width: 100%;
+  }
+
+  .stats-display {
+    border-left: none;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+    margin-left: 0;
+    width: 100%;
+  }
 
   .planner-container {
-    display: grid;
-    grid-template-columns: var(--planner-time-col) 1fr;
-    border-radius: var(--dp-radius);
-    overflow: hidden;
-    box-shadow: var(--dp-shadow);
-    border: var(--dp-border);
-    background: oklch(var(--b1));
+    grid-template-columns: 60px 1fr;
+    max-height: 600px;
   }
 
-  .planner-time-labels {
-    background: linear-gradient(to bottom, oklch(var(--b2) / 0.65), oklch(var(--b2) / 0.35));
-    border-right: 1px solid oklch(var(--bc) / 0.10);
-    z-index: 30;
+  .timeline-grid {
+    height: 1440px; /* Adjusted for smaller height */
   }
 
-  .planner-time-slot {
-    height: var(--planner-hour-height);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 8px 4px;
-    border-bottom: 1px solid oklch(var(--bc) / 0.06);
-    font-size: 13px;
-    font-weight: 600;
-    color: oklch(var(--bc) / 0.6);
-    user-select: none;
-    position: relative;
+  .event-card {
+    font-size: 12px;
   }
-  .planner-time-slot::after{
-    content: "";
-    position: absolute;
-    right: 10px;
-    width: 10px;
-    height: 1px;
-    background: oklch(var(--bc) / 0.14);
-    top: 50%;
-    transform: translateY(-50%);
-  }
-  .planner-time-slot .hour { font-size: 16px; font-weight: 800; color: oklch(var(--bc) / 0.85); }
-  .planner-time-slot .period { font-size: 10px; margin-top: 2px; opacity: 0.75; }
+}
 
-  /* Timeline */
-  .planner-timeline {
-    position: relative;
-    background:
-      repeating-linear-gradient(
-        to bottom,
-        oklch(var(--bc) / 0.12) 0px,
-        oklch(var(--bc) / 0.12) 1px,
-        transparent 1px,
-        transparent var(--planner-hour-height)
-      ),
-      repeating-linear-gradient(
-        to bottom,
-        transparent 0px,
-        transparent calc(var(--planner-hour-height) / 2),
-        oklch(var(--bc) / 0.05) calc(var(--planner-hour-height) / 2),
-        oklch(var(--bc) / 0.05) calc(var(--planner-hour-height) / 2 + 1px),
-        transparent calc(var(--planner-hour-height) / 2 + 1px),
-        transparent var(--planner-hour-height)
-      ),
-      linear-gradient(to bottom, oklch(var(--b1)), oklch(var(--b2) / 0.25));
+@media (max-width: 768px) {
+  .planner-wrapper {
+    padding: 8px;
   }
 
-  .planner-sticky-toolbar{
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    backdrop-filter: blur(10px);
-    background: oklch(var(--b1) / 0.85);
-    border-bottom: 1px solid oklch(var(--bc) / 0.10);
+  .planner-header {
+    padding: 16px;
+    gap: 16px;
   }
 
-  .planner-hour-row {
-    height: var(--planner-hour-height);
-    position: relative;
-    cursor: pointer;
-    transition: background 0.15s ease;
+  .planner-title {
+    font-size: 20px;
   }
-  .planner-hour-row:hover { background: oklch(var(--p) / 0.045); }
-  .planner-hour-row:active { background: oklch(var(--p) / 0.07); }
 
-  /* Hover helper glow */
-  .planner-hour-row::after{
-    content:"";
-    position:absolute;
-    left: 0; right: 0;
-    top: 0;
-    height: 100%;
-    opacity: 0;
-    transition: opacity .15s ease;
-    background: linear-gradient(90deg, transparent, oklch(var(--p)/0.06), transparent);
-    pointer-events:none;
+  .date-badge {
+    font-size: 12px;
+    padding: 6px 12px;
   }
-  .planner-hour-row:hover::after{ opacity: 1; }
 
-  /* Fixed markers */
-  .planner-time-marker {
-    position: absolute;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, oklch(var(--p) / 0.35), transparent);
-    border-top: 2px dashed oklch(var(--p) / 0.45);
-    pointer-events: none;
-    z-index: 10;
+  .planner-controls {
+    gap: 6px;
+    flex-wrap: wrap;
   }
-  .planner-time-marker::after {
-    content: attr(data-label);
-    position: absolute;
-    right: 16px;
-    top: -10px;
-    background: oklch(var(--p));
-    color: oklch(var(--pc));
-    padding: 2px 10px;
-    border-radius: 8px;
+
+  .btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .btn-sm {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .stats-display {
+    flex-direction: row;
+    gap: 12px;
+    width: 100%;
+    padding: 12px 0 0 0;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    margin-left: 0;
+  }
+
+  .stat-value {
+    font-size: 16px;
+  }
+
+  .stat-label {
     font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    box-shadow: 0 2px 8px oklch(var(--p) / 0.25);
   }
 
-  /* Plan markers */
-  .planner-plan-marker {
-    position: absolute;
-    left: var(--planner-gutter);
-    right: var(--planner-gutter);
-    height: 18px;
-    pointer-events: none;
-    z-index: 12;
-    display: flex;
-    align-items: center;
+  .planner-container {
+    grid-template-columns: 50px 1fr;
+    max-height: 70vh;
+  }
+
+  .hour-slot {
+    height: 50px;
+    font-size: 10px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .timeline-grid {
+    height: 1200px;
+  }
+
+  .event-card {
+    font-size: 11px;
+    padding: 8px 10px;
+    min-width: 120px;
+    left: 2px;
+    right: 2px;
+  }
+
+  .event-title {
+    font-size: 12px;
+    padding-right: 50px;
+  }
+
+  .event-badge {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+
+  .event-time {
+    font-size: 10px;
+  }
+
+  .event-time::before {
+    font-size: 11px;
+  }
+
+  .event-duration {
+    font-size: 9px;
+  }
+
+  .event-actions {
+    gap: 4px;
+    top: 8px;
+    right: 8px;
+  }
+
+  .event-btn {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .modal-content {
+    width: 95%;
+    padding: 20px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-title {
+    font-size: 18px;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  .form-group label {
+    font-size: 13px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 16px; /* Prevent zoom on iOS */
+    padding: 10px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
     gap: 8px;
   }
-  .planner-plan-line {
-    flex: 1;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, oklch(var(--a) / 0.55), transparent);
+
+  .btn-delete {
+    order: 3;
   }
-  .planner-plan-chip {
-    pointer-events: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 10px;
-    border-radius: 999px;
-    background: oklch(var(--a) / 0.14);
-    border: 1px solid oklch(var(--a) / 0.33);
-    color: oklch(var(--bc) / 0.82);
-    font-size: 11px;
-    font-weight: 900;
-    letter-spacing: 0.2px;
-    backdrop-filter: blur(6px);
+}
+
+/* ===== EXTRA SMALL SCREENS ===== */
+@media (max-width: 480px) {
+  .planner-wrapper {
+    padding: 4px;
   }
 
-  /* Current Time Indicator */
-  .planner-current-time { position: absolute; left: 0; right: 0; z-index: 100; pointer-events: none; display: none; }
-  .planner-current-time.active { display: block; }
-  .planner-current-time-line { height: 3px; background: #ff4444; position: relative; border-radius: 999px; box-shadow: 0 0 12px rgba(255, 68, 68, 0.55); }
-  .planner-current-time-dot {
-    position: absolute; left: -8px; top: -6px; width: 14px; height: 14px; border-radius: 50%;
-    background: #ff4444; border: 3px solid oklch(var(--b1)); box-shadow: 0 2px 10px rgba(255, 68, 68, 0.45);
-    animation: pulse 2s ease-in-out infinite;
-  }
-  @keyframes pulse { 0%,100%{ transform: scale(1); opacity: 1; } 50%{ transform: scale(1.1); opacity: 0.82; } }
-  .planner-current-time-label {
-    position: absolute; right: 16px; top: -22px;
-    background: #ff4444; color: white; padding: 4px 12px; border-radius: 12px;
-    font-size: 11px; font-weight: 800; letter-spacing: 0.5px; box-shadow: 0 2px 10px rgba(255, 68, 68, 0.35);
+  .planner-header {
+    padding: 12px;
   }
 
-  .planner-events-layer {
-    position: absolute;
-    top: 0;
-    left: var(--planner-gutter);
-    right: var(--planner-gutter);
-    bottom: 0;
-    pointer-events: none;
-  }
-
-  .planner-event {
-    position: absolute;
-    left: 0;
-    right: 0;
-    background: linear-gradient(135deg, oklch(var(--p) / 0.92), oklch(var(--s) / 0.86));
-    border: 2px solid oklch(var(--p));
-    border-radius: 14px;
-    padding: 12px 12px 10px 12px;
-    cursor: pointer;
-    pointer-events: auto;
-    overflow: hidden;
-    box-shadow: 0 6px 18px oklch(var(--b1) / 0.18);
-    transition: all 0.2s ease;
-    display: flex;
+  .header-left {
     flex-direction: column;
-    min-height: 48px;
-    outline: none;
-    transform: translateZ(0);
-  }
-  /* Dual-lane layout: manual events on left, calendar events on right */
-  .planner-event:not(.calendar-event) {
-    left: 0;
-    right: 52%;
-  }
-  .planner-event.calendar-event {
-    left: 52%;
-    right: 0;
-  }
-  .planner-event:focus-within{
-    box-shadow: 0 0 0 4px oklch(var(--p) / 0.20), 0 10px 26px oklch(var(--b1) / 0.22);
-  }
-  .planner-event.logged {
-    opacity: 0.72;
-    background: linear-gradient(135deg, oklch(var(--su) / 0.55), oklch(var(--su) / 0.45));
-    border-color: oklch(var(--su));
-  }
-  .planner-event.logged .planner-event-title {
-    text-decoration: line-through;
-    text-decoration-thickness: 1.5px;
-    opacity: 0.95;
-  }
-  .planner-event.calendar-event {
-    background: linear-gradient(135deg, oklch(var(--in) / 0.75), oklch(var(--in) / 0.65));
-    border-color: oklch(var(--in));
-    border-style: dashed;
-    cursor: default;
-  }
-  .planner-event.calendar-event:hover {
-    transform: none;
-    border-color: oklch(var(--in));
-  }
-  .planner-event.logging { opacity: 0.82; animation: logging-pulse 1s ease-in-out infinite; }
-  @keyframes logging-pulse { 0%,100%{ transform: scale(1); } 50%{ transform: scale(0.985); } }
-  .planner-event:hover { transform: translateX(-3px); box-shadow: 0 10px 24px oklch(var(--p) / 0.22); border-color: oklch(var(--pf)); z-index: 50; }
-
-  .planner-event-header { display: flex; align-items: start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-  .planner-event-title {
-    font-size: 14px; font-weight: 800; line-height: 1.35; color: oklch(var(--pc));
-    flex: 1; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-    margin-bottom: 4px;
-  }
-  .planner-event-actions { display: flex; gap: 6px; opacity: 0.85; transition: opacity 0.2s ease; }
-  @media (hover:hover){
-    .planner-event-actions{ opacity: 0; }
-    .planner-event:hover .planner-event-actions{ opacity: 1; }
+    align-items: flex-start;
+    gap: 8px;
   }
 
-  .planner-event-btn {
-    width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;
-    border-radius: 8px; background: oklch(var(--b1) / 0.22); border: 1px solid oklch(var(--pc) / 0.28);
-    color: oklch(var(--pc)); cursor: pointer; transition: all 0.15s ease;
-  }
-  .planner-event-btn:hover { background: oklch(var(--b1) / 0.40); transform: scale(1.06); }
-  .planner-event-btn.delete:hover { background: oklch(var(--er)); border-color: oklch(var(--er)); color: white; }
-
-  .planner-event-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; color: oklch(var(--pc) / 0.92); font-weight: 700; margin-top: 6px; }
-  .planner-event-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 3px 10px; border-radius: 999px;
-    background: oklch(var(--b1) / 0.22); border: 1px solid oklch(var(--pc) / 0.20);
+  .planner-title {
+    font-size: 18px;
   }
 
-  .planner-plan-section {
-    margin-top: 10px;
-    padding: 8px 10px;
-    background: oklch(var(--b1) / 0.28);
-    border-radius: 10px;
-    border-left: 3px solid oklch(var(--a));
-    backdrop-filter: blur(4px);
-  }
-  .planner-plan-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 9px;
-    font-weight: 900;
-    text-transform: uppercase;
-    letter-spacing: 0.9px;
-    color: oklch(var(--a));
-    margin-bottom: 6px;
-    opacity: 0.92;
-  }
-  .planner-plan-badges { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-  .planner-plan-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 4px 10px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, oklch(var(--a) / 0.18), oklch(var(--a) / 0.12));
-    border: 1.5px solid oklch(var(--a) / 0.36);
+  .date-badge {
     font-size: 11px;
-    font-weight: 800;
-    color: oklch(var(--pc));
-    box-shadow: 0 2px 4px oklch(var(--b1) / 0.22);
-    transition: all 0.15s ease;
-  }
-  .planner-plan-badge:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 6px oklch(var(--b1) / 0.32);
-    border-color: oklch(var(--a) / 0.55);
   }
 
-  .planner-empty-state {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    text-align: center; color: oklch(var(--bc) / 0.45); pointer-events: none; z-index: 1;
-    background: oklch(var(--b1) / 0.65);
-    border: 1px dashed oklch(var(--bc) / 0.18);
-    border-radius: 16px;
-    padding: 18px 18px;
-    width: min(520px, 92%);
-    box-shadow: 0 10px 24px oklch(var(--b1) / 0.08);
-  }
-  .planner-empty-state i { font-size: 44px; margin-bottom: 12px; opacity: 0.30; }
-  .planner-empty-state p { font-size: 14px; font-weight: 700; }
-
-  .planner-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
-  .planner-stat-value {
-    font-size: 28px; font-weight: 900;
-    background: linear-gradient(135deg, oklch(var(--p)), oklch(var(--s)));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-  }
-  .planner-stat-label { font-size: 12px; font-weight: 700; color: oklch(var(--bc) / 0.62); text-transform: uppercase; letter-spacing: 0.5px; }
-
-  /* Selected date chip */
-  .dp-chip{
-    display:inline-flex;
-    align-items:center;
-    gap:8px;
-    padding: 6px 12px;
-    border-radius: 999px;
-    border: 1px solid oklch(var(--bc) / 0.12);
-    background: oklch(var(--b1) / 0.75);
-    backdrop-filter: blur(10px);
-    font-size: 12px;
-    font-weight: 800;
-    color: oklch(var(--bc) / 0.72);
+  .planner-controls {
+    width: 100%;
   }
 
-  @media (max-width: 768px) {
-    #dayPlannerPage { --planner-hour-height: 68px; --planner-time-col: 70px; --planner-gutter: 8px; }
-    #dayPlannerPage .planner-event-title { font-size: 12px; }
-    .planner-event-meta { font-size: 10px; }
-    .planner-time-slot .hour { font-size: 14px; }
-    .planner-plan-chip { font-size: 10px; padding: 3px 8px; }
-    .planner-time-labels{ max-height: calc(100vh - 300px); }
+  .planner-controls button {
+    flex: 1;
+    min-width: 60px;
   }
+
+  .stats-display {
+    padding: 8px 0 0 0;
+  }
+
+  .planner-container {
+    grid-template-columns: 40px 1fr;
+    max-height: 60vh;
+  }
+
+  .hour-slot {
+    font-size: 9px;
+    height: 40px;
+  }
+
+  .timeline-grid {
+    height: 960px;
+  }
+
+  .event-card {
+    min-height: 40px;
+  }
+
+  .modal-content {
+    padding: 16px;
+  }
+}
 </style>
 
-<div id="dayPlannerPage">
-<main class="space-y-6 max-w-7xl mx-auto">
-  <!-- Header -->
-  <div class="card bg-gradient-to-br from-primary/10 via-secondary/5 to-base-100 border-0 shadow-xl">
-    <div class="card-body p-6">
-      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div>
-          <div class="flex items-center gap-3 mb-2">
-            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
-              <i class="bi bi-calendar-check text-2xl text-primary-content"></i>
-            </div>
-            <div>
-              <h1 class="text-3xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                Day Planner
-              </h1>
-              <p class="text-sm text-base-content/60 mt-1">
-                Plan your perfect day, one event at a time
-              </p>
-            </div>
+<div class="planner-wrapper">
+  <!-- HEADER -->
+  <div class="planner-header">
+    <div class="header-left">
+      <h1 class="planner-title">📅 Day Planner</h1>
+      <span class="date-badge" id="dateDisplay"></span>
+    </div>
+    
+    <div class="header-right">
+      <div class="planner-controls">
+        <button class="btn btn-secondary btn-sm" onclick="prevDay()" title="Previous day">← Prev</button>
+        <button class="btn btn-secondary btn-sm" onclick="today()" title="Jump to today">Today</button>
+        <button class="btn btn-secondary btn-sm" onclick="nextDay()" title="Next day">Next →</button>
+        
+        <div class="date-picker-wrapper">
+          <input type="date" id="datePicker" title="Pick a specific date">
+        </div>
+        
+        <div class="stats-display">
+          <div class="stat">
+            <span class="stat-value" id="eventCount">0</span>
+            <span class="stat-label">Events</span>
+          </div>
+          <div class="stat">
+            <span class="stat-value" id="timeScheduled">0h</span>
+            <span class="stat-label">Scheduled</span>
           </div>
         </div>
-
-        <div class="flex items-center gap-2 flex-wrap">
-          <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm gap-2">
-            <i class="bi bi-arrow-left"></i>
-            Dashboard
-          </a>
-
-          <div class="join">
-            <button class="btn btn-sm join-item" id="prevDayBtn" title="Previous Day">
-              <i class="bi bi-chevron-left"></i>
-            </button>
-            <button class="btn btn-outline btn-sm join-item" id="todayBtn">
-              <i class="bi bi-calendar-today"></i>
-              Today
-            </button>
-            <button class="btn btn-sm join-item" id="nextDayBtn" title="Next Day">
-              <i class="bi bi-chevron-right"></i>
-            </button>
-          </div>
-
-          <span class="dp-chip" id="selectedDateChip">
-            <i class="bi bi-calendar3"></i>
-            <span id="selectedDateText">Today</span>
-          </span>
-
-          <input type="date" id="datePicker" class="input input-bordered input-sm" style="width: 150px;" />
-
-          <button class="btn btn-secondary btn-sm gap-2" id="autoScheduleBtn">
-            <i class="bi bi-magic"></i>
-            Auto Schedule
-          </button>
-          <button class="btn btn-primary btn-sm gap-2" id="quickAddBtn">
-            <i class="bi bi-lightning-charge-fill"></i>
-            Quick Add
-          </button>
-        </div>
+        
+        <button class="btn btn-success btn-sm" onclick="newEvent()" title="Create new event">+ New Event</button>
+        <button class="btn btn-primary btn-sm" onclick="autoSchedule()" title="Automatically schedule unscheduled tasks">🤖 Auto Schedule</button>
       </div>
     </div>
   </div>
 
-  <!-- Day Title & Stats -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="lg:col-span-2 card bg-base-100 border border-base-300 shadow-lg">
-      <div class="card-body p-5">
-        <div class="flex items-center gap-3">
-          <i class="bi bi-calendar-event text-primary text-2xl"></i>
-          <input
-            type="text"
-            id="dayTitle"
-            class="input input-ghost text-xl font-bold flex-1 focus:input-primary px-2"
-            placeholder="Name your day..."
-            value="{{ today|date:'l, F j, Y' }}"
-          />
-        </div>
-      </div>
-    </div>
-
-    <div class="card bg-base-100 border border-base-300 shadow-lg">
-      <div class="card-body p-5">
-        <div class="planner-stats">
-          <div class="text-center">
-            <div class="planner-stat-value" id="eventCount">0</div>
-            <div class="planner-stat-label">Events</div>
-          </div>
-          <div class="text-center">
-            <div class="planner-stat-value" id="totalHours">0h</div>
-            <div class="planner-stat-label">Scheduled</div>
-          </div>
-        </div>
-      </div>
+  <!-- PLANNER GRID -->
+  <div class="planner-container">
+    <div class="time-labels" id="timeLabels"></div>
+    <div class="timeline" id="timeline">
+      <div class="timeline-grid" id="grid"></div>
     </div>
   </div>
-
-  <!-- Task Suggestions Quick Access -->
-  {% if pending_tasks or plan_tasks %}
-  <div class="card bg-base-100 border border-base-300 shadow-lg">
-    <div class="card-body p-5">
-      <h3 class="font-bold text-sm mb-3 flex items-center gap-2">
-        <i class="bi bi-lightbulb text-warning"></i>
-        Quick Add from Tasks
-      </h3>
-      <div class="flex gap-2 overflow-x-auto pb-2">
-        {% for task in pending_tasks|slice:":5" %}
-        <button
-          class="quick-task-btn btn btn-sm btn-outline gap-2 whitespace-nowrap"
-          data-task-title="{{ task.title }}"
-          data-plan-names="{% if task.plan_names %}{{ task.plan_names|join:',' }}{% endif %}">
-          <i class="bi bi-plus-circle"></i>
-          {{ task.title|truncatewords:4 }}
-          {% if task.plan_names %}
-            <span class="badge badge-primary badge-xs">Plan</span>
-          {% endif %}
-        </button>
-        {% endfor %}
-        {% for task in plan_tasks|slice:":3" %}
-        <button
-          class="quick-task-btn btn btn-sm btn-outline btn-primary gap-2 whitespace-nowrap"
-          data-task-title="{{ task.title }}"
-          data-plan-names="{{ task.plan_name }}">
-          <i class="bi bi-diagram-3"></i>
-          {{ task.title|truncatewords:4 }}
-        </button>
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-  {% endif %}
-
-  <!-- Main Timeline -->
-  <div class="card bg-base-100 border border-base-300 shadow-xl">
-    <div class="card-body p-0">
-      <div class="p-5 border-b border-base-300">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-bold flex items-center gap-2">
-            <i class="bi bi-clock-history"></i>
-            Your Schedule
-          </h2>
-          <div class="text-sm text-base-content/60">
-            <i class="bi bi-info-circle"></i>
-            Click any time slot to add an event
-          </div>
-        </div>
-      </div>
-
-      <div class="planner-sticky-toolbar px-5 py-3 flex items-center justify-between">
-        <div class="text-xs text-base-content/60 flex items-center gap-2">
-          <i class="bi bi-mouse"></i> Click to add • <i class="bi bi-keyboard"></i> N new • T today • ←/→ day • Esc close
-        </div>
-        <div class="text-xs text-base-content/60 flex items-center gap-2">
-          <i class="bi bi-grid-3x3-gap"></i>
-          Snap: <span class="badge badge-ghost badge-sm">15 min</span>
-        </div>
-      </div>
-
-      <div class="planner-container">
-        <div class="planner-time-labels" id="timeLabels"></div>
-
-        <div class="planner-timeline" id="timeline">
-          <div id="timeRows"></div>
-
-          <!-- Plan markers layer -->
-          <div id="plansLayer"></div>
-
-          <div class="planner-current-time" id="currentTimeLine">
-            <div class="planner-current-time-line">
-              <div class="planner-current-time-dot"></div>
-              <div class="planner-current-time-label" id="currentTimeLabel">NOW</div>
-            </div>
-          </div>
-
-          <div class="planner-events-layer" id="eventsLayer">
-            <div class="planner-empty-state" id="emptyState">
-              <i class="bi bi-calendar-plus"></i>
-              <p>Click any time slot to start planning your day</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</main>
-
-<!-- Event Creation Modal -->
-<input type="checkbox" id="eventModal" class="modal-toggle" />
-<div class="modal modal-bottom sm:modal-middle">
-  <div class="modal-box max-w-2xl">
-    <h3 class="font-bold text-xl mb-6 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-        <i class="bi bi-plus-circle-fill text-primary text-xl"></i>
-      </div>
-      <span id="eventModalTitle">Create Event</span>
-    </h3>
-
-    <div class="grid grid-cols-2 gap-4 mb-6">
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold"><i class="bi bi-clock"></i> Start Time</span>
-        </label>
-        <input type="time" id="eventStartTime" class="input input-bordered w-full" step="900" />
-      </div>
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold"><i class="bi bi-clock-fill"></i> End Time</span>
-        </label>
-        <input type="time" id="eventEndTime" class="input input-bordered w-full" step="900" />
-      </div>
-    </div>
-
-    <div class="form-control mb-4">
-      <label class="label">
-        <span class="label-text font-semibold"><i class="bi bi-pencil-fill"></i> Event Title</span>
-      </label>
-      <input type="text" id="eventTitle" class="input input-bordered input-lg w-full" placeholder="What are you planning to do?" autofocus />
-    </div>
-
-    {% if pending_tasks or plan_tasks %}
-    <div class="divider">OR SELECT FROM YOUR TASKS</div>
-
-    <div class="max-h-64 overflow-y-auto space-y-3 mb-6">
-      {% if pending_tasks %}
-      <div>
-        <h4 class="text-xs font-bold text-base-content/60 mb-2 flex items-center gap-2">
-          <i class="bi bi-list-check text-warning"></i> PENDING TASKS
-        </h4>
-        <div class="space-y-2">
-          {% for task in pending_tasks|slice:":8" %}
-          <button
-            class="task-select-btn w-full text-left p-3 rounded-lg border-2 border-base-300 hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-3 group"
-            data-task-title="{{ task.title }}"
-            data-plan-names="{% if task.plan_names %}{{ task.plan_names|join:',' }}{% endif %}">
-            <div class="w-8 h-8 rounded-lg bg-warning/10 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-              <i class="bi bi-check2 text-warning group-hover:text-primary"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="font-semibold text-sm">{{ task.title }}</div>
-              <div class="flex items-center gap-2 mt-1">
-                {% if task.category %}
-                <span class="badge badge-outline badge-xs">{{ task.category.name }}</span>
-                {% endif %}
-                {% if task.plan_names %}
-                  {% for plan_name in task.plan_names %}
-                  <span class="badge badge-primary badge-xs">{{ plan_name }}</span>
-                  {% endfor %}
-                {% endif %}
-                {% if task.due_date %}
-                <span class="badge badge-xs {% if task.due_date == today %}badge-warning{% elif task.due_date < today %}badge-error{% endif %}">
-                  {{ task.due_date|date:"M j" }}
-                </span>
-                {% endif %}
-              </div>
-            </div>
-            <i class="bi bi-arrow-right opacity-0 group-hover:opacity-100 transition-opacity"></i>
-          </button>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      {% if plan_tasks %}
-      <div>
-        <h4 class="text-xs font-bold text-base-content/60 mb-2 flex items-center gap-2">
-          <i class="bi bi-diagram-3 text-primary"></i> PLAN TASKS
-        </h4>
-        <div class="space-y-2">
-          {% for task in plan_tasks|slice:":8" %}
-          <button
-            class="task-select-btn w-full text-left p-3 rounded-lg border-2 border-base-300 hover:border-primary hover:bg-primary/5 transition-all flex items-center gap-3 group"
-            data-task-title="{{ task.title }}"
-            data-plan-names="{{ task.plan_name }}">
-            <div class="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <i class="bi bi-diagram-3 text-primary"></i>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="font-semibold text-sm">{{ task.title }}</div>
-              <div class="flex items-center gap-2 mt-1">
-                <span class="badge badge-primary badge-xs">{{ task.plan_name }}</span>
-                {% if task.category %}
-                <span class="badge badge-outline badge-xs">{{ task.category }}</span>
-                {% endif %}
-              </div>
-            </div>
-            <i class="bi bi-arrow-right opacity-0 group-hover:opacity-100 transition-opacity"></i>
-          </button>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-    </div>
-    {% endif %}
-
-    <div class="modal-action">
-      <label for="eventModal" class="btn btn-ghost">Cancel</label>
-      <button id="saveEventBtn" class="btn btn-primary gap-2">
-        <i class="bi bi-check-lg"></i> <span id="saveBtnText">Create Event</span>
-      </button>
-    </div>
-  </div>
-  <label class="modal-backdrop" for="eventModal">Close</label>
 </div>
 
-<!-- Auto-Schedule Time Selection Modal -->
-<input type="checkbox" id="autoScheduleModal" class="modal-toggle" />
-<div class="modal modal-bottom sm:modal-middle">
-  <div class="modal-box max-w-lg">
-    <h3 class="font-bold text-xl mb-4 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
-        <i class="bi bi-magic text-secondary text-xl"></i>
-      </div>
-      <span>Auto Schedule Your Day</span>
-    </h3>
-
-    <div class="alert alert-info mb-4">
-      <i class="bi bi-info-circle"></i>
-      <span class="text-sm">Events will only be scheduled after the current time</span>
+<!-- EVENT MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title" id="modalTitle">New Event</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
-    <div class="space-y-4">
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold"><i class="bi bi-clock"></i> Start Time</span>
-          <span class="label-text-alt text-xs" id="autoScheduleSuggestion"></span>
-        </label>
-        <input type="time" id="autoScheduleStartTime" class="input input-bordered w-full" />
-      </div>
+    <div class="form-group">
+      <label for="eventTitle">Event Title *</label>
+      <input type="text" id="eventTitle" placeholder="Enter event title" autocomplete="off">
+    </div>
 
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-semibold"><i class="bi bi-clock-fill"></i> End Time</span>
-        </label>
-        <input type="time" id="autoScheduleEndTime" class="input input-bordered w-full" value="17:00" />
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="eventStart">Start Time *</label>
+        <input type="time" id="eventStart">
       </div>
-
-      <div id="autoSchedulePreview" class="alert bg-base-200 hidden">
-        <i class="bi bi-calendar-check"></i>
-        <div class="text-sm">
-          <div class="font-semibold" id="autoSchedulePreviewText"></div>
-        </div>
+      <div class="form-group">
+        <label for="eventEnd">End Time *</label>
+        <input type="time" id="eventEnd">
       </div>
     </div>
 
-    <div class="modal-action">
-      <label for="autoScheduleModal" class="btn btn-ghost">Cancel</label>
-      <button id="confirmAutoScheduleBtn" class="btn btn-secondary gap-2">
-        <i class="bi bi-magic"></i> Schedule Tasks
-      </button>
+    <div class="form-group">
+      <label for="eventDescription">Description</label>
+      <textarea id="eventDescription" placeholder="Add notes or details (optional)"></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-delete btn-sm" id="deleteBtn" onclick="deleteEvent()" style="display:none;">🗑️ Delete</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="saveEvent()">Save Event</button>
     </div>
   </div>
-  <label class="modal-backdrop" for="autoScheduleModal">Close</label>
 </div>
 
-<!-- Auto-Schedule Alert Modal -->
-<input type="checkbox" id="autoScheduleAlertModal" class="modal-toggle" />
-<div class="modal modal-bottom sm:modal-middle">
-  <div class="modal-box max-w-md">
-    <h3 class="font-bold text-lg mb-4 flex items-center gap-3">
-      <div class="w-10 h-10 rounded-xl flex items-center justify-center" id="alertIconContainer">
-        <i id="alertIcon" class="text-xl"></i>
+<!-- AUTO-SCHEDULE MODAL -->
+<div class="modal-overlay" id="autoScheduleModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">🤖 Auto Schedule Tasks</h3>
+      <button class="modal-close" onclick="closeAutoScheduleModal()">✕</button>
+    </div>
+
+    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">
+      Automatically schedule unscheduled tasks within your preferred time window.
+    </p>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="autoStartTime">Start Time *</label>
+        <input type="time" id="autoStartTime" value="09:00">
       </div>
-      <span id="alertTitle">Alert</span>
-    </h3>
+      <div class="form-group">
+        <label for="autoEndTime">End Time *</label>
+        <input type="time" id="autoEndTime" value="17:00">
+      </div>
+    </div>
 
-    <p id="alertMessage" class="text-base-content/80"></p>
-
-    <div class="modal-action">
-      <label for="autoScheduleAlertModal" class="btn btn-primary">OK</label>
+    <div class="modal-actions">
+      <button class="btn btn-secondary btn-sm" onclick="closeAutoScheduleModal()">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="executeAutoSchedule()">Schedule Tasks</button>
     </div>
   </div>
-  <label class="modal-backdrop" for="autoScheduleAlertModal">Close</label>
+</div>
+
+<!-- RESULT MODAL -->
+<div class="modal-overlay" id="resultModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title" id="resultTitle">Result</h3>
+      <button class="modal-close" onclick="closeResultModal()">✕</button>
+    </div>
+
+    <div id="resultMessage" style="padding: 20px 0; color: var(--text-secondary); line-height: 1.6;"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" onclick="closeResultModal()">OK</button>
+    </div>
+  </div>
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // ========== CONFIG ==========
-  const START_HOUR = 0;
-  const END_HOUR = 23;
+const CSRF_TOKEN = '{{ csrf_token }}';
+const HOUR_HEIGHT = 60;
+let currentDate = new Date().toISOString().split('T')[0];
+let events = [];
+let editingId = null;
+let dragState = null;
+
+// Initialize
+function init() {
+  renderTimeLabels();
+  renderGrid();
+  syncDateUI();
+  loadEvents();
+  updateNowLine();
+  setInterval(updateNowLine, 60000);
   
-  // Get CSRF token from Django template
-  const CSRF_TOKEN = '{{ csrf_token }}';
-
-  // ========== STATE ==========
-  let events = [];
-  let editingEventId = null;
-  let selectedPlanNames = [];
-  let currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-
-  // ========== ELEMENTS ==========
-  const timeLabels = document.getElementById('timeLabels');
-  const timeRows = document.getElementById('timeRows');
-  const eventsLayer = document.getElementById('eventsLayer');
-  const plansLayer = document.getElementById('plansLayer');
-  const emptyState = document.getElementById('emptyState');
-  const dayTitleEl = document.getElementById('dayTitle');
-  const eventModal = document.getElementById('eventModal');
-  const eventTitle = document.getElementById('eventTitle');
-  const eventStartTime = document.getElementById('eventStartTime');
-  const eventEndTime = document.getElementById('eventEndTime');
-  const saveEventBtn = document.getElementById('saveEventBtn');
-  const currentTimeLine = document.getElementById('currentTimeLine');
-  const currentTimeLabel = document.getElementById('currentTimeLabel');
-
-  // UX elements
-  const datePicker = document.getElementById('datePicker');
-  const selectedDateText = document.getElementById('selectedDateText');
-  const eventModalTitle = document.getElementById('eventModalTitle');
-  const saveBtnText = document.getElementById('saveBtnText');
-
-  // ========== UTILITIES ==========
-  const pad2 = (n) => String(n).padStart(2, '0');
-  const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-
-  function hourHeightPx() {
-    const v = getComputedStyle(document.documentElement).getPropertyValue('--planner-hour-height').trim();
-    const n = parseFloat(v);
-    return Number.isFinite(n) ? n : 84;
-  }
-
-  function minutesToHHMM(mins) {
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${pad2(h)}:${pad2(m)}`;
-  }
-
-  function hhmmToMinutes(hhMM) {
-    const [h, m] = hhMM.split(':').map(Number);
-    return h * 60 + m;
-  }
-
-  function formatHourLabel(hour) {
-    if (hour === 0) return { hour: '12', period: 'AM' };
-    if (hour < 12) return { hour: String(hour), period: 'AM' };
-    if (hour === 12) return { hour: '12', period: 'PM' };
-    return { hour: String(hour - 12), period: 'PM' };
-  }
-
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
-  // ===== UX: snap to 15 minutes + clamp =====
-  function snapTo15(mins){ return Math.round(mins / 15) * 15; }
-  function clamp(mins){
-    return Math.max(START_HOUR * 60, Math.min(END_HOUR * 60, mins));
-  }
-  function overlapsAny(startMin, endMin, ignoreId=null){
-    return events.some(ev => {
-      if (ignoreId && ev.id === ignoreId) return false;
-      return startMin < ev.endMin && endMin > ev.startMin;
-    });
-  }
-
-  function isTodayDateStr(dateStr){
-    return dateStr === new Date().toISOString().split('T')[0];
-  }
-  function formatPrettyDate(dateStr){
-    const d = new Date(dateStr + 'T00:00:00');
-    return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
-  }
-  function syncDateUI(){
-    if (datePicker) datePicker.value = currentDate;
-    if (selectedDateText){
-      selectedDateText.textContent = isTodayDateStr(currentDate) ? 'Today' : formatPrettyDate(currentDate);
-    }
-  }
-
-  // ========== STORAGE ==========
-  async function load() {
-    try {
-      const response = await fetch(`/api/day-schedule/${currentDate}/`, {
-        headers: { 'X-CSRFToken': CSRF_TOKEN }
-      });
-
-      if (!response.ok) throw new Error('Failed to load schedule');
-
-      const data = await response.json();
-      if (data.success) {
-        events = (data.events || []).map(ev => ({
-          ...ev,
-          planNames: ev.planNames || []
-        }));
-        dayTitleEl.value = data.title || new Date(currentDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-      }
-    } catch (error) {
-      console.error('Error loading schedule:', error);
-      events = [];
-      const d = new Date(currentDate);
-      dayTitleEl.value = d.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    }
-    updateStats();
+  // Date picker
+  document.getElementById('datePicker').addEventListener('change', (e) => {
+    currentDate = e.target.value;
+    loadEvents();
     syncDateUI();
-  }
-
-  async function save() {
-    try {
-      // Filter out calendar events before saving (they come from DailyLog)
-      const manualEvents = events.filter(ev => !ev.isCalendarEvent);
-      
-      console.log('Saving events:', manualEvents); // Debug log
-      
-      const response = await fetch('/api/day-schedule/save/', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRFToken': CSRF_TOKEN
-        },
-        body: JSON.stringify({
-          date: currentDate,
-          title: dayTitleEl.value.trim(),
-          events: manualEvents
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Save failed:', response.status, errorText);
-        throw new Error(`Failed to save schedule: ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (!data.success) {
-        console.error('Save failed:', data.error);
-        throw new Error(data.error || 'Save failed');
-      }
-      
-      console.log('Save successful:', data); // Debug log
-    } catch (error) {
-      console.error('Error saving schedule:', error);
-      // Show error to user
-      showAlert('Save Error', `Failed to save schedule: ${error.message}`, 'error');
-      throw error; // Re-throw so caller knows it failed
+  });
+  
+  // Timeline click to create
+  document.getElementById('grid').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget || e.target.classList.contains('grid-line')) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const container = document.querySelector('.planner-container');
+      const y = e.clientY - rect.top + container.scrollTop;
+      const hour = Math.floor(y / HOUR_HEIGHT);
+      const minutes = Math.round(((y % HOUR_HEIGHT) / HOUR_HEIGHT) * 60 / 15) * 15;
+      newEvent(hour * 60 + minutes);
     }
-    updateStats();
-  }
+  });
 
-  // ========== BUILD TIMELINE ==========
-  function buildTimeline() {
-    timeLabels.innerHTML = '';
-    timeRows.innerHTML = '';
-
-    for (let h = START_HOUR; h <= END_HOUR; h++) {
-      const { hour, period } = formatHourLabel(h);
-
-      const label = document.createElement('div');
-      label.className = 'planner-time-slot';
-      label.innerHTML = `<div class="hour">${hour}</div><div class="period">${period}</div>`;
-      timeLabels.appendChild(label);
-
-      const row = document.createElement('div');
-      row.className = 'planner-hour-row';
-      row.dataset.hour = h;
-      row.addEventListener('click', () => openEventModal(h * 60));
-      timeRows.appendChild(row);
+  // Close modal on escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      closeAutoScheduleModal();
+      closeResultModal();
     }
+  });
+}
 
-    const markers = [
-      { hour: 9, label: 'WORK START' },
-      { hour: 12, label: 'LUNCH' },
-      { hour: 17, label: 'WORK END' }
-    ];
+function renderTimeLabels() {
+  const container = document.getElementById('timeLabels');
+  for (let h = 0; h < 24; h++) {
+    const div = document.createElement('div');
+    div.className = 'hour-slot';
+    div.textContent = h.toString().padStart(2, '0') + ':00';
+    container.appendChild(div);
+  }
+}
 
-    const timeline = document.getElementById('timeline');
-    timeline.querySelectorAll('.planner-time-marker').forEach(m => m.remove());
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  
+  // Add working hours background (9am to 5pm)
+  const workingHoursBg = document.createElement('div');
+  workingHoursBg.className = 'working-hours-bg';
+  workingHoursBg.style.top = (9 * HOUR_HEIGHT) + 'px'; // 9am
+  workingHoursBg.style.height = (8 * HOUR_HEIGHT) + 'px'; // 8 hours (9am-5pm)
+  grid.appendChild(workingHoursBg);
+  
+  // Add grid lines
+  for (let h = 0; h <= 24; h++) {
+    const line = document.createElement('div');
+    line.className = 'grid-line';
+    line.style.top = (h * HOUR_HEIGHT) + 'px';
+    grid.appendChild(line);
+  }
+}
 
-    markers.forEach(({ hour, label }) => {
-      if (hour >= START_HOUR && hour <= END_HOUR) {
-        const marker = document.createElement('div');
-        marker.className = 'planner-time-marker';
-        marker.dataset.label = label;
-        marker.style.top = `${(hour - START_HOUR) * hourHeightPx()}px`;
-        timeline.appendChild(marker);
-      }
+function syncDateUI() {
+  document.getElementById('datePicker').value = currentDate;
+  const d = new Date(currentDate + 'T12:00:00');
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = currentDate === today;
+  
+  document.getElementById('dateDisplay').textContent = 
+    isToday ? '📍 Today' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function prevDay() {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() - 1);
+  currentDate = d.toISOString().split('T')[0];
+  loadEvents();
+  syncDateUI();
+}
+
+function nextDay() {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() + 1);
+  currentDate = d.toISOString().split('T')[0];
+  loadEvents();
+  syncDateUI();
+}
+
+function today() {
+  currentDate = new Date().toISOString().split('T')[0];
+  loadEvents();
+  syncDateUI();
+  scrollToNow();
+}
+
+function scrollToNow() {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const y = (mins / 60) * HOUR_HEIGHT;
+  document.querySelector('.planner-container').scrollTop = Math.max(0, y - 200);
+}
+
+function updateNowLine() {
+  const today = new Date().toISOString().split('T')[0];
+  if (currentDate !== today) return;
+  
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const y = (mins / 60) * HOUR_HEIGHT;
+  
+  let line = document.querySelector('.now-line');
+  if (!line) {
+    line = document.createElement('div');
+    line.className = 'now-line';
+    document.getElementById('grid').appendChild(line);
+  }
+  line.style.top = y + 'px';
+}
+
+async function loadEvents() {
+  try {
+    const r = await fetch(`/api/day-schedule/${currentDate}/`, {
+      headers: { 'X-CSRFToken': CSRF_TOKEN }
     });
-  }
-
-  // ========== PLAN MARKERS ==========
-  function renderPlanMarkers() {
-    plansLayer.innerHTML = '';
-
-    const planFirstStart = new Map();
-    for (const ev of events) {
-      const plans = (ev.planNames || []).filter(Boolean);
-      if (!plans.length) continue;
-
-      for (const p of plans) {
-        const existing = planFirstStart.get(p);
-        if (existing === undefined || ev.startMin < existing) planFirstStart.set(p, ev.startMin);
-      }
-    }
-
-    const sorted = Array.from(planFirstStart.entries()).sort((a, b) => a[1] - b[1]);
-    const H = hourHeightPx();
-
-    sorted.forEach(([planName, startMin], idx) => {
-      const top = ((startMin - START_HOUR * 60) / 60) * H;
-      const stagger = (idx % 3) * 18;
-
-      const marker = document.createElement('div');
-      marker.className = 'planner-plan-marker';
-      marker.style.top = `${Math.max(6, top + 6 + stagger)}px`;
-
-      marker.innerHTML = `
-        <span class="planner-plan-chip">
-          <i class="bi bi-diagram-3"></i>
-          ${escapeHtml(planName)}
-        </span>
-        <div class="planner-plan-line"></div>
-      `;
-      plansLayer.appendChild(marker);
-    });
-  }
-
-  // ========== RENDER EVENTS ==========
-  function render() {
-    // Ensure empty state is preserved
-    eventsLayer.innerHTML = '';
-    eventsLayer.appendChild(emptyState);
-
-    if (events.length === 0) {
-      emptyState.style.display = 'block';
-    } else {
-      emptyState.style.display = 'none';
-
-      events.sort((a, b) => a.startMin - b.startMin);
-      const H = hourHeightPx();
-
-      events.forEach(ev => {
-        const top = ((ev.startMin - START_HOUR * 60) / 60) * H;
-        const height = ((ev.endMin - ev.startMin) / 60) * H;
-        const duration = ev.endMin - ev.startMin;
-
-        const eventEl = document.createElement('div');
-        const isCalendarEvent = ev.isCalendarEvent || false;
-        eventEl.className = `planner-event${ev.logged ? ' logged' : ''}${isCalendarEvent ? ' calendar-event' : ''}`;
-        eventEl.style.top = `${top}px`;
-        eventEl.style.height = `${Math.max(48, height)}px`;
-        eventEl.dataset.id = ev.id;
-
-        eventEl.innerHTML = `
-          <div class="planner-event-header">
-            <div style="flex: 1; min-width: 0;">
-              <div class="planner-event-title">${escapeHtml(ev.title)}</div>
-              ${(ev.planNames && ev.planNames.length > 0) ? `
-                <div class="planner-plan-section">
-                  <div class="planner-plan-label">
-                    <i class="bi bi-diagram-3-fill"></i>
-                    <span>Part of Plan${ev.planNames.length > 1 ? 's' : ''}</span>
-                  </div>
-                  <div class="planner-plan-badges">
-                    ${ev.planNames.map(plan => `
-                      <span class="planner-plan-badge">
-                        <i class="bi bi-bookmark-fill"></i>
-                        ${escapeHtml(plan)}
-                      </span>
-                    `).join('')}
-                  </div>
-                </div>
-              ` : ''}
-            </div>
-            ${!isCalendarEvent ? `
-            <div class="planner-event-actions">
-              <button class="planner-event-btn edit-btn" data-id="${ev.id}" title="Edit">
-                <i class="bi bi-pencil"></i>
-              </button>
-              <button class="planner-event-btn delete delete-btn" data-id="${ev.id}" title="Delete">
-                <i class="bi bi-trash"></i>
-              </button>
-            </div>
-            ` : ''}
-          </div>
-          <div class="planner-event-meta">
-            <span class="planner-event-badge">
-              <i class="bi bi-clock"></i>
-              ${minutesToHHMM(ev.startMin)} – ${minutesToHHMM(ev.endMin)}
-            </span>
-            <span class="planner-event-badge">
-              <i class="bi bi-hourglass-split"></i>
-              ${duration} min
-            </span>
-          </div>
-        `;
-
-        eventsLayer.appendChild(eventEl);
-
-        // Only allow logging for non-calendar events
-        if (!isCalendarEvent) {
-          eventEl.addEventListener('click', (e) => {
-            if (!e.target.closest('.planner-event-btn')) {
-              logActivity(ev.id);
-            }
-          });
-        }
-      });
-
-      document.querySelectorAll('.edit-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const event = events.find(ev => ev.id === btn.dataset.id);
-          if (event) editEvent(event);
-        });
-      });
-
-      document.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          deleteEvent(btn.dataset.id);
-        });
-      });
-    }
-
-    renderPlanMarkers();
-    save();
-  }
-
-  // ========== CURRENT TIME INDICATOR ==========
-  function updateCurrentTime() {
-    const now = new Date();
-    const hours = now.getHours();
-    const minutes = now.getMinutes();
-
-    const today = new Date().toISOString().split('T')[0];
-    const isToday = currentDate === today;
-
-    if (isToday && hours >= START_HOUR && hours < END_HOUR) {
-      const minutesFromStart = (hours - START_HOUR) * 60 + minutes;
-      const top = (minutesFromStart / 60) * hourHeightPx();
-
-      currentTimeLine.style.top = `${top}px`;
-      currentTimeLine.classList.add('active');
-      currentTimeLabel.textContent = minutesToHHMM(hours * 60 + minutes);
-    } else {
-      currentTimeLine.classList.remove('active');
-    }
-  }
-
-  // ========== EVENT MODAL ==========
-  function openEventModal(startMinutes = null, event = null) {
-    if (event) {
-      editingEventId = event.id;
-      eventTitle.value = event.title;
-      eventStartTime.value = minutesToHHMM(event.startMin);
-      eventEndTime.value = minutesToHHMM(event.endMin);
-      selectedPlanNames = (event.planNames && event.planNames.length) ? [...event.planNames] : [];
-
-      if (eventModalTitle) eventModalTitle.textContent = 'Edit Event';
-      if (saveBtnText) saveBtnText.textContent = 'Save Changes';
-    } else {
-      editingEventId = null;
-      eventTitle.value = '';
-      selectedPlanNames = [];
-
-      if (eventModalTitle) eventModalTitle.textContent = 'Create Event';
-      if (saveBtnText) saveBtnText.textContent = 'Create Event';
-
-      if (startMinutes !== null) {
-        const s = clamp(snapTo15(startMinutes));
-        const e = clamp(snapTo15(Math.min(s + 60, END_HOUR * 60)));
-        eventStartTime.value = minutesToHHMM(s);
-        eventEndTime.value = minutesToHHMM(e);
-      } else {
-        eventStartTime.value = '09:00';
-        eventEndTime.value = '10:00';
-      }
-    }
-
-    eventModal.checked = true;
-    setTimeout(() => eventTitle.focus(), 100);
-  }
-
-  function closeEventModal() {
-    eventModal.checked = false;
-    editingEventId = null;
-  }
-
-  function editEvent(event) { openEventModal(null, event); }
-
-  function deleteEvent(id) {
-    const event = events.find(e => e.id === id);
-    if (!event) return;
-    if (confirm(`Delete "${event.title}"?`)) {
-      events = events.filter(e => e.id !== id);
+    const data = await r.json();
+    if (data.success) {
+      events = data.events || [];
       render();
     }
+  } catch (e) {
+    console.error('Load failed:', e);
   }
+}
 
-  // ========== HELPERS ==========
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
+async function saveToServer() {
+  try {
+    await fetch('/api/day-schedule/save/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ date: currentDate, events: events.filter(e => !e.isCalendarEvent) })
+    });
+  } catch (e) {
+    console.error('Save failed:', e);
   }
+}
 
-  // ========== ALERT MODAL ==========
-  function showAlert(title, message, type = 'info') {
-    const alertModal = document.getElementById('autoScheduleAlertModal');
-    const alertTitle = document.getElementById('alertTitle');
-    const alertMessage = document.getElementById('alertMessage');
-    const alertIcon = document.getElementById('alertIcon');
-    const alertIconContainer = document.getElementById('alertIconContainer');
-
-    alertTitle.textContent = title;
-    alertMessage.textContent = message;
-
-    alertIconContainer.className = 'w-10 h-10 rounded-xl flex items-center justify-center';
-    alertIcon.className = 'text-xl';
-
-    if (type === 'error') {
-      alertIconContainer.classList.add('bg-error/10');
-      alertIcon.classList.add('bi-exclamation-triangle-fill', 'text-error');
-    } else if (type === 'success') {
-      alertIconContainer.classList.add('bg-success/10');
-      alertIcon.classList.add('bi-check-circle-fill', 'text-success');
-    } else if (type === 'warning') {
-      alertIconContainer.classList.add('bg-warning/10');
-      alertIcon.classList.add('bi-exclamation-circle-fill', 'text-warning');
-    } else {
-      alertIconContainer.classList.add('bg-info/10');
-      alertIcon.classList.add('bi-info-circle-fill', 'text-info');
-    }
-
-    alertModal.checked = true;
-  }
-
-  // ========== LOG ACTIVITY ==========
-  function logActivity(eventId) {
-    const event = events.find(e => e.id === eventId);
-    if (!event) return;
-    if (event.logged) return;
-
-    const eventEl = document.querySelector(`[data-id="${eventId}"]`);
-    if (eventEl) eventEl.classList.add('logging');
-
-    // Format activity name with plan information if available
-    let activityName = `worked on ${event.title}`;
-    if (event.planNames && event.planNames.length > 0) {
-      const planName = event.planNames[0]; // Use first plan if multiple
-      activityName = `worked on ${event.title} for ${planName}`;
+function render() {
+  document.querySelectorAll('.event-card').forEach(el => el.remove());
+  
+  const grid = document.getElementById('grid');
+  events.forEach(ev => {
+    const card = document.createElement('div');
+    card.className = 'event-card';
+    if (ev.isCalendarEvent) card.classList.add('calendar-event');
+    if (ev.complete) card.classList.add('complete');
+    card.dataset.id = ev.id;
+    card.style.top = ((ev.startMin / 60) * HOUR_HEIGHT) + 'px';
+    card.style.height = (((ev.endMin - ev.startMin) / 60) * HOUR_HEIGHT) + 'px';
+    
+    const header = document.createElement('div');
+    header.className = 'event-header';
+    
+    const title = document.createElement('div');
+    title.className = 'event-title';
+    title.textContent = ev.title;
+    
+    const badge = document.createElement('span');
+    badge.className = 'event-badge';
+    badge.textContent = ev.isCalendarEvent ? '📆 Cal' : '✏️ Custom';
+    
+    header.appendChild(title);
+    header.appendChild(badge);
+    
+    const time = document.createElement('div');
+    time.className = 'event-time';
+    const duration = ev.endMin - ev.startMin;
+    const durationText = duration >= 60 
+      ? `${Math.floor(duration / 60)}h ${duration % 60}m`
+      : `${duration}m`;
+    time.innerHTML = `
+      ${formatTime(ev.startMin)} - ${formatTime(ev.endMin)}
+      <span class="event-duration">${durationText}</span>
+    `;
+    
+    const actions = document.createElement('div');
+    actions.className = 'event-actions';
+    actions.innerHTML = `
+      <button class="event-btn" onclick="editEvent('${ev.id}'); event.stopPropagation();" title="Edit">✏️</button>
+      <button class="event-btn" onclick="quickDelete('${ev.id}'); event.stopPropagation();" title="Delete">🗑️</button>
+    `;
+    
+    card.appendChild(header);
+    card.appendChild(time);
+    card.appendChild(actions);
+    
+    if (!ev.isCalendarEvent) {
+      card.addEventListener('mousedown', startDrag);
+      card.addEventListener('touchstart', startDrag, { passive: false });
     }
     
-    const duration = Math.round((event.endMin - event.startMin));
+    grid.appendChild(card);
+  });
+  
+  updateStats();
+}
 
-    fetch('{% url "quick_log_activity" %}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': CSRF_TOKEN
-      },
-      body: JSON.stringify({ activity: activityName, duration: duration })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.success) {
-        event.logged = true;
-        render();
+function updateStats() {
+  const count = events.length;
+  const total = events.reduce((sum, ev) => sum + (ev.endMin - ev.startMin), 0);
+  const hours = Math.floor(total / 60);
+  
+  document.getElementById('eventCount').textContent = count;
+  document.getElementById('timeScheduled').textContent = hours + 'h';
+}
 
-        const toast = document.createElement('div');
-        toast.className = 'toast toast-top toast-end';
-        toast.innerHTML = `
-          <div class="alert alert-success">
-            <i class="bi bi-check-circle-fill"></i>
-            <span>${data.message}</span>
-          </div>
+function startDrag(e) {
+  const card = e.currentTarget;
+  const id = card.dataset.id;
+  const event = events.find(ev => ev.id === id);
+  if (!event || event.isCalendarEvent) return;
+  
+  // Support both mouse and touch events
+  const startClientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+  
+  const rect = card.getBoundingClientRect();
+  const container = document.querySelector('.planner-container');
+  const gridRect = document.getElementById('grid').getBoundingClientRect();
+  
+  // Track if drag has actually started (threshold-based)
+  let isDragging = false;
+  const DRAG_THRESHOLD = 10; // pixels
+  
+  dragState = {
+    id,
+    offsetY: startClientY - rect.top,
+    origStartMin: event.startMin,
+    origEndMin: event.endMin,
+    startY: startClientY
+  };
+  
+  const onMove = (e) => {
+    if (!dragState) return;
+    
+    // Support both mouse and touch events
+    const moveY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+    
+    // Check if we've moved enough to start dragging
+    if (!isDragging) {
+      const distance = Math.abs(moveY - dragState.startY);
+      if (distance < DRAG_THRESHOLD) {
+        // Not moved enough yet, allow scrolling
+        return;
+      }
+      // Threshold exceeded, start dragging
+      isDragging = true;
+      card.classList.add('dragging');
+    }
+    
+    // Now we're actually dragging, prevent scrolling
+    if (e.type === 'touchmove') {
+      e.preventDefault();
+    }
+    
+    const y = moveY - gridRect.top + container.scrollTop - dragState.offsetY;
+    const mins = Math.round((y / HOUR_HEIGHT) * 60 / 15) * 15;
+    const duration = dragState.origEndMin - dragState.origStartMin;
+    
+    const newStart = Math.max(0, Math.min(1440 - duration, mins));
+    const newEnd = newStart + duration;
+    
+    const ev = events.find(e => e.id === dragState.id);
+    if (ev) {
+      ev.startMin = newStart;
+      ev.endMin = newEnd;
+      card.style.top = ((newStart / 60) * HOUR_HEIGHT) + 'px';
+      const timeDisplay = card.querySelector('.event-time');
+      if (timeDisplay) {
+        timeDisplay.innerHTML = `
+          ${formatTime(newStart)} - ${formatTime(newEnd)}
+          <span class="event-duration">${duration >= 60 ? Math.floor(duration / 60) + 'h ' + (duration % 60) + 'm' : duration + 'm'}</span>
         `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-      } else {
-        throw new Error(data.error || 'Failed to log activity');
       }
-    })
-    .catch(error => {
-      console.error('Error logging activity:', error);
-      if (eventEl) eventEl.classList.remove('logging');
-
-      const toast = document.createElement('div');
-      toast.className = 'toast toast-top toast-end';
-      toast.innerHTML = `
-        <div class="alert alert-error">
-          <i class="bi bi-exclamation-triangle-fill"></i>
-          <span>Failed to log activity</span>
-        </div>
-      `;
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 3000);
-    });
+    }
+  };
+  
+  const onUp = () => {
+    if (dragState) {
+      if (isDragging) {
+        // Only save if we actually dragged
+        saveToServer();
+        updateStats();
+      }
+      card.classList.remove('dragging');
+      dragState = null;
+      isDragging = false;
+    }
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onUp);
+  };
+  
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchmove', onMove, { passive: false });
+  document.addEventListener('touchend', onUp);
+  
+  // Don't prevent default on initial touch - allow scrolling
+  if (e.type === 'mousedown') {
+    e.preventDefault();
   }
+}
 
-  // ========== SAVE EVENT ==========
-  saveEventBtn.addEventListener('click', () => {
-    const title = eventTitle.value.trim();
-    if (!title) {
-      eventTitle.focus();
-      showAlert('Missing Title', 'Please enter an event title.', 'warning');
-      return;
-    }
+function formatTime(mins) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
 
-    let startMin = snapTo15(hhmmToMinutes(eventStartTime.value));
-    let endMin = snapTo15(hhmmToMinutes(eventEndTime.value));
-
-    startMin = clamp(startMin);
-    endMin = clamp(endMin);
-
-    if (endMin <= startMin) {
-      showAlert('Invalid Time Range', 'End time must be after start time.', 'error');
-      return;
-    }
-
-    const ignoreId = editingEventId || null;
-    if (overlapsAny(startMin, endMin, ignoreId)) {
-      showAlert('Time Conflict', 'This event overlaps with another one. Adjust the time window.', 'warning');
-      return;
-    }
-
-    if (editingEventId) {
-      const event = events.find(e => e.id === editingEventId);
-      if (event) {
-        event.title = title;
-        event.startMin = startMin;
-        event.endMin = endMin;
-        event.planNames = [...selectedPlanNames];
-      }
-    } else {
-      events.push({
-        id: uid(),
-        title,
-        startMin,
-        endMin,
-        logged: false,
-        planNames: [...selectedPlanNames]
-      });
-    }
-
-    selectedPlanNames = [];
-    closeEventModal();
-    render();
-  });
-
-  eventTitle.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') saveEventBtn.click();
-  });
-
-  // ========== TASK SELECTION ==========
-  document.querySelectorAll('.task-select-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      eventTitle.value = this.dataset.taskTitle;
-      const planNamesStr = this.dataset.planNames || '';
-      selectedPlanNames = planNamesStr ? planNamesStr.split(',').map(p => p.trim()).filter(Boolean) : [];
-    });
-  });
-
-  document.querySelectorAll('.quick-task-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const planNamesStr = this.dataset.planNames || '';
-      const taskPlanNames = planNamesStr ? planNamesStr.split(',').map(p => p.trim()).filter(Boolean) : [];
-
-      openEventModal(null, null);
-      eventTitle.value = this.dataset.taskTitle;
-      selectedPlanNames = taskPlanNames;
-    });
-  });
-
-  // ========== AUTOMATIC SCHEDULING ==========
-  function autoScheduleDay() {
-    const taskData = [];
-    document.querySelectorAll('.task-select-btn').forEach(btn => {
-      const taskTitle = btn.dataset.taskTitle;
-      const planNamesStr = btn.dataset.planNames || '';
-      const planNames = planNamesStr ? planNamesStr.split(',').map(p => p.trim()).filter(Boolean) : [];
-      taskData.push({ title: taskTitle, planNames });
-    });
-
-    if (taskData.length === 0) {
-      showAlert('No Tasks Available', 'No tasks available to schedule. Add some pending tasks or plan tasks first!', 'warning');
-      return;
-    }
-
+function newEvent(startMin = null) {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'New Event';
+  document.getElementById('deleteBtn').style.display = 'none';
+  
+  if (startMin === null) {
     const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    const nextSlot = Math.ceil(currentMinutes / 30) * 30;
-    const suggestedStart = nextSlot < 9 * 60 ? '09:00' : minutesToHHMM(nextSlot);
-
-    const autoScheduleStartTime = document.getElementById('autoScheduleStartTime');
-    const autoScheduleEndTime = document.getElementById('autoScheduleEndTime');
-    const autoScheduleSuggestion = document.getElementById('autoScheduleSuggestion');
-    const autoSchedulePreview = document.getElementById('autoSchedulePreview');
-
-    autoScheduleStartTime.value = suggestedStart;
-    autoScheduleEndTime.value = '17:00';
-    autoScheduleSuggestion.textContent = `Suggested: ${suggestedStart}`;
-    autoSchedulePreview.classList.add('hidden');
-
-    const updatePreview = () => {
-      const startTime = autoScheduleStartTime.value;
-      const endTime = autoScheduleEndTime.value;
-      if (!startTime || !endTime) return;
-
-      const START_WORK = hhmmToMinutes(startTime);
-      const END_WORK = hhmmToMinutes(endTime);
-
-      if (START_WORK >= END_WORK || START_WORK < currentMinutes) {
-        autoSchedulePreview.classList.add('hidden');
-        return;
-      }
-
-      const TOTAL_WORK_MINS = END_WORK - START_WORK;
-      const BREAK_TIME = 10;
-      const MIN_TASK_DURATION = 30;
-      const maxTasks = Math.floor((TOTAL_WORK_MINS + BREAK_TIME) / (MIN_TASK_DURATION + BREAK_TIME));
-
-      if (maxTasks < 1) {
-        autoSchedulePreview.classList.add('hidden');
-        return;
-      }
-
-      const numTasks = Math.min(taskData.length, maxTasks);
-      const hours = Math.floor(TOTAL_WORK_MINS / 60);
-      const mins = TOTAL_WORK_MINS % 60;
-      const timeStr = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-
-      document.getElementById('autoSchedulePreviewText').textContent =
-        `Will schedule ${numTasks} task${numTasks > 1 ? 's' : ''} across ${timeStr}`;
-      autoSchedulePreview.classList.remove('hidden');
-    };
-
-    autoScheduleStartTime.oninput = updatePreview;
-    autoScheduleEndTime.oninput = updatePreview;
-    updatePreview();
-
-    document.getElementById('autoScheduleModal').checked = true;
+    startMin = now.getHours() * 60 + Math.round(now.getMinutes() / 15) * 15;
   }
+  
+  document.getElementById('eventTitle').value = '';
+  document.getElementById('eventDescription').value = '';
+  document.getElementById('eventStart').value = formatTime(startMin);
+  document.getElementById('eventEnd').value = formatTime(Math.min(1440, startMin + 60));
+  
+  document.getElementById('modal').classList.add('active');
+  document.getElementById('eventTitle').focus();
+}
 
-  document.getElementById('confirmAutoScheduleBtn').addEventListener('click', async () => {
-    const autoScheduleStartTime = document.getElementById('autoScheduleStartTime');
-    const autoScheduleEndTime = document.getElementById('autoScheduleEndTime');
-    const autoScheduleModal = document.getElementById('autoScheduleModal');
+function editEvent(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Event';
+  document.getElementById('deleteBtn').style.display = 'block';
+  
+  document.getElementById('eventTitle').value = ev.title;
+  document.getElementById('eventDescription').value = ev.description || '';
+  document.getElementById('eventStart').value = formatTime(ev.startMin);
+  document.getElementById('eventEnd').value = formatTime(ev.endMin);
+  
+  document.getElementById('modal').classList.add('active');
+  document.getElementById('eventTitle').focus();
+}
 
-    const startTime = autoScheduleStartTime.value;
-    const endTime = autoScheduleEndTime.value;
-
-    if (!startTime || !endTime) {
-      showAlert('Invalid Input', 'Please enter both start and end times.', 'error');
-      return;
+function saveEvent() {
+  const title = document.getElementById('eventTitle').value.trim();
+  if (!title) {
+    showResult('⚠️ Validation Error', 'Please enter an event title.', false);
+    return;
+  }
+  
+  const startTime = document.getElementById('eventStart').value;
+  const endTime = document.getElementById('eventEnd').value;
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  
+  if (endMin <= startMin) {
+    showResult('⚠️ Validation Error', 'End time must be after start time.', false);
+    return;
+  }
+  
+  if (editingId) {
+    const ev = events.find(e => e.id === editingId);
+    if (ev) {
+      ev.title = title;
+      ev.startMin = startMin;
+      ev.endMin = endMin;
+      ev.description = document.getElementById('eventDescription').value;
     }
-
-    const taskData = [];
-    document.querySelectorAll('.task-select-btn').forEach(btn => {
-      const taskTitle = btn.dataset.taskTitle;
-      const planNamesStr = btn.dataset.planNames || '';
-      const planNames = planNamesStr ? planNamesStr.split(',').map(p => p.trim()).filter(Boolean) : [];
-      taskData.push({ title: taskTitle, planNames });
+  } else {
+    events.push({
+      id: 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+      title,
+      startMin,
+      endMin,
+      description: document.getElementById('eventDescription').value,
+      logged: false
     });
-
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    const START_WORK = hhmmToMinutes(startTime);
-    const END_WORK = hhmmToMinutes(endTime);
-
-    if (START_WORK >= END_WORK) {
-      showAlert('Invalid Time Range', 'End time must be after start time!', 'error');
-      return;
-    }
-
-    if (START_WORK < currentMinutes) {
-      showAlert('Invalid Start Time', `Start time cannot be in the past! Please choose a time after ${minutesToHHMM(currentMinutes)}`, 'error');
-      return;
-    }
-
-    const TOTAL_WORK_MINS = END_WORK - START_WORK;
-
-    const BREAK_TIME = 10;
-    const MIN_TASK_DURATION = 30;
-    const maxTasks = Math.floor((TOTAL_WORK_MINS + BREAK_TIME) / (MIN_TASK_DURATION + BREAK_TIME));
-
-    if (maxTasks < 1) {
-      showAlert('Time Window Too Short', 'Time window is too short! Please choose a longer time period.', 'error');
-      return;
-    }
-
-    autoScheduleModal.checked = false;
-
-    // Preserve calendar events, only clear manual events
-    const calendarEvents = events.filter(ev => ev.isCalendarEvent);
-    events = [...calendarEvents];
-
-    const numTasks = Math.min(taskData.length, maxTasks);
-    const totalBreakTime = (numTasks - 1) * BREAK_TIME;
-    const availableWorkTime = TOTAL_WORK_MINS - totalBreakTime;
-    const timePerTask = Math.floor(availableWorkTime / numTasks);
-
-    let currentTime = START_WORK;
-
-    for (let i = 0; i < numTasks; i++) {
-      const task = taskData[i];
-      const startMin = currentTime;
-      const endMin = currentTime + timePerTask;
-
-      events.push({
-        id: uid(),
-        title: task.title,
-        startMin,
-        endMin,
-        logged: false,
-        planNames: [...(task.planNames || [])],
-        isCalendarEvent: false  // Explicitly mark as manual event
-      });
-
-      currentTime = endMin + BREAK_TIME;
-    }
-
-    // Wait for render and save to complete
-    render();
-    await save();
-
-    if (taskData.length > numTasks) {
-      showAlert(
-        'Schedule Created',
-        `Scheduled ${numTasks} tasks. ${taskData.length - numTasks} task${taskData.length - numTasks > 1 ? 's' : ''} remaining - add them manually or adjust the time window!`,
-        'success'
-      );
-    } else {
-      showAlert('Schedule Created', `Successfully scheduled ${numTasks} task${numTasks > 1 ? 's' : ''}!`, 'success');
-    }
-  });
-
-  document.getElementById('autoScheduleBtn').addEventListener('click', autoScheduleDay);
-  document.getElementById('quickAddBtn').addEventListener('click', () => openEventModal(null, null));
-
-  // ========== DATE NAVIGATION ==========
-  async function changeDate(daysOffset) {
-    const d = new Date(currentDate);
-    d.setDate(d.getDate() + daysOffset);
-    currentDate = d.toISOString().split('T')[0];
-
-    await load();
-    render();
-    updateCurrentTime();
-    syncDateUI();
   }
+  
+  closeModal();
+  render();
+  saveToServer();
+}
 
-  document.getElementById('prevDayBtn').addEventListener('click', async () => { await changeDate(-1); });
-  document.getElementById('nextDayBtn').addEventListener('click', async () => { await changeDate(1); });
-  document.getElementById('todayBtn').addEventListener('click', async () => {
-    currentDate = new Date().toISOString().split('T')[0];
-    await load();
+function deleteEvent() {
+  if (!editingId || !confirm('Delete this event?')) return;
+  events = events.filter(e => e.id !== editingId);
+  closeModal();
+  render();
+  saveToServer();
+}
+
+function quickDelete(id) {
+  if (confirm('Delete this event?')) {
+    events = events.filter(e => e.id !== id);
     render();
-    updateCurrentTime();
-    syncDateUI();
-  });
+    saveToServer();
+  }
+}
 
-  if (datePicker){
-    datePicker.addEventListener('change', async () => {
-      if (!datePicker.value) return;
-      currentDate = datePicker.value;
-      await load();
+async function autoSchedule() {
+  document.getElementById('autoScheduleModal').classList.add('active');
+}
+
+function closeAutoScheduleModal() {
+  document.getElementById('autoScheduleModal').classList.remove('active');
+}
+
+async function executeAutoSchedule() {
+  const startTime = document.getElementById('autoStartTime').value;
+  const endTime = document.getElementById('autoEndTime').value;
+  
+  if (!startTime || !endTime) {
+    showResult('Error', 'Please enter both start and end times.', false);
+    return;
+  }
+  
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  
+  if (endMin <= startMin) {
+    showResult('Error', 'End time must be after start time.', false);
+    return;
+  }
+  
+  closeAutoScheduleModal();
+  
+  try {
+    const response = await fetch('/api/day-schedule/smart-schedule/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({
+        date: currentDate,
+        start_time: startTime,
+        end_time: endTime,
+        existing_events: events.filter(e => !e.isCalendarEvent).map(e => ({
+          id: e.id,
+          title: e.title,
+          start_minutes: e.startMin,
+          end_minutes: e.endMin
+        }))
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Merge auto-scheduled events with existing calendar events
+      const calendarEvents = events.filter(e => e.isCalendarEvent);
+      events = [...calendarEvents, ...data.events.map(e => ({
+        id: e.id || 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+        title: e.title,
+        startMin: e.startMin,
+        endMin: e.endMin,
+        logged: false,
+        isCalendarEvent: false
+      }))];
+      
       render();
-      updateCurrentTime();
-      syncDateUI();
-    });
-  }
-
-  // ========== STATS ==========
-  function updateStats() {
-    document.getElementById('eventCount').textContent = events.length;
-    const totalMinutes = events.reduce((sum, ev) => sum + (ev.endMin - ev.startMin), 0);
-    const hours = Math.floor(totalMinutes / 60);
-    const mins = totalMinutes % 60;
-    document.getElementById('totalHours').textContent = mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-  }
-
-  // ========== AUTO-SAVE TITLE ==========
-  let titleDebounce;
-  dayTitleEl.addEventListener('input', () => {
-    clearTimeout(titleDebounce);
-    titleDebounce = setTimeout(() => save(), 300);
-  });
-
-  // ========== KEYBOARD SHORTCUTS ==========
-  document.addEventListener('keydown', async (e) => {
-    const modalOpen = eventModal && eventModal.checked;
-
-    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
-    const typing = ['input','textarea','select'].includes(tag);
-
-    if (e.key === 'Escape' && modalOpen){ closeEventModal(); return; }
-    if (typing) return;
-
-    if (e.key.toLowerCase() === 'n') openEventModal(null, null);
-    if (e.key.toLowerCase() === 't') {
-      currentDate = new Date().toISOString().split('T')[0];
-      await load(); render(); updateCurrentTime(); syncDateUI();
+      saveToServer();
+      
+      const message = `Successfully scheduled ${data.events.length} task${data.events.length !== 1 ? 's' : ''}!${data.message ? '\n\n' + data.message : ''}`;
+      showResult('✅ Success', message, true);
+    } else {
+      showResult('❌ Error', 'Auto-scheduling failed: ' + (data.error || 'Unknown error'), false);
     }
-    if (e.key === 'ArrowLeft') await changeDate(-1);
-    if (e.key === 'ArrowRight') await changeDate(1);
-  });
+  } catch (error) {
+    console.error('Auto-schedule error:', error);
+    showResult('❌ Error', 'Failed to auto-schedule. Please try again.', false);
+  }
+}
 
-  // ========== INIT ==========
-  buildTimeline();
-  load().then(() => {
-    render();
-    updateCurrentTime();
-    syncDateUI();
-  });
+function showResult(title, message, isSuccess) {
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultMessage').innerHTML = message.replace(/\n/g, '<br>');
+  document.getElementById('resultModal').classList.add('active');
+}
 
-  setInterval(updateCurrentTime, 60000);
+function closeResultModal() {
+  document.getElementById('resultModal').classList.remove('active');
+}
 
-  window.addEventListener('resize', () => {
-    buildTimeline();
-    render();
-    updateCurrentTime();
-  });
-});
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  editingId = null;
+}
+
+document.addEventListener('DOMContentLoaded', init);
 </script>
-</div>
 
 {% endblock %}

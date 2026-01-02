@@ -745,45 +745,81 @@
   </div>
 </main>
 
-<!-- Star toggle script -->
+<!-- Star toggle script - FIXED: Memory leak from multiple event listeners -->
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  document.querySelectorAll('.star-btn').forEach(button => {
-    button.addEventListener('click', async function () {
-      const activityType = this.dataset.activityType;
-      const activityId = this.dataset.activityId;
-      const starIcon = this.querySelector('.bi');
-      const starCount = this.querySelector('.star-count');
-
-      try {
-        const response = await fetch('{% url "toggle_star_reaction" %}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: JSON.stringify({ activity_type: activityType, activity_id: activityId })
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          const starred = !!data.starred;
-          starIcon.classList.toggle('bi-star-fill', starred);
-          starIcon.classList.toggle('bi-star', !starred);
-          starIcon.classList.toggle('text-warning', starred);
-          this.setAttribute('aria-label', starred ? 'Unstar this activity' : 'Star this activity');
-          starCount.textContent = data.star_count;
-        } else {
-          console.error('Error:', data.error);
-        }
-      } catch (err) {
-        console.error('Network error:', err);
+(function() {
+  'use strict';
+  
+  if (window.__dashboardRestructuredInitialized) return;
+  window.__dashboardRestructuredInitialized = true;
+  
+  let isProcessingClick = false;
+  let lastClickTime = 0;
+  
+  document.addEventListener('click', function(event) {
+    const button = event.target.closest('.star-btn');
+    if (!button) return;
+    
+    const now = Date.now();
+    if (now - lastClickTime < 500) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    lastClickTime = now;
+    
+    if (isProcessingClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    
+    event.preventDefault();
+    event.stopPropagation();
+    
+    isProcessingClick = true;
+    button.disabled = true;
+    
+    const activityType = button.dataset.activityType;
+    const activityId = button.dataset.activityId;
+    const starIcon = button.querySelector('.bi');
+    const starCount = button.querySelector('.star-count');
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    
+    fetch('{% url "toggle_star_reaction" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({ activity_type: activityType, activity_id: activityId }),
+      signal: controller.signal
+    })
+    .then(response => response.json())
+    .then(data => {
+      clearTimeout(timeoutId);
+      if (data.starred !== undefined) {
+        const starred = !!data.starred;
+        starIcon.classList.toggle('bi-star-fill', starred);
+        starIcon.classList.toggle('bi-star', !starred);
+        starIcon.classList.toggle('text-warning', starred);
+        button.setAttribute('aria-label', starred ? 'Unstar this activity' : 'Star this activity');
+        if (starCount) starCount.textContent = data.star_count;
       }
+    })
+    .catch(err => {
+      clearTimeout(timeoutId);
+      if (err.name !== 'AbortError') console.error('Network error:', err);
+    })
+    .finally(() => {
+      isProcessingClick = false;
+      button.disabled = false;
     });
-  });
-});
+  }, { passive: false });
+})();
 </script>
 
 

@@ -1,0 +1,1878 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Day Planner - VisMatrix{% endblock %}
+
+{% block content %}
+<!-- SIMPLIFIED DAY PLANNER - Rewritten from scratch for performance -->
+<style>
+  /* =========================================================
+     DAY PLANNER v3 FIXED — PERFORMANCE OPTIMIZED
+     ========================================================= */
+
+  #dayPlannerPage{
+    --planner-hour-height: 80px;
+    --planner-time-col: 90px;
+    --planner-gutter: 14px;
+    --dp-snap: 15;
+    
+    /* Premium Color System */
+    --dp-now: #ef4444;
+    --dp-hour-line: oklch(var(--bc) / 0.12);
+    --dp-quarter-line: oklch(var(--bc) / 0.05);
+    --dp-hover-bg: oklch(var(--p) / 0.08);
+    --dp-hover-border: oklch(var(--p) / 0.35);
+    
+    /* Layered Shadows */
+    --dp-shadow-sm: 0 2px 8px oklch(var(--b1) / 0.08);
+    --dp-shadow-md: 0 4px 16px oklch(var(--b1) / 0.12);
+    --dp-shadow-lg: 0 8px 32px oklch(var(--b1) / 0.16);
+    --dp-shadow-xl: 0 12px 48px oklch(var(--b1) / 0.24);
+    
+    /* Animation Variables */
+    --dp-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --dp-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  #dayPlannerPage main{ 
+    padding-bottom: 40px; 
+  }
+  
+  @keyframes slideInUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  @keyframes scaleIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  
+  .animate-slide-in {
+    animation: slideInUp 0.4s ease-out;
+  }
+
+  .planner-container{
+    display: grid;
+    grid-template-columns: var(--planner-time-col) 1fr;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px oklch(var(--b1) / 0.12);
+    border: 1px solid oklch(var(--bc) / 0.08);
+    background: oklch(var(--b1));
+    max-height: min(80vh, 900px);
+    position: relative;
+    transition: box-shadow 0.2s ease;
+  }
+  
+  .planner-container:hover {
+    box-shadow: 0 8px 20px oklch(var(--b1) / 0.18);
+    border-color: oklch(var(--bc) / 0.12);
+  }
+
+  .planner-time-labels{
+    background: 
+      linear-gradient(180deg, 
+        oklch(var(--b2) / 0.95) 0%, 
+        oklch(var(--b2) / 0.80) 50%,
+        oklch(var(--b2) / 0.60) 100%
+      ),
+      radial-gradient(circle at center, oklch(var(--p) / 0.03), transparent);
+    border-right: 1px solid oklch(var(--bc) / 0.12);
+    box-shadow: inset -1px 0 0 oklch(var(--bc) / 0.05);
+    z-index: 30;
+    overflow: hidden;
+    position: relative;
+  }
+  
+  .planner-time-labels::before{
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(180deg, 
+      oklch(var(--p) / 0.15) 0%, 
+      transparent 50%,
+      oklch(var(--s) / 0.15) 100%
+    );
+  }
+
+  .planner-time-slot{
+    height: var(--planner-hour-height);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: 10px 6px;
+    border-bottom: 1px solid oklch(var(--bc) / 0.06);
+    user-select:none;
+    position:relative;
+    transition: background 0.2s ease;
+  }
+  
+  .planner-time-slot:hover {
+    background: oklch(var(--bc) / 0.03);
+  }
+  
+  .planner-time-slot .hour{ 
+    font-size: 22px; 
+    font-weight: 900; 
+    color: oklch(var(--bc) / 1);
+    letter-spacing: -0.8px;
+    line-height: 1;
+    text-shadow: 0 1px 2px oklch(var(--b1) / 0.1);
+  }
+  
+  .planner-time-slot .period{ 
+    font-size: 9px; 
+    margin-top: 4px; 
+    opacity: 0.65; 
+    letter-spacing: 1.2px; 
+    font-weight: 900;
+    text-transform: uppercase;
+    color: oklch(var(--bc) / 0.70);
+  }
+  .planner-time-slot::after{
+    content:"";
+    position:absolute;
+    right:10px;
+    width:10px;
+    height:1px;
+    background: oklch(var(--bc) / 0.14);
+    top:50%;
+    transform: translateY(-50%);
+  }
+
+  .planner-sticky-toolbar{
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(12px);
+    background: oklch(var(--b1) / 0.95);
+    border-bottom: 1px solid oklch(var(--bc) / 0.10);
+    box-shadow: 0 2px 8px oklch(var(--b1) / 0.08);
+    transition: none;
+  }
+  
+  .planner-sticky-toolbar:hover {
+    background: oklch(var(--b1) / 0.98);
+    box-shadow: 0 4px 12px oklch(var(--b1) / 0.12);
+  }
+
+  .planner-timeline{
+    position: relative;
+    overflow: auto;
+    background: 
+      radial-gradient(circle at top left, oklch(var(--p) / 0.03), transparent 60%),
+      radial-gradient(circle at bottom right, oklch(var(--s) / 0.03), transparent 60%),
+      linear-gradient(180deg, oklch(var(--b1)) 0%, oklch(var(--b2) / 0.15) 100%);
+    user-select: none;
+    touch-action: pan-y;
+    scroll-behavior: smooth;
+  }
+
+  .planner-timeline::-webkit-scrollbar {
+    width: 10px;
+  }
+  .planner-timeline::-webkit-scrollbar-track {
+    background: oklch(var(--b2) / 0.3);
+    border-radius: 8px;
+  }
+  .planner-timeline::-webkit-scrollbar-thumb {
+    background: oklch(var(--p) / 0.4);
+    border-radius: 8px;
+    border: 2px solid oklch(var(--b1));
+  }
+  .planner-timeline::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--p) / 0.6);
+  }
+
+  .planner-time-labels::-webkit-scrollbar {
+    width: 0px;
+  }
+
+  .planner-spacer{
+    position: relative;
+    min-height: calc(24 * var(--planner-hour-height));
+  }
+
+  .planner-hours-canvas{
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .planner-hour-slot{
+    height: var(--planner-hour-height);
+    position: relative;
+    border-bottom: 2px solid var(--dp-hour-line);
+  }
+
+  .planner-hour-slot:last-child{
+    border-bottom: none;
+  }
+
+  .planner-hour-divider{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--dp-hour-line);
+  }
+
+  .planner-quarter-marks{
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+  }
+
+  .quarter-mark{
+    height: 1px;
+    background: var(--dp-quarter-line);
+    margin: 0 12px;
+  }
+
+  .planner-grid{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        var(--dp-hour-line) 0px,
+        var(--dp-hour-line) 1px,
+        transparent 1px,
+        transparent var(--planner-hour-height)
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent calc(var(--planner-hour-height) / 4 - 1px),
+        var(--dp-quarter-line) calc(var(--planner-hour-height) / 4 - 1px),
+        var(--dp-quarter-line) calc(var(--planner-hour-height) / 4),
+        transparent calc(var(--planner-hour-height) / 4),
+        transparent var(--planner-hour-height)
+      );
+  }
+
+  .dp-ghost{
+    position: absolute;
+    left: var(--planner-gutter);
+    right: var(--planner-gutter);
+    border-radius: 18px;
+    border: 2px dashed var(--dp-hover-border);
+    background: 
+      linear-gradient(135deg, 
+        oklch(var(--p) / 0.12) 0%, 
+        oklch(var(--s) / 0.08) 100%);
+    backdrop-filter: blur(12px);
+    pointer-events: none;
+    z-index: 20;
+    display: none;
+    animation: ghostPulse 2s ease-in-out infinite;
+    box-shadow: 
+      inset 0 1px 0 oklch(var(--pc) / 0.08),
+      0 4px 12px oklch(var(--p) / 0.08);
+  }
+  .dp-ghost.active{ display: block; }
+  
+  @keyframes ghostPulse{
+    0%, 100%{ opacity: 0.85; }
+    50%{ opacity: 1; }
+  }
+  
+  .dp-ghost-label{
+    position: absolute;
+    right: 16px;
+    top: 12px;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.6px;
+    color: oklch(var(--p));
+    background: oklch(var(--b1));
+    border: 1px solid oklch(var(--p) / 0.25);
+    padding: 7px 16px;
+    border-radius: 999px;
+    backdrop-filter: blur(16px);
+    box-shadow: 
+      0 2px 8px oklch(var(--p) / 0.15),
+      inset 0 1px 0 oklch(var(--pc) / 0.10);
+    transition: none;
+  }
+
+  .dp-drag-select{
+    position:absolute;
+    left: var(--planner-gutter);
+    right: var(--planner-gutter);
+    border-radius: 14px;
+    background: oklch(var(--p) / 0.10);
+    border: 2px solid oklch(var(--p) / 0.45);
+    z-index: 25;
+    pointer-events:none;
+    display:none;
+  }
+  .dp-drag-select.active{ display:block; }
+
+  .planner-events-layer{
+    position:absolute;
+    inset: 0;
+    pointer-events:none;
+    z-index: 30;
+  }
+
+  .planner-empty-state{
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    color: oklch(var(--bc) / 0.45);
+    pointer-events: none;
+    z-index: 1;
+    background: 
+      radial-gradient(circle at center, oklch(var(--p) / 0.04), transparent 70%),
+      oklch(var(--b1) / 0.85);
+    border: 2px dashed oklch(var(--bc) / 0.18);
+    border-radius: 28px;
+    padding: 48px 32px;
+    width: min(560px, 94%);
+    box-shadow: 
+      0 8px 32px oklch(var(--b1) / 0.15),
+      inset 0 1px 0 oklch(var(--pc) / 0.05);
+    backdrop-filter: blur(16px) saturate(180%);
+    animation: scaleIn 0.5s var(--dp-bounce);
+  }
+  .planner-empty-state i{ 
+    font-size: 72px; 
+    margin-bottom: 20px; 
+    opacity: 0.35;
+    background: linear-gradient(135deg, 
+      oklch(var(--p)) 0%, 
+      oklch(var(--s)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+    animation: pulse 3s ease-in-out infinite;
+  }
+  .planner-empty-state p{ 
+    font-size: 16px; 
+    font-weight: 700; 
+    color: oklch(var(--bc) / 0.65);
+    line-height: 1.6;
+  }
+
+  .planner-current-time{ position:absolute; left:0; right:0; z-index: 50; pointer-events:none; display:none; }
+  .planner-current-time.active{ display:block; }
+  .planner-current-time-line{
+    height: 3px; background: var(--dp-now); border-radius: 999px;
+    box-shadow: 0 0 12px rgba(255,68,68,.55);
+    position:relative;
+  }
+  .planner-current-time-dot{
+    position:absolute; left: 10px; top: -6px;
+    width: 14px; height:14px; border-radius:50%;
+    background: var(--dp-now);
+    border: 3px solid oklch(var(--b1));
+    box-shadow: 0 2px 10px rgba(255,68,68,.45);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .planner-current-time-label{
+    position:absolute; left: 42px; top: -22px;
+    background: var(--dp-now); color: #fff;
+    padding: 4px 12px; border-radius: 12px;
+    font-size: 11px; font-weight: 900; letter-spacing: .5px;
+    box-shadow: 0 2px 10px rgba(255,68,68,.35);
+  }
+  @keyframes pulse{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.1); opacity:.82; } }
+
+  .planner-event{
+    position: absolute;
+    border-radius: 18px;
+    padding: 16px;
+    min-height: 56px;
+    overflow: hidden;
+    pointer-events: auto;
+    cursor: pointer;
+    background: 
+      linear-gradient(145deg, 
+        oklch(var(--p) / 0.96), 
+        oklch(var(--s) / 0.92)
+      ),
+      radial-gradient(circle at top right, oklch(var(--pc) / 0.05), transparent);
+    border: 1.5px solid oklch(var(--p) / 0.4);
+    box-shadow: 0 4px 12px oklch(var(--p) / 0.15);
+    transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+    backdrop-filter: blur(10px);
+    contain: content;
+  }
+  
+  .planner-event::before{
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg,
+      oklch(var(--pc) / 0.15) 0%,
+      oklch(var(--pc) / 0.25) 100%);
+    border-radius: 18px 18px 0 0;
+  }
+  
+  .planner-event:hover{ 
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px oklch(var(--p) / 0.25);
+    border-color: oklch(var(--pf));
+    z-index: 35;
+  }
+
+  .planner-event.calendar-event{
+    background: linear-gradient(145deg, #6366f1 0%, #8b5cf6 100%);
+    border: 2px solid #818cf8;
+    box-shadow: 
+      0 4px 16px rgba(99, 102, 241, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    cursor: default;
+  }
+  .planner-event.calendar-event::before{
+    background: linear-gradient(90deg, 
+      rgba(255, 255, 255, 0.2), 
+      rgba(255, 255, 255, 0.4),
+      rgba(255, 255, 255, 0.2)
+    );
+  }
+  .planner-event.calendar-event:hover{ 
+    transform: none;
+    box-shadow: 
+      0 6px 24px rgba(99, 102, 241, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  }
+  .planner-event.calendar-event .planner-event-title::before{
+    content: '📅';
+    margin-right: 6px;
+    font-size: 15px;
+  }
+
+  .planner-event.logged{
+    opacity: .76;
+    background: linear-gradient(135deg, oklch(var(--su) / 0.55), oklch(var(--su) / 0.45));
+    border-color: oklch(var(--su));
+  }
+
+  .planner-event-header{ display:flex; align-items:start; justify-content:space-between; gap: 10px; }
+  .planner-event-title{
+    font-size: 14px; font-weight: 900; line-height: 1.35;
+    color: oklch(var(--pc));
+    overflow:hidden; text-overflow:ellipsis;
+    display:-webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .planner-event-actions{ display:flex; gap: 6px; opacity: .9; }
+  @media (hover:hover){
+    .planner-event-actions{ opacity: 0; }
+    .planner-event:hover .planner-event-actions{ opacity: 1; }
+  }
+  .planner-event-btn{
+    width: 28px; height: 28px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius: 10px;
+    background: oklch(var(--b1) / 0.30);
+    border: 1px solid oklch(var(--pc) / 0.25);
+    color: oklch(var(--pc));
+    transition: all 0.2s ease;
+    font-size: 13px;
+    box-shadow: 0 1px 3px oklch(var(--b1) / 0.10);
+    cursor: pointer;
+  }
+  .planner-event-btn:hover{ 
+    transform: scale(1.15); 
+    background: oklch(var(--b1) / 0.50); 
+    box-shadow: 0 2px 6px oklch(var(--b1) / 0.20);
+  }
+  .planner-event-btn:active{ 
+    transform: scale(0.95); 
+  }
+  .planner-event-btn.delete:hover{ 
+    background: oklch(var(--er)); 
+    border-color: oklch(var(--er)); 
+    color:#fff;
+  }
+
+  .planner-event-meta{
+    display:flex; gap: 8px; flex-wrap:wrap;
+    margin-top: 6px;
+    font-size: 11px; font-weight: 900;
+    color: oklch(var(--pc) / 0.92);
+  }
+  .planner-event-badge{
+    display:inline-flex; align-items:center; gap: 6px;
+    padding: 3px 10px; border-radius: 999px;
+    background: oklch(var(--b1) / 0.22);
+    border: 1px solid oklch(var(--pc) / 0.20);
+  }
+
+  .planner-event .dp-handle{
+    position:absolute;
+    left: 12px; right: 12px;
+    height: 10px;
+    border-radius: 999px;
+    background: oklch(var(--b1) / 0.25);
+    border: 1px solid oklch(var(--pc) / 0.25);
+    opacity: 0;
+    transition: opacity .12s ease;
+    cursor: ns-resize;
+  }
+  .planner-event:hover .dp-handle{ opacity: 1; }
+  .planner-event .dp-handle.top{ top: 8px; }
+  .planner-event .dp-handle.bottom{ bottom: 8px; }
+
+  .planner-event.dragging{
+    opacity: .92;
+    transform: scale(.99);
+    box-shadow: 0 14px 40px oklch(var(--b1) / 0.28);
+    z-index: 40;
+  }
+
+  .planner-stats { 
+    display: grid; 
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
+    gap: 16px; 
+  }
+  
+  .planner-stat-value{
+    font-size: 32px;
+    font-weight: 900;
+    background: linear-gradient(135deg, oklch(var(--p)), oklch(var(--s)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    letter-spacing: -1px;
+  }
+  
+  .planner-stat-label{ 
+    font-size: 11px; 
+    font-weight: 900; 
+    color: oklch(var(--bc) / 0.6); 
+    text-transform: uppercase; 
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  .dp-chip{
+    display:inline-flex; align-items:center; gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid oklch(var(--bc) / 0.12);
+    background: oklch(var(--b1) / 0.75);
+    backdrop-filter: blur(10px);
+    font-size: 12px; font-weight: 900;
+    color: oklch(var(--bc) / 0.72);
+  }
+
+  @media (max-width: 768px){
+    #dayPlannerPage{ 
+      --planner-hour-height: 70px; 
+      --planner-time-col: 75px; 
+      --planner-gutter: 10px; 
+    }
+    .planner-event-title{ font-size: 13px; }
+    .planner-event-meta{ font-size: 10px; }
+    .planner-time-slot .hour{ font-size: 16px; }
+    .scroll-nav{
+      right: 16px;
+      bottom: 16px;
+      gap: 8px;
+    }
+    .scroll-nav-btn{
+      width: 44px;
+      height: 44px;
+      font-size: 18px;
+    }
+  }
+
+  .scroll-nav{
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    opacity: 0.92;
+    transition: all 0.3s ease;
+  }
+  .scroll-nav:hover{
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+  
+  .scroll-nav-btn{
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: 
+      linear-gradient(145deg, 
+        oklch(var(--p)) 0%, 
+        oklch(var(--s)) 100%),
+      radial-gradient(circle at top, oklch(var(--pc) / 0.08), transparent);
+    color: oklch(var(--pc));
+    border: 2px solid oklch(var(--b1));
+    box-shadow: 
+      0 2px 8px oklch(var(--p) / 0.25),
+      0 8px 24px oklch(var(--p) / 0.30),
+      inset 0 2px 4px oklch(var(--pc) / 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    font-size: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .scroll-nav-btn:hover{
+    transform: scale(1.1);
+    box-shadow: 
+      0 4px 12px oklch(var(--p) / 0.30),
+      0 12px 32px oklch(var(--p) / 0.40),
+      inset 0 2px 6px oklch(var(--pc) / 0.25);
+    border-color: oklch(var(--pc) / 0.15);
+  }
+  
+  .scroll-nav-btn:active{
+    transform: scale(1.05);
+    box-shadow: 
+      0 2px 6px oklch(var(--p) / 0.25),
+      inset 0 1px 3px oklch(var(--pc) / 0.20);
+  }
+</style>
+
+<div id="dayPlannerPage">
+<main class="space-y-6 max-w-7xl mx-auto animate-slide-in">
+
+  <!-- Compact Header -->
+  <div class="card bg-gradient-to-br from-primary/12 via-secondary/6 to-base-100 border border-base-300/50 shadow-xl overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-r from-primary/5 to-secondary/5 opacity-50"></div>
+    <div class="card-body p-5 lg:p-6 relative">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg ring-4 ring-primary/10">
+            <i class="bi bi-calendar-check text-3xl text-primary-content"></i>
+          </div>
+          <div>
+            <h1 class="text-3xl lg:text-4xl font-black bg-gradient-to-r from-primary via-primary to-secondary bg-clip-text text-transparent leading-none">
+              Day Planner
+            </h1>
+            <p class="text-xs lg:text-sm text-base-content/60 mt-1.5 font-medium">
+              Interactive timeline with smart scheduling
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm gap-2 hover:scale-105 transition-transform">
+            <i class="bi bi-arrow-left"></i> Dashboard
+          </a>
+
+          <div class="divider divider-horizontal mx-1 hidden lg:flex"></div>
+
+          <div class="join shadow-md">
+            <button class="btn btn-sm join-item hover:scale-105 transition-transform" id="prevDayBtn" title="Previous Day">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <button class="btn btn-primary btn-sm join-item gap-1.5" id="todayBtn">
+              <i class="bi bi-calendar-today"></i> <span class="hidden sm:inline">Today</span>
+            </button>
+            <button class="btn btn-sm join-item hover:scale-105 transition-transform" id="nextDayBtn" title="Next Day">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+
+          <input type="date" id="datePicker" class="input input-bordered input-sm shadow-md hover:shadow-lg transition-shadow" style="width:150px;" />
+
+          <button class="btn btn-secondary btn-sm gap-2 shadow-md hover:scale-105 hover:shadow-lg transition-all" id="autoScheduleBtn">
+            <i class="bi bi-magic"></i> <span class="hidden sm:inline">Auto Schedule</span>
+          </button>
+          <button class="btn btn-primary btn-sm gap-2 shadow-md hover:scale-105 hover:shadow-lg transition-all" id="quickAddBtn">
+            <i class="bi bi-lightning-charge-fill"></i> <span class="hidden sm:inline">Quick Add</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Date Display & Stats -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card bg-gradient-to-br from-base-100 to-base-200/30 border border-base-300/50 shadow-lg hover:shadow-xl transition-shadow">
+      <div class="card-body p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <i class="bi bi-calendar-event text-primary text-xl"></i>
+          </div>
+          <div class="flex-1 flex items-center gap-3">
+            <span class="dp-chip border-primary/20 bg-primary/5">
+              <i class="bi bi-calendar3"></i> 
+              <span id="selectedDateText" class="font-bold">Today</span>
+            </span>
+            <input
+              type="text"
+              id="dayTitle"
+              class="input input-ghost text-lg lg:text-xl font-bold flex-1 focus:input-primary px-2 transition-all"
+              placeholder="Name your day..."
+              value="{{ today|date:'l, F j, Y' }}"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-gradient-to-br from-base-100 to-base-200/30 border border-base-300/50 shadow-lg hover:shadow-xl transition-shadow">
+      <div class="card-body p-5">
+        <div class="planner-stats">
+          <div class="text-center group">
+            <div class="flex items-center justify-center gap-2 mb-1">
+              <i class="bi bi-calendar-check text-primary text-lg group-hover:scale-110 transition-transform"></i>
+            </div>
+            <div class="planner-stat-value" id="eventCount">0</div>
+            <div class="planner-stat-label">Events</div>
+          </div>
+          <div class="text-center group">
+            <div class="flex items-center justify-center gap-2 mb-1">
+              <i class="bi bi-clock-history text-secondary text-lg group-hover:scale-110 transition-transform"></i>
+            </div>
+            <div class="planner-stat-value" id="totalHours">0h</div>
+            <div class="planner-stat-label">Scheduled</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="relative">
+    <!-- Timeline Header Card -->
+    <div class="card bg-gradient-to-br from-primary/8 via-secondary/4 to-base-100 border border-primary/20 shadow-lg mb-4">
+      <div class="card-body p-5">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div class="flex items-center gap-4">
+            <div class="relative">
+              <div class="absolute inset-0 bg-primary/20 rounded-2xl blur-xl"></div>
+              <div class="relative w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
+                <i class="bi bi-calendar2-week text-2xl text-primary-content"></i>
+              </div>
+            </div>
+            <div>
+              <h2 class="text-2xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Your Schedule
+              </h2>
+              <p class="text-xs text-base-content/60 mt-0.5 font-medium">
+                Interactive 24-hour timeline
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button class="btn btn-sm btn-ghost gap-2 hover:bg-primary/10 transition-all" onclick="document.getElementById('timeline').scrollTo({ top: 0, behavior: 'smooth' })">
+              <i class="bi bi-arrow-up-circle"></i>
+              <span class="hidden sm:inline">Top</span>
+            </button>
+            <button class="btn btn-sm btn-ghost gap-2 hover:bg-primary/10 transition-all" id="scrollToNowHeader">
+              <i class="bi bi-bullseye"></i>
+              <span class="hidden sm:inline">Now</span>
+            </button>
+            <div class="divider divider-horizontal mx-0"></div>
+            <div class="badge badge-lg badge-primary badge-outline gap-2 px-4">
+              <i class="bi bi-grid-1x2"></i>
+              <span class="font-bold">15min</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Help Panel -->
+    <div class="alert alert-info shadow-md mb-4 border border-info/30">
+      <div class="flex items-start gap-3 w-full">
+        <i class="bi bi-lightbulb-fill text-xl flex-shrink-0 mt-0.5"></i>
+        <div class="flex-1 min-w-0">
+          <h3 class="font-bold text-sm mb-1">How to use the timeline</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <div class="flex items-center gap-2">
+              <kbd class="kbd kbd-xs">Click</kbd>
+              <span class="text-base-content/70">Create event</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <kbd class="kbd kbd-xs">Drag</kbd>
+              <span class="text-base-content/70">Select range</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <kbd class="kbd kbd-xs">Move</kbd>
+              <span class="text-base-content/70">Reposition events</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-xs btn-circle" onclick="this.closest('.alert').style.display='none'">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Timeline Container -->
+    <div class="card bg-base-100 shadow-2xl border border-base-300/50 overflow-hidden">
+      <!-- Timeline Controls Bar -->
+      <div class="bg-gradient-to-r from-base-200/50 to-base-100 border-b border-base-300/50 px-5 py-3.5">
+        <div class="flex items-center justify-between gap-4 flex-wrap">
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <div class="w-3 h-3 rounded-full bg-success animate-pulse"></div>
+              <span class="text-xs font-semibold text-base-content/70">Live View</span>
+            </div>
+            <div class="divider divider-horizontal mx-0"></div>
+            <div class="flex items-center gap-2">
+              <i class="bi bi-calendar-event text-primary"></i>
+              <span class="text-xs font-semibold" id="eventCountBadge">0 events</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="bi bi-clock text-secondary"></i>
+              <span class="text-xs font-semibold" id="totalTimeBadge">0h scheduled</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <div class="join join-horizontal shadow-sm">
+              <button class="btn btn-xs join-item btn-active" title="Timeline View">
+                <i class="bi bi-list-ul"></i>
+              </button>
+              <button class="btn btn-xs join-item" title="Grid View" disabled>
+                <i class="bi bi-grid-3x3-gap"></i>
+              </button>
+            </div>
+            <button class="btn btn-xs btn-ghost" id="refreshTimeline" title="Refresh">
+              <i class="bi bi-arrow-clockwise"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline Content Area -->
+      <div class="planner-container">
+        <div class="planner-time-labels" id="timeLabels">
+          {% for hour in "012345678901234567890123"|make_list %}
+          <div class="planner-time-slot">
+            <div class="hour">{% if forloop.counter0 == 0 %}12{% elif forloop.counter0 <= 12 %}{{ forloop.counter0 }}{% else %}{{ forloop.counter0|add:"-12" }}{% endif %}</div>
+            <div class="period">{% if forloop.counter0 < 12 %}AM{% else %}PM{% endif %}</div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="planner-timeline" id="timeline">
+          <!-- Scroll Navigation -->
+          <div class="scroll-nav" id="scrollNav">
+            <button class="scroll-nav-btn group" id="scrollToMorning" title="Morning (6 AM)">
+              <i class="bi bi-sunrise"></i>
+            </button>
+            <button class="scroll-nav-btn group" id="scrollToNoon" title="Noon (12 PM)">
+              <i class="bi bi-sun"></i>
+            </button>
+            <button class="scroll-nav-btn group" id="scrollToEvening" title="Evening (6 PM)">
+              <i class="bi bi-sunset"></i>
+            </button>
+            <button class="scroll-nav-btn group" id="scrollToNow" title="Current Time">
+              <i class="bi bi-clock"></i>
+            </button>
+          </div>
+
+          <div class="planner-spacer" id="timelineSpacer">
+            <div class="planner-grid"></div>
+
+            <!-- Pre-rendered Hour Slots -->
+            <div class="planner-hours-canvas">
+              {% for hour in "012345678901234567890123"|make_list %}
+              <div class="planner-hour-slot" data-hour="{{ forloop.counter0 }}">
+                <div class="planner-hour-divider"></div>
+                <div class="planner-quarter-marks">
+                  <div class="quarter-mark"></div>
+                  <div class="quarter-mark"></div>
+                  <div class="quarter-mark"></div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Hover / Drag overlays -->
+            <div class="dp-ghost" id="ghostBlock"><div class="dp-ghost-label" id="ghostLabel">09:00 – 10:00</div></div>
+            <div class="dp-drag-select" id="dragSelect"></div>
+
+            <!-- Now indicator -->
+            <div class="planner-current-time" id="currentTimeLine">
+              <div class="planner-current-time-line">
+                <div class="planner-current-time-dot"></div>
+                <div class="planner-current-time-label" id="currentTimeLabel">NOW</div>
+              </div>
+            </div>
+
+            <!-- Events -->
+            <div class="planner-events-layer" id="eventsLayer">
+              <div class="planner-empty-state" id="emptyState">
+                <i class="bi bi-calendar-plus"></i>
+                <p>Click or drag anywhere to start planning your day</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Timeline Footer Stats -->
+      <div class="bg-gradient-to-r from-base-100 to-base-200/20 border-t border-base-300/50 px-5 py-3">
+        <div class="flex items-center justify-between gap-4 flex-wrap text-xs">
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded bg-gradient-to-br from-primary to-secondary"></div>
+              <span class="text-base-content/70">Manual Events</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded bg-gradient-to-br from-indigo-500 to-purple-500"></div>
+              <span class="text-base-content/70">Calendar Sync</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="w-4 h-4 rounded bg-gradient-to-br from-success/50 to-success/40"></div>
+              <span class="text-base-content/70">Completed</span>
+            </div>
+          </div>
+          <div class="text-base-content/60">
+            <i class="bi bi-info-circle-fill"></i>
+            Drag events to move or resize • Double-click to edit
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Event Creation Modal -->
+<input type="checkbox" id="eventModal" class="modal-toggle" />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-xl mb-6 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+        <i class="bi bi-plus-circle-fill text-primary text-xl"></i>
+      </div>
+      <span id="eventModalTitle">Create Event</span>
+    </h3>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold"><i class="bi bi-clock"></i> Start Time</span></label>
+        <input type="time" id="eventStartTime" class="input input-bordered w-full" step="900" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold"><i class="bi bi-clock-fill"></i> End Time</span></label>
+        <input type="time" id="eventEndTime" class="input input-bordered w-full" step="900" />
+      </div>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-semibold"><i class="bi bi-pencil-fill"></i> Event Title</span></label>
+      <input type="text" id="eventTitle" class="input input-bordered input-lg w-full" placeholder="What are you planning to do?" autofocus />
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-semibold"><i class="bi bi-list-check"></i> Link to Task (Optional)</span></label>
+      <select id="eventTask" class="select select-bordered w-full">
+        <option value="">-- No task linked --</option>
+      </select>
+      <label class="label">
+        <span class="label-text-alt text-base-content/60">Link this event to an existing task for better tracking</span>
+      </label>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-semibold"><i class="bi bi-journal-text"></i> Description (Optional)</span></label>
+      <textarea id="eventDescription" class="textarea textarea-bordered w-full" rows="2" placeholder="Add notes or details..."></textarea>
+    </div>
+
+    <div class="modal-action">
+      <label for="eventModal" class="btn btn-ghost">Cancel</label>
+      <button id="saveEventBtn" class="btn btn-primary gap-2">
+        <i class="bi bi-check-lg"></i> <span id="saveBtnText">Create Event</span>
+      </button>
+    </div>
+  </div>
+  <label class="modal-backdrop" for="eventModal">Close</label>
+</div>
+
+<!-- Auto Schedule Modal -->
+<input type="checkbox" id="autoScheduleModal" class="modal-toggle" />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box max-w-md">
+    <h3 class="font-bold text-xl mb-6 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+        <i class="bi bi-magic text-secondary text-xl"></i>
+      </div>
+      <span>Smart Auto-Schedule</span>
+    </h3>
+
+    <p class="text-sm text-base-content/70 mb-6">
+      Let AI intelligently schedule your tasks based on priority, due dates, and optimal time distribution.
+    </p>
+
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold"><i class="bi bi-sunrise"></i> Start Time</span></label>
+        <input type="time" id="autoScheduleStartTime" class="input input-bordered w-full" value="09:00" step="900" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold"><i class="bi bi-sunset"></i> End Time</span></label>
+        <input type="time" id="autoScheduleEndTime" class="input input-bordered w-full" value="17:00" step="900" />
+      </div>
+    </div>
+
+    <div class="alert alert-info mb-4">
+      <i class="bi bi-info-circle"></i>
+      <span class="text-sm">This will replace any manual events you've created for this day.</span>
+    </div>
+
+    <div class="modal-action">
+      <label for="autoScheduleModal" class="btn btn-ghost">Cancel</label>
+      <button id="confirmAutoScheduleBtn" class="btn btn-secondary gap-2">
+        <i class="bi bi-magic"></i> Schedule Tasks
+      </button>
+    </div>
+  </div>
+  <label class="modal-backdrop" for="autoScheduleModal">Close</label>
+</div>
+
+<!-- Auto-Schedule Alert Modal -->
+<input type="checkbox" id="autoScheduleAlertModal" class="modal-toggle" />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box max-w-md">
+    <h3 class="font-bold text-lg mb-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center" id="alertIconContainer">
+        <i id="alertIcon" class="text-xl"></i>
+      </div>
+      <span id="alertTitle">Alert</span>
+    </h3>
+    <p id="alertMessage" class="text-base-content/80"></p>
+    <div class="modal-action">
+      <label for="autoScheduleAlertModal" class="btn btn-primary">OK</label>
+    </div>
+  </div>
+  <label class="modal-backdrop" for="autoScheduleAlertModal">Close</label>
+</div>
+
+<script>
+window.addEventListener('error', (e) => {
+  console.error('💥 Global error:', e.error || e.message);
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('💥 Unhandled promise rejection:', e.reason);
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (window.__dayPlannerInitialized) {
+    console.warn('Day planner already initialized');
+    return;
+  }
+  window.__dayPlannerInitialized = true;
+
+  const START_HOUR = 0;
+  const END_HOUR = 23;
+  const SNAP_MINUTES = 15;
+  const CSRF_TOKEN = '{{ csrf_token }}';
+
+  let events = [];
+  let editingEventId = null;
+  let currentDate = new Date().toISOString().split('T')[0];
+  let isDraggingCreate = false;
+  let dragStartMin = null;
+
+  const cleanup = {
+    timers: [],
+    rafs: [],
+    intervals: [],
+    listeners: [],
+    
+    addTimer(id) { this.timers.push(id); },
+    addRAF(id) { this.rafs.push(id); },
+    addInterval(id) { this.intervals.push(id); },
+    addListener(target, event, handler) { 
+      this.listeners.push({ target, event, handler }); 
+    },
+    
+    executeAll() {
+      this.timers.forEach(id => clearTimeout(id));
+      this.rafs.forEach(id => cancelAnimationFrame(id));
+      this.intervals.forEach(id => clearInterval(id));
+      this.listeners.forEach(({target, event, handler}) => {
+        target.removeEventListener(event, handler);
+      });
+      console.log('✅ Cleanup completed');
+      this.timers = [];
+      this.rafs = [];
+      this.intervals = [];
+      this.listeners = [];
+    }
+  };
+
+  const timeLabels = document.getElementById('timeLabels');
+  const timelineEl = document.getElementById('timeline');
+  const timelineSpacer = document.getElementById('timelineSpacer');
+  const eventsLayer = document.getElementById('eventsLayer');
+  const emptyState = document.getElementById('emptyState');
+  const ghostBlock = document.getElementById('ghostBlock');
+  const ghostLabel = document.getElementById('ghostLabel');
+  const dragSelect = document.getElementById('dragSelect');
+  const currentTimeLine = document.getElementById('currentTimeLine');
+  const currentTimeLabel = document.getElementById('currentTimeLabel');
+  const datePicker = document.getElementById('datePicker');
+  const selectedDateText = document.getElementById('selectedDateText');
+  const dayTitleEl = document.getElementById('dayTitle');
+  const eventModal = document.getElementById('eventModal');
+  const eventTitle = document.getElementById('eventTitle');
+  const eventStartTime = document.getElementById('eventStartTime');
+  const eventEndTime = document.getElementById('eventEndTime');
+  const saveEventBtn = document.getElementById('saveEventBtn');
+
+  const requiredElements = {
+    timeLabels, timelineEl, timelineSpacer, eventsLayer, emptyState,
+    ghostBlock, dragSelect, currentTimeLine, dayTitleEl, eventModal,
+    eventTitle, eventStartTime, eventEndTime, saveEventBtn
+  };
+
+  for (const [name, el] of Object.entries(requiredElements)) {
+    if (!el) {
+      console.error(`❌ Critical element missing: ${name}`);
+      return;
+    }
+  }
+
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+  function hourHeightPx() {
+    const v = getComputedStyle(document.getElementById('dayPlannerPage'))
+      .getPropertyValue('--planner-hour-height').trim();
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 80;
+  }
+
+  function minutesToHHMM(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${pad2(h)}:${pad2(m)}`;
+  }
+
+  function hhmmToMinutes(s) {
+    const [h, m] = s.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  function clamp(mins) {
+    return Math.max(START_HOUR * 60, Math.min((END_HOUR + 1) * 60, mins));
+  }
+
+  function snapTo(mins, step = SNAP_MINUTES) {
+    return Math.round(mins / step) * step;
+  }
+
+  function minutesToTop(mins) {
+    return ((mins - START_HOUR * 60) / 60) * hourHeightPx();
+  }
+
+  function yToMinutes(clientY) {
+    const rect = timelineEl.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+    const yAbs = y + timelineEl.scrollTop;
+    const minsFromStart = (yAbs / hourHeightPx()) * 60;
+    return clamp(snapTo(START_HOUR * 60 + minsFromStart));
+  }
+
+  const escapeMap = {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;',
+    '"': '&quot;', "'": '&#39;'
+  };
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>"']/g, char => escapeMap[char]);
+  }
+
+  function isTodayDateStr(dateStr) {
+    return dateStr === new Date().toISOString().split('T')[0];
+  }
+
+  function formatPrettyDate(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function syncDateUI() {
+    if (datePicker) datePicker.value = currentDate;
+    selectedDateText.textContent = isTodayDateStr(currentDate) ? 'Today' : formatPrettyDate(currentDate);
+  }
+
+  function overlapsAny(startMin, endMin, ignoreId = null) {
+    return events.some(ev => {
+      if (ignoreId && ev.id === ignoreId) return false;
+      return startMin < ev.endMin && endMin > ev.startMin;
+    });
+  }
+
+  function bindScrollSync() {
+    let scrollRAF = null;
+
+    const onScroll = () => {
+      if (scrollRAF) return;
+      scrollRAF = requestAnimationFrame(() => {
+        timeLabels.scrollTop = timelineEl.scrollTop;
+        scrollRAF = null;
+      });
+    };
+
+    timelineEl.addEventListener('scroll', onScroll, { passive: true });
+    cleanup.addListener(timelineEl, 'scroll', onScroll);
+  }
+
+  function showGhost(s, e) {
+    const top = minutesToTop(s);
+    const height = Math.max(46, ((e - s) / 60) * hourHeightPx());
+    ghostBlock.style.top = `${top}px`;
+    ghostBlock.style.height = `${height}px`;
+    ghostLabel.textContent = `${minutesToHHMM(s)} – ${minutesToHHMM(e)}`;
+    ghostBlock.classList.add('active');
+  }
+
+  function hideGhost() {
+    ghostBlock.classList.remove('active');
+  }
+
+  function showDragSelect(a, b) {
+    const s = Math.min(a, b), e = Math.max(a, b);
+    dragSelect.style.top = `${minutesToTop(s)}px`;
+    dragSelect.style.height = `${Math.max(46, ((e - s) / 60) * hourHeightPx())}px`;
+    dragSelect.classList.add('active');
+  }
+
+  function hideDragSelect() {
+    dragSelect.classList.remove('active');
+  }
+
+  function updateCurrentTime() {
+    try {
+      const now = new Date();
+      const mins = now.getHours() * 60 + now.getMinutes();
+      if (isTodayDateStr(currentDate) && mins >= START_HOUR * 60 && mins <= (END_HOUR + 1) * 60) {
+        const top = minutesToTop(mins);
+        currentTimeLine.style.top = `${top}px`;
+        currentTimeLine.classList.add('active');
+        if (currentTimeLabel) currentTimeLabel.textContent = minutesToHHMM(mins);
+      } else {
+        currentTimeLine.classList.remove('active');
+      }
+    } catch (err) {
+      console.error('updateCurrentTime error:', err);
+    }
+  }
+
+  function scrollToNowIfToday() {
+    if (!isTodayDateStr(currentDate)) return;
+    const now = new Date();
+    const mins = now.getHours() * 60 + now.getMinutes();
+    const top = minutesToTop(mins);
+    timelineEl.scrollTo({ top: Math.max(0, top - 160), behavior: 'smooth' });
+  }
+
+  const modalManager = {
+    currentModal: null,
+
+    open(modalId) {
+      if (this.currentModal && this.currentModal !== modalId) {
+        this.close();
+      }
+      const modal = document.getElementById(modalId);
+      if (modal) {
+        modal.checked = true;
+        this.currentModal = modalId;
+      }
+    },
+
+    close() {
+      if (this.currentModal) {
+        const modal = document.getElementById(this.currentModal);
+        if (modal) modal.checked = false;
+        this.currentModal = null;
+      }
+    }
+  };
+
+  function openEventModal(startMinutes = null, ev = null) {
+    const eventModalTitle = document.getElementById('eventModalTitle');
+    const saveBtnText = document.getElementById('saveBtnText');
+    const eventTask = document.getElementById('eventTask');
+    const eventDescription = document.getElementById('eventDescription');
+
+    if (ev) {
+      editingEventId = ev.id;
+      eventTitle.value = ev.title || '';
+      eventTask.value = ev.taskId || '';
+      eventDescription.value = ev.description || '';
+      eventStartTime.value = minutesToHHMM(ev.startMin);
+      eventEndTime.value = minutesToHHMM(ev.endMin);
+      eventModalTitle.textContent = 'Edit Event';
+      saveBtnText.textContent = 'Save Changes';
+    } else {
+      editingEventId = null;
+      eventTitle.value = '';
+      eventTask.value = '';
+      eventDescription.value = '';
+      eventModalTitle.textContent = 'Create Event';
+      saveBtnText.textContent = 'Create Event';
+
+      const s = startMinutes != null ? clamp(snapTo(startMinutes)) : 9 * 60;
+      const e = clamp(s + 60);
+      eventStartTime.value = minutesToHHMM(s);
+      eventEndTime.value = minutesToHHMM(e);
+    }
+
+    modalManager.open('eventModal');
+    setTimeout(() => eventTitle.focus(), 80);
+  }
+
+  function closeEventModal() {
+    modalManager.close();
+    editingEventId = null;
+  }
+
+  let saveInProgress = false;
+  let pendingSave = false;
+  let lastSavedState = null;
+
+  function hasChanges() {
+    const currentState = JSON.stringify({
+      events: events.filter(e => !e.isCalendarEvent),
+      title: dayTitleEl.value.trim(),
+      date: currentDate
+    });
+    return currentState !== lastSavedState;
+  }
+
+  async function load() {
+    try {
+      const r = await fetch(`/api/day-schedule/${currentDate}/`, {
+        headers: { 'X-CSRFToken': CSRF_TOKEN }
+      });
+      if (!r.ok) throw new Error('Failed to load schedule');
+      const data = await r.json();
+      if (data.success) {
+        events = (data.events || []).map(ev => ({...ev, planNames: ev.planNames || []}));
+        dayTitleEl.value = data.title || new Date(currentDate).toLocaleDateString(undefined, {
+          weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+        });
+      } else {
+        events = [];
+      }
+    } catch (e) {
+      console.error(e);
+      events = [];
+    }
+
+    lastSavedState = JSON.stringify({
+      events: events.filter(e => !e.isCalendarEvent),
+      title: dayTitleEl.value.trim(),
+      date: currentDate
+    });
+
+    syncDateUI();
+    updateStats();
+  }
+
+  async function save() {
+    if (saveInProgress) {
+      pendingSave = true;
+      return;
+    }
+
+    if (!hasChanges()) return;
+
+    saveInProgress = true;
+
+    try {
+      const manual = events.filter(e => !e.isCalendarEvent);
+      const r = await fetch('/api/day-schedule/save/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ date: currentDate, title: dayTitleEl.value.trim(), events: manual })
+      });
+      if (!r.ok) throw new Error(`Save failed (${r.status})`);
+      const data = await r.json();
+      if (!data.success) throw new Error(data.error || 'Save failed');
+
+      lastSavedState = JSON.stringify({
+        events: manual,
+        title: dayTitleEl.value.trim(),
+        date: currentDate
+      });
+    } catch (e) {
+      console.error(e);
+      throw e;
+    } finally {
+      saveInProgress = false;
+      if (pendingSave) {
+        pendingSave = false;
+        const timer = setTimeout(() => save(), 100);
+        cleanup.addTimer(timer);
+      }
+    }
+  }
+
+  function computeLanes(list) {
+    const sorted = [...list].sort((a, b) => (a.startMin - b.startMin) || (a.endMin - b.endMin));
+    const active = [];
+    const out = [];
+
+    function prune(t) {
+      for (let i = active.length - 1; i >= 0; i--) {
+        if (active[i].ev.endMin <= t) active.splice(i, 1);
+      }
+    }
+
+    for (const ev of sorted) {
+      prune(ev.startMin);
+      const used = new Set(active.map(x => x.lane));
+      let lane = 0;
+      while (used.has(lane)) lane++;
+      active.push({ ev, lane });
+      out.push({ ...ev, lane, _groupEnd: Math.max(ev.endMin, ...active.map(x => x.ev.endMin)) });
+    }
+
+    const groups = [];
+    let g = [];
+    let gEnd = -Infinity;
+
+    for (const ev of sorted) {
+      if (g.length === 0) {
+        g = [ev];
+        gEnd = ev.endMin;
+        continue;
+      }
+      if (ev.startMin < gEnd) {
+        g.push(ev);
+        gEnd = Math.max(gEnd, ev.endMin);
+      } else {
+        groups.push(g);
+        g = [ev];
+        gEnd = ev.endMin;
+      }
+    }
+    if (g.length) groups.push(g);
+
+    const groupLaneCount = new Map();
+    groups.forEach(group => {
+      const ids = new Set(group.map(x => x.id));
+      const lanes = out.filter(x => ids.has(x.id)).map(x => x.lane);
+      const count = (lanes.length ? Math.max(...lanes) + 1 : 1);
+      group.forEach(x => groupLaneCount.set(x.id, count));
+    });
+
+    return out.map(x => ({ ...x, lanesInGroup: groupLaneCount.get(x.id) || 1 }));
+  }
+
+  let lastRenderState = null;
+
+  function render() {
+    try {
+      const currentState = JSON.stringify(events.map(e => ({
+        id: e.id,
+        title: e.title,
+        startMin: e.startMin,
+        endMin: e.endMin,
+        logged: e.logged,
+        isCalendarEvent: e.isCalendarEvent
+      })));
+
+      if (currentState === lastRenderState) {
+        updateStats();
+        return;
+      }
+      lastRenderState = currentState;
+
+      eventsLayer.innerHTML = '';
+      eventsLayer.appendChild(emptyState);
+
+      if (!events.length) {
+        emptyState.style.display = 'block';
+        return;
+      }
+      emptyState.style.display = 'none';
+
+      const laid = computeLanes(events);
+      const H = hourHeightPx();
+      const fragment = document.createDocumentFragment();
+
+      laid.forEach(ev => {
+        const isCal = !!ev.isCalendarEvent;
+        const top = minutesToTop(ev.startMin);
+        const height = Math.max(46, ((ev.endMin - ev.startMin) / 60) * H);
+        const duration = ev.endMin - ev.startMin;
+        const lanes = Math.max(1, ev.lanesInGroup || 1);
+        const gapPx = 6;
+        const wPct = 100 / lanes;
+        const leftPct = ev.lane * wPct;
+
+        const el = document.createElement('div');
+        el.className = `planner-event${ev.logged ? ' logged' : ''}${isCal ? ' calendar-event' : ''}`;
+        el.style.top = `${top}px`;
+        el.style.height = `${height}px`;
+        el.style.left = `calc(${leftPct}% + ${gapPx / 2}px)`;
+        el.style.width = `calc(${wPct}% - ${gapPx}px)`;
+        el.dataset.id = ev.id;
+
+        el.innerHTML = `
+          <div class="planner-event-header">
+            <div style="flex:1; min-width:0;">
+              <div class="planner-event-title">${escapeHtml(ev.title)}</div>
+            </div>
+            ${!isCal ? `
+              <div class="planner-event-actions">
+                <button class="planner-event-btn edit-btn" data-id="${ev.id}" title="Edit"><i class="bi bi-pencil"></i></button>
+                <button class="planner-event-btn delete-btn" data-id="${ev.id}" title="Delete"><i class="bi bi-trash"></i></button>
+              </div>
+            ` : ''}
+          </div>
+          <div class="planner-event-meta">
+            <span class="planner-event-badge time-badge"><i class="bi bi-clock"></i> ${minutesToHHMM(ev.startMin)} – ${minutesToHHMM(ev.endMin)}</span>
+            <span class="planner-event-badge"><i class="bi bi-hourglass-split"></i> ${duration} min</span>
+          </div>
+          ${!isCal ? `
+            <div class="dp-handle top" data-handle="top"></div>
+            <div class="dp-handle bottom" data-handle="bottom"></div>
+          ` : ''}
+        `;
+
+        fragment.appendChild(el);
+      });
+
+      eventsLayer.appendChild(fragment);
+      updateStats();
+    } catch (err) {
+      console.error('💥 Render error:', err);
+      lastRenderState = null;
+    }
+  }
+
+  let dragState = null;
+
+  const onDragMove = (e) => {
+    if (!dragState) return;
+    const ev = events.find(x => x.id === dragState.eventId);
+    if (!ev) return;
+
+    const dy = e.clientY - dragState.startY;
+    const minsDelta = snapTo((dy / hourHeightPx()) * 60);
+
+    let newStart = dragState.origStart;
+    let newEnd = dragState.origEnd;
+
+    if (dragState.mode === 'move') {
+      const dur = dragState.origEnd - dragState.origStart;
+      newStart = clamp(dragState.origStart + minsDelta);
+      newEnd = clamp(newStart + dur);
+    } else if (dragState.mode === 'resize-top') {
+      newStart = clamp(dragState.origStart + minsDelta);
+      newStart = Math.min(newStart, dragState.origEnd - SNAP_MINUTES);
+    } else if (dragState.mode === 'resize-bottom') {
+      newEnd = clamp(dragState.origEnd + minsDelta);
+      newEnd = Math.max(newEnd, dragState.origStart + SNAP_MINUTES);
+    }
+
+    if (overlapsAny(newStart, newEnd, ev.id)) return;
+
+    ev.startMin = newStart;
+    ev.endMin = newEnd;
+    render();
+  };
+
+  const onDragEnd = async (e) => {
+    if (!dragState) return;
+    const eventId = dragState.eventId;
+    dragState = null;
+
+    const el = document.querySelector(`[data-id="${eventId}"]`);
+    if (el) el.classList.remove('dragging');
+
+    try {
+      await save();
+    } catch (err) {
+      console.error('Save after drag failed:', err);
+    }
+  };
+
+  window.addEventListener('mousemove', onDragMove, { passive: true });
+  cleanup.addListener(window, 'mousemove', onDragMove);
+
+  window.addEventListener('mouseup', onDragEnd);
+  cleanup.addListener(window, 'mouseup', onDragEnd);
+
+  let mousemoveRAF = null;
+
+  timelineSpacer.addEventListener('mousemove', (e) => {
+    if (e.target.closest('.planner-event')) return;
+
+    if (mousemoveRAF) cancelAnimationFrame(mousemoveRAF);
+
+    mousemoveRAF = requestAnimationFrame(() => {
+      if (isDraggingCreate) {
+        const cur = yToMinutes(e.clientY);
+        showDragSelect(dragStartMin, cur);
+      } else {
+        const m = yToMinutes(e.clientY);
+        showGhost(m, clamp(m + 60));
+      }
+      mousemoveRAF = null;
+    });
+  }, { passive: true });
+
+  timelineSpacer.addEventListener('mouseleave', () => {
+    if (mousemoveRAF) {
+      cancelAnimationFrame(mousemoveRAF);
+      mousemoveRAF = null;
+    }
+    if (!isDraggingCreate) hideGhost();
+  }, { passive: true });
+
+  timelineSpacer.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.planner-event')) return;
+    isDraggingCreate = true;
+    dragStartMin = yToMinutes(e.clientY);
+    showDragSelect(dragStartMin, clamp(dragStartMin + 60));
+    hideGhost();
+  });
+
+  window.addEventListener('mouseup', (e) => {
+    if (!isDraggingCreate) return;
+    isDraggingCreate = false;
+    const end = yToMinutes(e.clientY);
+    hideDragSelect();
+
+    let a = snapTo(Math.min(dragStartMin, end));
+    let b = snapTo(Math.max(dragStartMin, end));
+    if (b - a < 30) b = clamp(a + 60);
+
+    openEventModal(a, null);
+    eventStartTime.value = minutesToHHMM(a);
+    eventEndTime.value = minutesToHHMM(b);
+  });
+
+  timelineSpacer.addEventListener('click', (e) => {
+    if (e.target.closest('.planner-event')) return;
+    const s = yToMinutes(e.clientY);
+    openEventModal(s, null);
+  });
+
+  eventsLayer.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.edit-btn');
+    if (editBtn) {
+      e.stopPropagation();
+      const ev = events.find(x => x.id === editBtn.dataset.id);
+      if (ev) openEventModal(null, ev);
+      return;
+    }
+
+    const deleteBtn = e.target.closest('.delete-btn');
+    if (deleteBtn) {
+      e.stopPropagation();
+      const id = deleteBtn.dataset.id;
+      const ev = events.find(x => x.id === id);
+      if (!ev) return;
+      if (confirm(`Delete "${ev.title}"?`)) {
+        events = events.filter(x => x.id !== id);
+        render();
+        save().catch((err) => console.error('Save after delete failed:', err));
+      }
+    }
+  });
+
+  saveEventBtn.addEventListener('click', () => {
+    const title = (eventTitle.value || '').trim();
+    if (!title) {
+      eventTitle.focus();
+      return;
+    }
+
+    let startMin = clamp(snapTo(hhmmToMinutes(eventStartTime.value)));
+    let endMin = clamp(snapTo(hhmmToMinutes(eventEndTime.value)));
+
+    if (endMin <= startMin) return;
+
+    const ignore = editingEventId || null;
+    if (overlapsAny(startMin, endMin, ignore)) return;
+
+    const taskId = document.getElementById('eventTask')?.value || null;
+    const description = (document.getElementById('eventDescription')?.value || '').trim();
+
+    if (editingEventId) {
+      const ev = events.find(x => x.id === editingEventId);
+      if (ev) {
+        ev.title = title;
+        ev.taskId = taskId;
+        ev.description = description;
+        ev.startMin = startMin;
+        ev.endMin = endMin;
+      }
+    } else {
+      events.push({
+        id: uid(),
+        title,
+        taskId,
+        description,
+        startMin,
+        endMin,
+        logged: false
+      });
+    }
+
+    closeEventModal();
+    render();
+    const timer = setTimeout(() => save().catch((err) => console.error('Save failed:', err)), 100);
+    cleanup.addTimer(timer);
+  });
+
+  eventTitle.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') saveEventBtn.click();
+  });
+
+  let lastStatsState = null;
+
+  function updateStats() {
+    const currentStats = JSON.stringify({
+      count: events.length,
+      totalMins: events.reduce((s, ev) => s + (ev.endMin - ev.startMin), 0)
+    });
+
+    if (currentStats === lastStatsState) return;
+    lastStatsState = currentStats;
+
+    const count = events.length;
+    const el = document.getElementById('eventCount');
+    if (el) el.textContent = count;
+
+    const badge = document.getElementById('eventCountBadge');
+    if (badge) badge.textContent = `${count} event${count !== 1 ? 's' : ''}`;
+
+    const totalMinutes = events.reduce((s, ev) => s + (ev.endMin - ev.startMin), 0);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    const timeText = m > 0 ? `${h}h ${m}m` : `${h}h`;
+
+    const hoursEl = document.getElementById('totalHours');
+    if (hoursEl) hoursEl.textContent = timeText;
+
+    const timeBadge = document.getElementById('totalTimeBadge');
+    if (timeBadge) timeBadge.textContent = `${timeText} scheduled`;
+  }
+
+  async function changeDate(days) {
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + days);
+    currentDate = d.toISOString().split('T')[0];
+    await load();
+    render();
+    updateCurrentTime();
+    syncDateUI();
+    if (isTodayDateStr(currentDate)) scrollToNowIfToday();
+    else timelineEl.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  document.getElementById('prevDayBtn')?.addEventListener('click', () => changeDate(-1));
+  document.getElementById('nextDayBtn')?.addEventListener('click', () => changeDate(1));
+  document.getElementById('todayBtn')?.addEventListener('click', async () => {
+    currentDate = new Date().toISOString().split('T')[0];
+    await load();
+    render();
+    updateCurrentTime();
+    syncDateUI();
+    scrollToNowIfToday();
+  });
+
+  datePicker?.addEventListener('change', async () => {
+    if (!datePicker.value) return;
+    currentDate = datePicker.value;
+    await load();
+    render();
+    updateCurrentTime();
+    syncDateUI();
+  });
+
+  function scrollToHour(hour) {
+    const mins = hour * 60;
+    const top = minutesToTop(mins);
+    timelineEl.scrollTo({ top: Math.max(0, top - 100), behavior: 'smooth' });
+  }
+
+  document.getElementById('scrollToMorning')?.addEventListener('click', () => scrollToHour(6));
+  document.getElementById('scrollToNoon')?.addEventListener('click', () => scrollToHour(12));
+  document.getElementById('scrollToEvening')?.addEventListener('click', () => scrollToHour(18));
+  document.getElementById('scrollToNow')?.addEventListener('click', () => {
+    if (isTodayDateStr(currentDate)) scrollToNowIfToday();
+    else scrollToHour(9);
+  });
+  document.getElementById('scrollToNowHeader')?.addEventListener('click', () => {
+    if (isTodayDateStr(currentDate)) scrollToNowIfToday();
+    else scrollToHour(9);
+  });
+
+  document.getElementById('quickAddBtn')?.addEventListener('click', () => {
+    openEventModal(null, null);
+  });
+
+  document.addEventListener('keydown', async (e) => {
+    if (eventModal?.checked) {
+      if (e.key === 'Escape') closeEventModal();
+      return;
+    }
+
+    const tag = (e.target?.tagName || '').toLowerCase();
+    if (['input', 'textarea', 'select'].includes(tag)) return;
+
+    if (e.key.toLowerCase() === 'n') openEventModal(null, null);
+    if (e.key.toLowerCase() === 't') {
+      currentDate = new Date().toISOString().split('T')[0];
+      await load();
+      render();
+      updateCurrentTime();
+      syncDateUI();
+      scrollToNowIfToday();
+    }
+    if (e.key === 'ArrowLeft') await changeDate(-1);
+    if (e.key === 'ArrowRight') await changeDate(1);
+  });
+
+  bindScrollSync();
+
+  const timeUpdateInterval = setInterval(updateCurrentTime, 60000);
+  cleanup.addInterval(timeUpdateInterval);
+
+  load().then(() => {
+    render();
+    updateCurrentTime();
+    syncDateUI();
+    if (isTodayDateStr(currentDate)) scrollToNowIfToday();
+  }).catch((err) => {
+    console.error('Initial load failed:', err);
+  });
+
+  window.addEventListener('beforeunload', () => {
+    cleanup.executeAll();
+  }, { once: true, passive: true });
+
+  console.log('✅ Day Planner initialized (v3 - PERFORMANCE OPTIMIZED)');
+});
+</script>
+
+{% endblock %}

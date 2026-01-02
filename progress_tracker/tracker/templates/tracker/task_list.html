@@ -112,7 +112,7 @@
   }
   .task-menu .dropdown-content {
     position: absolute;
-    z-index: 100000 !important;
+    z-index: 90 !important;
     min-width: 11rem;
   }
   
@@ -134,7 +134,7 @@
   /* When a task menu is open, raise the entire card above others */
   .vm-task.vm-open {
     position: relative;
-    z-index: 100000 !important;
+    z-index: 85 !important;
   }
 
   /* Disable hover transform while open (transform creates a stacking context) */
@@ -403,7 +403,6 @@
                     <ul
                       id="taskMenuDd-{{ task.id }}"
                       class="dropdown-content menu vm-dropdown-opaque rounded-box shadow-xl border border-base-200 hidden"
-                      style="z-index: 100000;"
                       role="menu"
                     >
                       <li>
@@ -786,39 +785,48 @@
     }
   })();
 
-  // Click to edit task
+  // Click to edit task - FIXED: Use event delegation instead of forEach
   (function () {
-    const taskCards = document.querySelectorAll('.vm-task');
+    // Single delegated click handler instead of N listeners
+    document.addEventListener('click', (e) => {
+      const card = e.target.closest('.vm-task');
+      if (!card) return;
+      
+      // Don't navigate if clicking on interactive elements
+      const isInteractive = e.target.closest('input, button, a, .dropdown, .task-menu');
+      if (isInteractive) return;
+      
+      // Get task ID and navigate to edit page
+      const taskId = card.dataset.taskId;
+      if (taskId) {
+        window.location.href = `/tasks/${taskId}/edit/`;
+      }
+    });
     
-    taskCards.forEach(card => {
-      card.addEventListener('click', (e) => {
-        // Don't navigate if clicking on interactive elements
-        const target = e.target;
-        const isInteractive = target.closest('input, button, a, .dropdown, .task-menu');
-        
-        if (isInteractive) {
-          return; // Let the interactive element handle its own action
-        }
-        
-        // Get task ID and navigate to edit page
-        const taskId = card.dataset.taskId;
-        if (taskId) {
-          window.location.href = `/tasks/${taskId}/edit/`;
-        }
-      });
-
-      // Visual feedback on touch/press
-      card.addEventListener('touchstart', () => {
+    // Visual feedback on touch/press using event delegation
+    let touchedCard = null;
+    
+    document.addEventListener('touchstart', (e) => {
+      const card = e.target.closest('.vm-task');
+      if (card) {
+        touchedCard = card;
         card.style.opacity = '0.7';
-      }, { passive: true });
-
-      card.addEventListener('touchend', () => {
-        card.style.opacity = '';
-      }, { passive: true });
-
-      card.addEventListener('touchcancel', () => {
-        card.style.opacity = '';
-      }, { passive: true });
+      }
+    }, { passive: true });
+    
+    document.addEventListener('touchend', () => {
+      if (touchedCard) {
+        touchedCard.style.opacity = '';
+        touchedCard = null;
+      }
+    }, { passive: true });
+    
+    document.addEventListener('touchcancel', () => {
+      if (touchedCard) {
+        touchedCard.style.opacity = '';
+        touchedCard = null;
+      }
+    }, { passive: true });
     });
   })();
 </script>

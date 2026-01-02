@@ -11,7 +11,7 @@
 <main class="space-y-6">
 
   <!-- Header -->
-  <header class="card border border-base-200 bg-base-100 animate-slideUp" role="banner">
+  <header class="card border border-base-200 bg-base-100" role="banner">
     <div class="card-body p-5 sm:p-6">
       <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div class="min-w-0">
@@ -224,7 +224,7 @@
 
           <div class="mt-4 space-y-3">
           {% for item in friends_timeline %}
-          <article class="p-4 rounded-2xl border border-base-200 bg-base-100 hover:bg-base-200/40 hover-lift transition cursor-pointer">
+          <article class="p-4 rounded-2xl border border-base-200 bg-base-100 hover:bg-base-200/40 transition-colors cursor-pointer">
             <div class="flex items-start gap-3">
               <div class="avatar placeholder">
                 <div class="bg-gradient-to-br from-primary to-secondary text-primary-content rounded-full w-12 h-12 ring-2 ring-primary/20 shadow-lg">
@@ -462,51 +462,150 @@
 
 <!-- Star toggle script -->
 <script>
-document.addEventListener('DOMContentLoaded', function () {
-  // Star toggle functionality
-  document.querySelectorAll('.star-btn').forEach(button => {
-    button.addEventListener('click', async function () {
-      const activityType = this.dataset.activityType;
-      const activityId = this.dataset.activityId;
-      const starIcon = this.querySelector('.bi');
-      const starCount = this.querySelector('.star-count');
+(function() {
+  'use strict';
+  
+  // Ensure we only initialize once
+  if (window.__dashboardInitialized) {
+    console.warn('Dashboard already initialized, skipping...');
+    return;
+  }
+  window.__dashboardInitialized = true;
+  
+  // Detect large dataset and apply optimizations
+  const articleCount = document.querySelectorAll('article').length;
+  const buttonCount = document.querySelectorAll('.star-btn').length;
+  const cardCount = document.querySelectorAll('.card').length;
+  
+  // Lower threshold - even modest datasets can cause issues
+  const isDataHeavy = articleCount > 3 || buttonCount > 5 || cardCount > 10;
+  
+  if (isDataHeavy) {
+    console.log('📊 Large dataset detected (' + articleCount + ' articles, ' + buttonCount + ' buttons, ' + cardCount + ' cards), applying performance optimizations...');
+    document.body.classList.add('data-heavy');
+    
+    // Throttle scroll events - only fire every 150ms max
+    let scrollTimeout;
+    let scrollRAF;
+    
+    const throttledScroll = function() {
+      if (scrollRAF) return; // Already scheduled
+      
+      scrollRAF = requestAnimationFrame(() => {
+        document.body.classList.add('is-scrolling');
+        scrollRAF = null;
+        
+        clearTimeout(scrollTimeout);
+        scrollTimeout = setTimeout(() => {
+          document.body.classList.remove('is-scrolling');
+        }, 150);
+      });
+    };
+    
+    // Only add if not already added
+    if (!window.__dashboardScrollListenerAdded) {
+      window.__dashboardScrollListenerAdded = true;
+      window.addEventListener('scroll', throttledScroll, { passive: true });
+    }
+  } else {
+    console.log('✅ Normal dataset (' + articleCount + ' articles, ' + buttonCount + ' buttons, ' + cardCount + ' cards)');
+  }
+  
+  // Star toggle - use event delegation OUTSIDE DOMContentLoaded
+  // This prevents duplicate listeners and runs immediately
+  let isProcessingClick = false;
+  let lastClickTime = 0;
+  
+  document.addEventListener('click', function(event) {
+    const button = event.target.closest('.star-btn');
+    if (!button) return;
+    
+    // Aggressive debouncing for data-heavy pages (prevent rapid clicks)
+    const now = Date.now();
+    if (now - lastClickTime < 500) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    lastClickTime = now;
+    
+    // Prevent multiple simultaneous requests
+    if (isProcessingClick) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    
+    // Prevent default and stop propagation
+    event.preventDefault();
+    event.stopPropagation();
+    
+    isProcessingClick = true;
+    button.disabled = true;
+    
+    const activityType = button.dataset.activityType;
+    const activityId = button.dataset.activityId;
+    const starIcon = button.querySelector('.bi');
+    const starCount = button.querySelector('.star-count');
 
-      try {
-        const response = await fetch('{% url "toggle_star_reaction" %}', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': '{{ csrf_token }}',
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: JSON.stringify({ activity_type: activityType, activity_id: activityId })
-        });
+    // Use fetch with timeout (3s for faster recovery)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-        const data = await response.json();
-
-        if (response.ok) {
-          const starred = !!data.starred;
-          starIcon.classList.toggle('bi-star-fill', starred);
-          starIcon.classList.toggle('bi-star', !starred);
-          starIcon.classList.toggle('text-warning', starred);
-          this.setAttribute('aria-label', starred ? 'Unstar this activity' : 'Star this activity');
+    fetch('{% url "toggle_star_reaction" %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
+      body: JSON.stringify({ activity_type: activityType, activity_id: activityId }),
+      signal: controller.signal
+    })
+    .then(response => response.json())
+    .then(data => {
+      clearTimeout(timeoutId);
+      if (data.starred !== undefined) {
+        const starred = !!data.starred;
+        starIcon.classList.toggle('bi-star-fill', starred);
+        starIcon.classList.toggle('bi-star', !starred);
+        starIcon.classList.toggle('text-warning', starred);
+        button.setAttribute('aria-label', starred ? 'Unstar this activity' : 'Star this activity');
+        if (starCount) {
           starCount.textContent = data.star_count;
-        } else {
-          console.error('Error:', data.error);
         }
-      } catch (err) {
+      }
+    })
+    .catch(err => {
+      clearTimeout(timeoutId);
+      if (err.name !== 'AbortError') {
         console.error('Network error:', err);
       }
+    })
+    .finally(() => {
+      isProcessingClick = false;
+      button.disabled = false;
     });
-  });
+  }, { passive: false });
 
+document.addEventListener('DOMContentLoaded', function () {
   // Current time indicator for day schedule
+  const timeline = document.getElementById('day-timeline');
+  const currentTimeLine = document.getElementById('current-time-line');
+  const currentTimeText = document.getElementById('current-time-text');
+  
+  // Early exit if elements don't exist
+  if (!timeline || !currentTimeLine || !currentTimeText) {
+    return;
+  }
+  
+  let timelineUpdateInterval = null;
+  let updatePending = false;
+  
   function updateCurrentTimeLine() {
-    const timeline = document.getElementById('day-timeline');
-    const currentTimeLine = document.getElementById('current-time-line');
-    const currentTimeText = document.getElementById('current-time-text');
-    
-    if (!timeline || !currentTimeLine || !currentTimeText) return;
+    if (updatePending) return;
+
+    updatePending = true;
     
     const now = new Date();
     const hours = now.getHours();
@@ -514,34 +613,81 @@ document.addEventListener('DOMContentLoaded', function () {
     
     // Only show the line if current time is between 9 AM (9) and 9 PM (21)
     if (hours >= 9 && hours < 21) {
-      // Calculate position as percentage
-      // Total time span: 9 AM to 9 PM = 12 hours = 720 minutes
-      // Current time from 9 AM in minutes
-      const minutesFrom9AM = (hours - 9) * 60 + minutes;
-      const totalMinutes = 12 * 60; // 12 hours
-      const percentage = (minutesFrom9AM / totalMinutes) * 100;
-      
-      // Timeline has 12 hour slots, each 48px (h-12)
-      const timelineHeight = 12 * 48; // 576px
-      const topPosition = (percentage / 100) * timelineHeight;
-      
-      currentTimeLine.style.top = `${topPosition}px`;
-      currentTimeLine.classList.remove('hidden');
-      
-      // Format time
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      const displayHours = hours > 12 ? hours - 12 : hours;
-      const displayMinutes = minutes.toString().padStart(2, '0');
-      currentTimeText.textContent = `${displayHours}:${displayMinutes} ${ampm}`;
+      // Use requestAnimationFrame for smoother updates and better performance
+      requestAnimationFrame(() => {
+        try {
+          // Calculate position as percentage
+          // Total time span: 9 AM to 9 PM = 12 hours = 720 minutes
+          // Current time from 9 AM in minutes
+          const minutesFrom9AM = (hours - 9) * 60 + minutes;
+          const totalMinutes = 12 * 60; // 12 hours
+          const percentage = (minutesFrom9AM / totalMinutes) * 100;
+          
+          // Timeline has 12 hour slots, each 48px (h-12)
+          const timelineHeight = 12 * 48; // 576px
+          const topPosition = (percentage / 100) * timelineHeight;
+          
+          // Use transform instead of top for better performance
+          currentTimeLine.style.transform = `translateY(${topPosition}px)`;
+          currentTimeLine.style.top = '0';
+          currentTimeLine.classList.remove('hidden');
+          
+          // Format time
+          const ampm = hours >= 12 ? 'PM' : 'AM';
+          const displayHours = hours > 12 ? hours - 12 : hours;
+          const displayMinutes = minutes.toString().padStart(2, '0');
+          currentTimeText.textContent = `${displayHours}:${displayMinutes} ${ampm}`;
+        } catch (error) {
+          console.error('Error updating timeline:', error);
+        } finally {
+          updatePending = false;
+        }
+      });
     } else {
       currentTimeLine.classList.add('hidden');
+      updatePending = false;
     }
+  }
+  
+  // Clear any existing interval to prevent duplicates
+  if (timelineUpdateInterval) {
+    clearInterval(timelineUpdateInterval);
+    timelineUpdateInterval = null;
   }
   
   // Update current time line immediately and every minute
   updateCurrentTimeLine();
-  setInterval(updateCurrentTimeLine, 60000); // Update every minute
+  timelineUpdateInterval = setInterval(updateCurrentTimeLine, 60000); // Update every minute
+  
+  // Clean up interval when page is hidden or unloaded - use { once: true } to prevent duplicates
+  const visibilityHandler = function() {
+    if (document.hidden && timelineUpdateInterval) {
+      clearInterval(timelineUpdateInterval);
+      timelineUpdateInterval = null;
+      updatePending = false; // Reset throttle flag
+    } else if (!document.hidden && !timelineUpdateInterval) {
+      updateCurrentTimeLine();
+      timelineUpdateInterval = setInterval(updateCurrentTimeLine, 60000);
+    }
+  };
+  
+  const unloadHandler = function() {
+    if (timelineUpdateInterval) {
+      clearInterval(timelineUpdateInterval);
+      timelineUpdateInterval = null;
+      updatePending = false;
+    }
+  };
+  
+  // Only add listeners if not already added (check flag on window)
+  if (!window.__dashboardTimelineListenersAdded) {
+    window.__dashboardTimelineListenersAdded = true;
+    document.addEventListener('visibilitychange', visibilityHandler, { passive: true });
+    window.addEventListener('beforeunload', unloadHandler, { once: true, passive: true });
+  }
 });
+
+})(); // End IIFE
 </script>
 
 

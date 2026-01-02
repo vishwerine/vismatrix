@@ -1,0 +1,568 @@
+{% extends 'tracker/base.html' %}
+{% block title %}Day Planner - VisMatrix{% endblock %}
+{% block content %}
+<style>
+/* SIMPLIFIED DAY PLANNER - Clean & Performant */
+.planner-wrapper { max-width: 1200px; margin: 0 auto; padding: 20px; }
+.planner-header { background: oklch(var(--b2)); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+.planner-controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+.planner-container { 
+  display: grid; 
+  grid-template-columns: 80px 1fr; 
+  border: 1px solid oklch(var(--bc) / 0.2); 
+  border-radius: 12px; 
+  overflow: hidden; 
+  background: oklch(var(--b1));
+  max-height: 700px;
+}
+.time-labels { 
+  background: oklch(var(--b2) / 0.5); 
+  border-right: 1px solid oklch(var(--bc) / 0.2); 
+  overflow: hidden;
+}
+.timeline { position: relative; overflow-y: auto; }
+.timeline-grid { 
+  position: relative; 
+  height: 1920px; /* 24 hours * 80px */
+}
+.hour-slot { 
+  height: 80px; 
+  border-bottom: 1px solid oklch(var(--bc) / 0.1); 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: oklch(var(--bc) / 0.7);
+}
+.grid-line { 
+  position: absolute; 
+  left: 0; 
+  right: 0; 
+  height: 1px; 
+  background: oklch(var(--bc) / 0.1); 
+  pointer-events: none;
+}
+.event-card {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  background: linear-gradient(135deg, oklch(var(--p) / 0.9), oklch(var(--s) / 0.8));
+  border: 2px solid oklch(var(--p) / 0.5);
+  border-radius: 8px;
+  padding: 8px 12px;
+  cursor: move;
+  color: oklch(var(--pc));
+  overflow: hidden;
+  min-height: 40px;
+  transition: transform 0.1s, box-shadow 0.1s;
+  z-index: 10;
+}
+.event-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px oklch(var(--p) / 0.3);
+  z-index: 20;
+}
+.event-card.dragging {
+  opacity: 0.8;
+  cursor: grabbing;
+  z-index: 30;
+}
+.event-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.event-time { font-size: 11px; opacity: 0.9; }
+.event-actions { 
+  position: absolute; 
+  top: 6px; 
+  right: 6px; 
+  display: flex; 
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.event-card:hover .event-actions { opacity: 1; }
+.event-btn {
+  background: oklch(var(--b1));
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: oklch(var(--bc));
+}
+.event-btn:hover { background: oklch(var(--b2)); }
+.now-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #ef4444;
+  z-index: 25;
+  pointer-events: none;
+}
+.now-line::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -4px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #ef4444;
+}
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal-overlay.active { display: flex; }
+.modal-content {
+  background: oklch(var(--b1));
+  padding: 24px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.form-group { margin-bottom: 16px; }
+.form-group label { display: block; margin-bottom: 6px; font-weight: 600; }
+.form-group input, .form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: 6px;
+  background: oklch(var(--b1));
+  color: oklch(var(--bc));
+}
+.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+</style>
+
+<div class="planner-wrapper">
+  <!-- Header -->
+  <div class="planner-header">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <h1 class="text-2xl font-bold">📅 Day Planner</h1>
+      <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm">← Back</a>
+    </div>
+    
+    <div class="planner-controls">
+      <button class="btn btn-sm btn-primary" onclick="prevDay()">← Prev</button>
+      <button class="btn btn-sm btn-primary" onclick="today()">Today</button>
+      <button class="btn btn-sm btn-primary" onclick="nextDay()">Next →</button>
+      <input type="date" id="datePicker" class="input input-sm input-bordered">
+      <span id="dateDisplay" class="font-semibold text-lg"></span>
+      <button class="btn btn-sm btn-success" onclick="newEvent()">+ New Event</button>
+      <span id="stats" class="text-sm opacity-70"></span>
+    </div>
+  </div>
+
+  <!-- Planner Grid -->
+  <div class="planner-container">
+    <div class="time-labels" id="timeLabels">
+      <!-- Time labels 0-23 -->
+    </div>
+    <div class="timeline" id="timeline">
+      <div class="timeline-grid" id="grid">
+        <!-- Grid lines -->
+        <!-- Events will be rendered here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Event Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-content">
+    <h3 class="text-xl font-bold mb-4" id="modalTitle">New Event</h3>
+    <div class="form-group">
+      <label>Title *</label>
+      <input type="text" id="eventTitle" placeholder="Event title">
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+      <div class="form-group">
+        <label>Start</label>
+        <input type="time" id="eventStart">
+      </div>
+      <div class="form-group">
+        <label>End</label>
+        <input type="time" id="eventEnd">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveEvent()">Save</button>
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-error btn-sm ml-auto" id="deleteBtn" onclick="deleteEvent()" style="display:none;">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const CSRF_TOKEN = '{{ csrf_token }}';
+const HOUR_HEIGHT = 80;
+let currentDate = new Date().toISOString().split('T')[0];
+let events = [];
+let editingId = null;
+let dragState = null;
+
+// Initialize
+function init() {
+  renderTimeLabels();
+  renderGrid();
+  syncDateUI();
+  loadEvents();
+  updateNowLine();
+  setInterval(updateNowLine, 60000);
+  
+  // Date picker
+  document.getElementById('datePicker').addEventListener('change', (e) => {
+    currentDate = e.target.value;
+    loadEvents();
+    syncDateUI();
+  });
+  
+  // Timeline click to create
+  document.getElementById('grid').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget || e.target.classList.contains('grid-line')) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const y = e.clientY - rect.top + document.getElementById('timeline').scrollTop;
+      const hour = Math.floor(y / HOUR_HEIGHT);
+      const minutes = Math.round(((y % HOUR_HEIGHT) / HOUR_HEIGHT) * 60 / 15) * 15;
+      newEvent(hour * 60 + minutes);
+    }
+  });
+  
+  // Scroll sync
+  document.getElementById('timeline').addEventListener('scroll', () => {
+    document.getElementById('timeLabels').scrollTop = document.getElementById('timeline').scrollTop;
+  });
+}
+
+function renderTimeLabels() {
+  const container = document.getElementById('timeLabels');
+  for (let h = 0; h < 24; h++) {
+    const div = document.createElement('div');
+    div.className = 'hour-slot';
+    div.textContent = h.toString().padStart(2, '0') + ':00';
+    container.appendChild(div);
+  }
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  for (let h = 0; h <= 24; h++) {
+    const line = document.createElement('div');
+    line.className = 'grid-line';
+    line.style.top = (h * HOUR_HEIGHT) + 'px';
+    grid.appendChild(line);
+  }
+}
+
+function syncDateUI() {
+  document.getElementById('datePicker').value = currentDate;
+  const d = new Date(currentDate + 'T12:00:00');
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('dateDisplay').textContent = 
+    currentDate === today ? 'Today' : d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function prevDay() {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() - 1);
+  currentDate = d.toISOString().split('T')[0];
+  loadEvents();
+  syncDateUI();
+}
+
+function nextDay() {
+  const d = new Date(currentDate);
+  d.setDate(d.getDate() + 1);
+  currentDate = d.toISOString().split('T')[0];
+  loadEvents();
+  syncDateUI();
+}
+
+function today() {
+  currentDate = new Date().toISOString().split('T')[0];
+  loadEvents();
+  syncDateUI();
+  scrollToNow();
+}
+
+function scrollToNow() {
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const y = (mins / 60) * HOUR_HEIGHT;
+  document.getElementById('timeline').scrollTop = Math.max(0, y - 200);
+}
+
+function updateNowLine() {
+  const today = new Date().toISOString().split('T')[0];
+  if (currentDate !== today) return;
+  
+  const now = new Date();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const y = (mins / 60) * HOUR_HEIGHT;
+  
+  let line = document.querySelector('.now-line');
+  if (!line) {
+    line = document.createElement('div');
+    line.className = 'now-line';
+    document.getElementById('grid').appendChild(line);
+  }
+  line.style.top = y + 'px';
+}
+
+async function loadEvents() {
+  try {
+    const r = await fetch(`/api/day-schedule/${currentDate}/`, {
+      headers: { 'X-CSRFToken': CSRF_TOKEN }
+    });
+    const data = await r.json();
+    if (data.success) {
+      events = data.events || [];
+      render();
+    }
+  } catch (e) {
+    console.error('Load failed:', e);
+  }
+}
+
+async function saveToServer() {
+  try {
+    await fetch('/api/day-schedule/save/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+      body: JSON.stringify({ date: currentDate, title: '', events: events.filter(e => !e.isCalendarEvent) })
+    });
+  } catch (e) {
+    console.error('Save failed:', e);
+  }
+}
+
+function render() {
+  // Remove old event cards
+  document.querySelectorAll('.event-card').forEach(el => el.remove());
+  
+  const grid = document.getElementById('grid');
+  events.forEach(ev => {
+    const card = document.createElement('div');
+    card.className = 'event-card';
+    card.dataset.id = ev.id;
+    card.style.top = ((ev.startMin / 60) * HOUR_HEIGHT) + 'px';
+    card.style.height = (((ev.endMin - ev.startMin) / 60) * HOUR_HEIGHT) + 'px';
+    
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'event-title';
+    titleDiv.textContent = ev.title;
+    
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'event-time';
+    timeDiv.textContent = `${formatTime(ev.startMin)} - ${formatTime(ev.endMin)}`;
+    
+    const actions = document.createElement('div');
+    actions.className = 'event-actions';
+    actions.innerHTML = `
+      <button class="event-btn" onclick="editEvent('${ev.id}'); event.stopPropagation();">✏️</button>
+      <button class="event-btn" onclick="quickDelete('${ev.id}'); event.stopPropagation();">🗑️</button>
+    `;
+    
+    card.appendChild(titleDiv);
+    card.appendChild(timeDiv);
+    card.appendChild(actions);
+    
+    // Drag handlers
+    if (!ev.isCalendarEvent) {
+      card.addEventListener('mousedown', startDrag);
+    }
+    
+    grid.appendChild(card);
+  });
+  
+  updateStats();
+}
+
+function updateStats() {
+  const count = events.length;
+  const total = events.reduce((sum, ev) => sum + (ev.endMin - ev.startMin), 0);
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  document.getElementById('stats').textContent = 
+    `${count} event${count !== 1 ? 's' : ''} • ${hours}h ${mins}m scheduled`;
+}
+
+function startDrag(e) {
+  const card = e.currentTarget;
+  const id = card.dataset.id;
+  const event = events.find(ev => ev.id === id);
+  if (!event || event.isCalendarEvent) return;
+  
+  const rect = card.getBoundingClientRect();
+  const timeline = document.getElementById('timeline');
+  const gridRect = document.getElementById('grid').getBoundingClientRect();
+  
+  dragState = {
+    id,
+    offsetY: e.clientY - rect.top,
+    origStartMin: event.startMin,
+    origEndMin: event.endMin
+  };
+  
+  card.classList.add('dragging');
+  
+  const onMove = (e) => {
+    if (!dragState) return;
+    const y = e.clientY - gridRect.top + timeline.scrollTop - dragState.offsetY;
+    const mins = Math.round((y / HOUR_HEIGHT) * 60 / 15) * 15;
+    const duration = dragState.origEndMin - dragState.origStartMin;
+    
+    const newStart = Math.max(0, Math.min(1440 - duration, mins));
+    const newEnd = newStart + duration;
+    
+    const ev = events.find(e => e.id === dragState.id);
+    if (ev) {
+      ev.startMin = newStart;
+      ev.endMin = newEnd;
+      
+      card.style.top = ((newStart / 60) * HOUR_HEIGHT) + 'px';
+      
+      const timeDiv = card.querySelector('.event-time');
+      if (timeDiv) {
+        timeDiv.textContent = `${formatTime(newStart)} - ${formatTime(newEnd)}`;
+      }
+    }
+  };
+  
+  const onUp = () => {
+    if (dragState) {
+      card.classList.remove('dragging');
+      dragState = null;
+      saveToServer();
+      updateStats();
+    }
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+  };
+  
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  
+  e.preventDefault();
+}
+
+function formatTime(mins) {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+}
+
+function newEvent(startMin = null) {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'New Event';
+  document.getElementById('deleteBtn').style.display = 'none';
+  
+  if (startMin === null) {
+    const now = new Date();
+    startMin = now.getHours() * 60 + Math.round(now.getMinutes() / 15) * 15;
+  }
+  
+  document.getElementById('eventTitle').value = '';
+  document.getElementById('eventStart').value = formatTime(startMin);
+  document.getElementById('eventEnd').value = formatTime(Math.min(1440, startMin + 60));
+  
+  document.getElementById('modal').classList.add('active');
+  document.getElementById('eventTitle').focus();
+}
+
+function editEvent(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Edit Event';
+  document.getElementById('deleteBtn').style.display = 'block';
+  
+  document.getElementById('eventTitle').value = ev.title;
+  document.getElementById('eventStart').value = formatTime(ev.startMin);
+  document.getElementById('eventEnd').value = formatTime(ev.endMin);
+  
+  document.getElementById('modal').classList.add('active');
+  document.getElementById('eventTitle').focus();
+}
+
+function saveEvent() {
+  const title = document.getElementById('eventTitle').value.trim();
+  if (!title) {
+    alert('Please enter a title');
+    return;
+  }
+  
+  const startTime = document.getElementById('eventStart').value;
+  const endTime = document.getElementById('eventEnd').value;
+  const [sh, sm] = startTime.split(':').map(Number);
+  const [eh, em] = endTime.split(':').map(Number);
+  const startMin = sh * 60 + sm;
+  const endMin = eh * 60 + em;
+  
+  if (endMin <= startMin) {
+    alert('End time must be after start time');
+    return;
+  }
+  
+  if (editingId) {
+    const ev = events.find(e => e.id === editingId);
+    if (ev) {
+      ev.title = title;
+      ev.startMin = startMin;
+      ev.endMin = endMin;
+    }
+  } else {
+    events.push({
+      id: 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+      title,
+      startMin,
+      endMin,
+      logged: false
+    });
+  }
+  
+  closeModal();
+  render();
+  saveToServer();
+}
+
+function deleteEvent() {
+  if (!editingId) return;
+  if (confirm('Delete this event?')) {
+    events = events.filter(e => e.id !== editingId);
+    closeModal();
+    render();
+    saveToServer();
+  }
+}
+
+function quickDelete(id) {
+  if (confirm('Delete this event?')) {
+    events = events.filter(e => e.id !== id);
+    render();
+    saveToServer();
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('active');
+  editingId = null;
+}
+
+// Close modal on escape
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+{% endblock %}

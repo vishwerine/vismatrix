@@ -38,7 +38,7 @@
                 <label tabindex="0" class="btn btn-ghost btn-xs btn-circle" onclick="event.stopPropagation()">
                   <i class="bi bi-three-dots-vertical"></i>
                 </label>
-                <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-10" onclick="event.stopPropagation()">
+                <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 z-[90]" onclick="event.stopPropagation()">
                   <li><a href="{% url 'plan_detail' plan.pk %}"><i class="bi bi-eye mr-2"></i>View Details</a></li>
                   <li><a href="{% url 'plan_update' plan.pk %}"><i class="bi bi-pencil mr-2"></i>Edit</a></li>
                   <li><a href="{% url 'plan_delete' plan.pk %}" class="text-error"><i class="bi bi-trash mr-2"></i>Delete</a></li>

@@ -1,0 +1,203 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+
+
+{% block title %}Analytics – Progress Insights{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-emerald-50 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 px-4 py-6">
+
+  <!-- ================= HEADER ================= -->
+  <div class="max-w-7xl mx-auto mb-8">
+    <h1 class="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-2">
+      📊 Progress Analytics
+    </h1>
+    <p class="text-slate-600 dark:text-slate-300">
+      Insightful breakdown of your productivity, habits, and progress.
+    </p>
+  </div>
+
+  <!-- ================= KEY METRICS ================= -->
+  <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+    <div class="stat bg-white dark:bg-slate-800 rounded-2xl shadow dark:shadow-slate-900/50">
+      <div class="stat-title">Tasks Today</div>
+      <div class="stat-value text-primary">{{ today_tasks_count }}</div>
+      <div class="stat-desc">
+        {{ tasks_trend }}% vs yesterday
+      </div>
+    </div>
+
+    <div class="stat bg-white dark:bg-slate-800 rounded-2xl shadow dark:shadow-slate-900/50">
+      <div class="stat-title">Minutes Today</div>
+      <div class="stat-value text-secondary">{{ today_time }}</div>
+      <div class="stat-desc">
+        Avg/day: {{ avg_daily_minutes }} min
+      </div>
+    </div>
+
+    <div class="stat bg-white dark:bg-slate-800 rounded-2xl shadow dark:shadow-slate-900/50">
+      <div class="stat-title">Current Streak</div>
+      <div class="stat-value text-success">{{ current_streak }} 🔥</div>
+      <div class="stat-desc">
+        Best: {{ best_streak }} days
+      </div>
+    </div>
+
+    <div class="stat bg-white dark:bg-slate-800 rounded-2xl shadow dark:shadow-slate-900/50">
+      <div class="stat-title">This Month</div>
+      <div class="stat-value text-accent">{{ logs_this_month }}</div>
+      <div class="stat-desc">
+        {{ month_trend }}% vs last month
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= WEEKLY LINE CHART ================= -->
+  <div class="max-w-7xl mx-auto bg-white dark:bg-slate-800 rounded-3xl shadow-xl dark:shadow-slate-900/50 p-6 mb-10">
+    <h2 class="text-xl font-bold dark:text-white mb-4">Weekly Activity</h2>
+    <canvas id="weeklyChart" height="90"></canvas>
+  </div>
+
+  <!-- ================= CATEGORY + TASK CHARTS ================= -->
+  <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-6 mb-10">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl dark:shadow-slate-900/50 p-6">
+      <h2 class="text-xl font-bold dark:text-white mb-4">Time by Category</h2>
+      <canvas id="categoryChart"></canvas>
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-3xl shadow-xl dark:shadow-slate-900/50 p-6">
+      <h2 class="text-xl font-bold dark:text-white mb-4">Top Tasks (Weekly)</h2>
+      <canvas id="taskChart"></canvas>
+    </div>
+  </div>
+
+  <!-- ================= CALENDAR HEATMAP ================= -->
+  <div class="max-w-7xl mx-auto bg-white dark:bg-slate-800 rounded-3xl shadow-xl dark:shadow-slate-900/50 p-6 mb-10">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-bold dark:text-white">{{ month_name }} {{ selected_year }}</h2>
+      <div class="flex gap-2">
+        <a href="?month={{ prev_month }}&year={{ prev_year }}" class="btn btn-sm">←</a>
+        <a href="?month={{ next_month }}&year={{ next_year }}" class="btn btn-sm">→</a>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-7 gap-2 text-center mb-2">
+      {% for d in day_names %}
+        <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">{{ d }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="grid grid-cols-7 gap-2">
+      {% for day in calendar_days %}
+        {% if day.is_future %}
+          <div
+            class="aspect-square rounded-xl text-xs flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-700 text-slate-300 dark:text-slate-500 cursor-not-allowed"
+            title="Future date"
+          >
+            <div class="font-bold">{{ day.day }}</div>
+          </div>
+        {% else %}
+          <a
+            href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
+            class="
+              aspect-square rounded-xl text-xs flex flex-col items-center justify-center
+              transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer
+              {% if day.intensity == 0 %} bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-500 dark:text-white
+              {% elif day.intensity == 1 %} bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-900 dark:hover:bg-emerald-800 dark:text-emerald-100
+              {% elif day.intensity == 2 %} bg-emerald-200 hover:bg-emerald-300 dark:bg-emerald-800 dark:hover:bg-emerald-700 dark:text-emerald-50
+              {% elif day.intensity == 3 %} bg-emerald-300 hover:bg-emerald-400 dark:bg-emerald-700 dark:hover:bg-emerald-600 dark:text-white
+              {% elif day.intensity == 4 %} bg-emerald-400 text-white hover:bg-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500
+              {% elif day.intensity == 5 %} bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-400
+              {% endif %}
+              {% if day.is_today %} ring-2 ring-primary {% endif %}
+            "
+            title="View details for {{ day.date|date:'F j, Y' }} ({{ day.minutes|default:0 }} minutes)"
+          >
+            <div class="font-bold">{{ day.day }}</div>
+            {% if day.minutes %}
+              <div>{{ day.minutes }}m</div>
+            {% endif %}
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ================= INSIGHTS ================= -->
+  <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-6 mb-12">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow dark:shadow-slate-900/50 p-5">
+      <h3 class="font-bold dark:text-white mb-1">Best Day</h3>
+      {% if best_day %}
+        <p class="dark:text-slate-300">{{ best_day.name }} ({{ best_day.minutes }} min avg)</p>
+      {% else %}
+        <p class="text-slate-500 dark:text-slate-400">Not enough data</p>
+      {% endif %}
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow dark:shadow-slate-900/50 p-5">
+      <h3 class="font-bold dark:text-white mb-1">Most Productive Category</h3>
+      {% if most_productive_category %}
+        <p class="dark:text-slate-300">{{ most_productive_category.name }} – {{ most_productive_category.value }} min</p>
+      {% else %}
+        <p class="text-slate-500 dark:text-slate-400">No data</p>
+      {% endif %}
+    </div>
+
+    <div class="bg-white dark:bg-slate-800 rounded-2xl shadow dark:shadow-slate-900/50 p-5">
+      <h3 class="font-bold dark:text-white mb-1">Weekly Completion</h3>
+      <p class="dark:text-slate-300">{{ completion_rate_week }}% completed</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= DATA SCRIPTS ================= -->
+{{ weekly_overview|json_script:"weeklyData" }}
+{{ category_data|json_script:"categoryData" }}
+{{ task_data|json_script:"taskData" }}
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+  const weekly = JSON.parse("{{ weekly_overview|escapejs }}");
+  const categories = JSON.parse("{{ category_data|escapejs }}");
+  const tasks = JSON.parse("{{ task_data|escapejs }}");
+
+  new Chart(document.getElementById("weeklyChart"), {
+    type: "line",
+    data: {
+      labels: weekly.map(d => d.label),
+      datasets: [{
+        label: "Minutes",
+        data: weekly.map(d => d.minutes),
+        tension: 0.4,
+        fill: true,
+      }]
+    }
+  });
+
+  new Chart(document.getElementById("categoryChart"), {
+    type: "doughnut",
+    data: {
+      labels: categories.map(c => c.name),
+      datasets: [{
+        data: categories.map(c => c.value)
+      }]
+    }
+  });
+
+  new Chart(document.getElementById("taskChart"), {
+    type: "bar",
+    data: {
+      labels: tasks.map(t => t.name),
+      datasets: [{
+        data: tasks.map(t => t.value)
+      }]
+    },
+    options: {
+      indexAxis: "y"
+    }
+  });
+</script>
+
+{% endblock %}

@@ -1,0 +1,1532 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Day Planner - VisMatrix{% endblock %}
+
+{% block content %}
+<style>
+  /* =========================================================
+     DAY PLANNER v3 — FULL DAY calendar view (0–23)
+     FIXES:
+       ✅ Always renders full day height
+       ✅ Timeline scroll + time labels scroll synced
+       ✅ Events layer sized correctly (absolute over full day)
+     SMART FEATURES:
+       ✅ Click to create (snapped)
+       ✅ Drag to create (select range)
+       ✅ Drag to move / resize manual events
+       ✅ Overlap lanes (calendar-like)
+       ✅ Auto-scroll to “Now” on Today
+     ========================================================= */
+
+  #dayPlannerPage{
+    --planner-hour-height: 84px;
+    --planner-time-col: 84px;
+    --planner-gutter: 12px;
+
+    --dp-radius: 18px;
+    --dp-shadow: 0 10px 30px oklch(var(--b1) / 0.12);
+    --dp-border: 1px solid oklch(var(--bc) / 0.10);
+
+    --dp-snap: 15; /* minutes */
+    --dp-hour-line: oklch(var(--bc) / 0.18);
+    --dp-quarter-line: oklch(var(--bc) / 0.08);
+    --dp-hover: oklch(var(--p) / 0.08);
+    --dp-now: #ff4444;
+  }
+
+  #dayPlannerPage main{ padding-bottom: 28px; }
+
+  .planner-container{
+    display:grid;
+    grid-template-columns: var(--planner-time-col) 1fr;
+    border-radius: var(--dp-radius);
+    overflow:hidden;
+    box-shadow: var(--dp-shadow);
+    border: var(--dp-border);
+    background: oklch(var(--b1));
+    max-height: min(78vh, 860px);
+  }
+
+  /* Left column scrolls in sync with timeline */
+  .planner-time-labels{
+    background: linear-gradient(to bottom, oklch(var(--b2) / 0.65), oklch(var(--b2) / 0.35));
+    border-right: 1px solid oklch(var(--bc) / 0.10);
+    z-index: 30;
+    overflow: hidden; /* we will scroll this via JS */
+  }
+
+  .planner-time-slot{
+    height: var(--planner-hour-height);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding: 8px 4px;
+    border-bottom: 1px solid oklch(var(--bc) / 0.06);
+    user-select:none;
+    position:relative;
+  }
+  .planner-time-slot .hour{ font-size: 18px; font-weight: 900; color: oklch(var(--bc) / 0.92); }
+  .planner-time-slot .period{ font-size: 11px; margin-top: 2px; opacity: .80; letter-spacing: .5px; font-weight: 700; }
+  .planner-time-slot::after{
+    content:"";
+    position:absolute;
+    right:10px;
+    width:10px;
+    height:1px;
+    background: oklch(var(--bc) / 0.14);
+    top:50%;
+    transform: translateY(-50%);
+  }
+
+  .planner-sticky-toolbar{
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    backdrop-filter: blur(10px);
+    background: oklch(var(--b1) / 0.86);
+    border-bottom: 1px solid oklch(var(--bc) / 0.10);
+  }
+
+  /* Timeline scroll area */
+  .planner-timeline{
+    position:relative;
+    overflow:auto;
+    background: linear-gradient(to bottom, oklch(var(--b1)), oklch(var(--b2) / 0.25));
+    user-select:none;
+    touch-action:pan-y;
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar styling */
+  .planner-timeline::-webkit-scrollbar {
+    width: 10px;
+  }
+  .planner-timeline::-webkit-scrollbar-track {
+    background: oklch(var(--b2) / 0.3);
+    border-radius: 8px;
+  }
+  .planner-timeline::-webkit-scrollbar-thumb {
+    background: oklch(var(--p) / 0.4);
+    border-radius: 8px;
+    border: 2px solid oklch(var(--b1));
+  }
+  .planner-timeline::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--p) / 0.6);
+  }
+
+  /* Time labels custom scrollbar */
+  .planner-time-labels::-webkit-scrollbar {
+    width: 0px;
+  }
+
+  /* Full-day height spacer (this is the critical fix) */
+  .planner-spacer{
+    position:relative;
+    height: var(--dp-day-height, 2016px); /* set from JS */
+  }
+
+  /* Grid lines overlay (hour + quarter-hour) */
+  .planner-grid{
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+    background:
+      repeating-linear-gradient(
+        to bottom,
+        var(--dp-hour-line) 0px,
+        var(--dp-hour-line) 1px,
+        transparent 1px,
+        transparent var(--planner-hour-height)
+      ),
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0px,
+        transparent calc(var(--planner-hour-height) / 4 - 1px),
+        var(--dp-quarter-line) calc(var(--planner-hour-height) / 4 - 1px),
+        var(--dp-quarter-line) calc(var(--planner-hour-height) / 4),
+        transparent calc(var(--planner-hour-height) / 4),
+        transparent var(--planner-hour-height)
+      );
+  }
+
+  /* Hover ghost block */
+  .dp-ghost{
+    position:absolute;
+    left: var(--planner-gutter);
+    right: var(--planner-gutter);
+    border-radius: 14px;
+    border: 2px dashed oklch(var(--p) / 0.55);
+    background: var(--dp-hover);
+    pointer-events:none;
+    z-index: 20;
+    display:none;
+  }
+  .dp-ghost.active{ display:block; }
+  .dp-ghost-label{
+    position:absolute;
+    right: 12px;
+    top: 8px;
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .4px;
+    color: oklch(var(--bc) / 0.72);
+    background: oklch(var(--b1) / 0.75);
+    border: 1px solid oklch(var(--bc) / 0.12);
+    padding: 4px 10px;
+    border-radius: 999px;
+    backdrop-filter: blur(10px);
+  }
+
+  /* Drag-create selection */
+  .dp-drag-select{
+    position:absolute;
+    left: var(--planner-gutter);
+    right: var(--planner-gutter);
+    border-radius: 14px;
+    background: oklch(var(--p) / 0.10);
+    border: 2px solid oklch(var(--p) / 0.45);
+    z-index: 25;
+    pointer-events:none;
+    display:none;
+  }
+  .dp-drag-select.active{ display:block; }
+
+  /* Events absolute layer */
+  .planner-events-layer{
+    position:absolute;
+    inset: 0;
+    pointer-events:none;
+    z-index: 30;
+  }
+
+  .planner-empty-state{
+    position:absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    text-align:center; color: oklch(var(--bc) / 0.45);
+    pointer-events:none; z-index: 1;
+    background: oklch(var(--b1) / 0.65);
+    border: 1px dashed oklch(var(--bc) / 0.18);
+    border-radius: 16px;
+    padding: 18px;
+    width: min(520px, 92%);
+    box-shadow: 0 10px 24px oklch(var(--b1) / 0.08);
+  }
+  .planner-empty-state i{ font-size: 44px; margin-bottom: 12px; opacity: .30; }
+  .planner-empty-state p{ font-size: 14px; font-weight: 900; }
+
+  /* Current time indicator */
+  .planner-current-time{ position:absolute; left:0; right:0; z-index: 60; pointer-events:none; display:none; }
+  .planner-current-time.active{ display:block; }
+  .planner-current-time-line{
+    height: 3px; background: var(--dp-now); border-radius: 999px;
+    box-shadow: 0 0 12px rgba(255,68,68,.55);
+    position:relative;
+  }
+  .planner-current-time-dot{
+    position:absolute; left: 10px; top: -6px;
+    width: 14px; height:14px; border-radius:50%;
+    background: var(--dp-now);
+    border: 3px solid oklch(var(--b1));
+    box-shadow: 0 2px 10px rgba(255,68,68,.45);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .planner-current-time-label{
+    position:absolute; left: 42px; top: -22px;
+    background: var(--dp-now); color: #fff;
+    padding: 4px 12px; border-radius: 12px;
+    font-size: 11px; font-weight: 900; letter-spacing: .5px;
+    box-shadow: 0 2px 10px rgba(255,68,68,.35);
+  }
+  @keyframes pulse{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.1); opacity:.82; } }
+
+  /* Event cards */
+  .planner-event{
+    position:absolute;
+    border-radius: 14px;
+    padding: 12px 12px 10px;
+    min-height: 46px;
+    overflow:hidden;
+    pointer-events:auto;
+    cursor:pointer;
+
+    background: linear-gradient(135deg, oklch(var(--p) / 0.92), oklch(var(--s) / 0.86));
+    border: 2px solid oklch(var(--p));
+    box-shadow: 0 6px 18px oklch(var(--b1) / 0.18);
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .planner-event:hover{ transform: translateY(-1px); box-shadow: 0 12px 26px oklch(var(--p) / 0.20); border-color: oklch(var(--pf)); z-index: 80; }
+
+  .planner-event.calendar-event{
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: 2px solid #818cf8;
+    border-style: solid;
+    cursor: default;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  }
+  .planner-event.calendar-event:hover{ 
+    transform: none;
+    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+  }
+  .planner-event.calendar-event .planner-event-title::before{
+    content: '📅 ';
+    margin-right: 4px;
+  }
+
+  .planner-event.logged{
+    opacity: .76;
+    background: linear-gradient(135deg, oklch(var(--su) / 0.55), oklch(var(--su) / 0.45));
+    border-color: oklch(var(--su));
+  }
+
+  .planner-event-header{ display:flex; align-items:start; justify-content:space-between; gap: 10px; }
+  .planner-event-title{
+    font-size: 14px; font-weight: 900; line-height: 1.35;
+    color: oklch(var(--pc));
+    overflow:hidden; text-overflow:ellipsis;
+    display:-webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  }
+  .planner-event-actions{ display:flex; gap: 6px; opacity: .9; }
+  @media (hover:hover){
+    .planner-event-actions{ opacity: 0; }
+    .planner-event:hover .planner-event-actions{ opacity: 1; }
+  }
+  .planner-event-btn{
+    width: 26px; height: 26px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius: 8px;
+    background: oklch(var(--b1) / 0.22);
+    border: 1px solid oklch(var(--pc) / 0.28);
+    color: oklch(var(--pc));
+    transition: transform .12s ease, background .12s ease;
+  }
+  .planner-event-btn:hover{ transform: scale(1.06); background: oklch(var(--b1) / 0.40); }
+  .planner-event-btn.delete:hover{ background: oklch(var(--er)); border-color: oklch(var(--er)); color:#fff; }
+
+  .planner-event-meta{
+    display:flex; gap: 8px; flex-wrap:wrap;
+    margin-top: 6px;
+    font-size: 11px; font-weight: 900;
+    color: oklch(var(--pc) / 0.92);
+  }
+  .planner-event-badge{
+    display:inline-flex; align-items:center; gap: 6px;
+    padding: 3px 10px; border-radius: 999px;
+    background: oklch(var(--b1) / 0.22);
+    border: 1px solid oklch(var(--pc) / 0.20);
+  }
+
+  /* Resize handles (manual events) */
+  .planner-event .dp-handle{
+    position:absolute;
+    left: 12px; right: 12px;
+    height: 10px;
+    border-radius: 999px;
+    background: oklch(var(--b1) / 0.25);
+    border: 1px solid oklch(var(--pc) / 0.25);
+    opacity: 0;
+    transition: opacity .12s ease;
+  }
+  .planner-event:hover .dp-handle{ opacity: 1; }
+  .planner-event .dp-handle.top{ top: 8px; cursor: ns-resize; }
+  .planner-event .dp-handle.bottom{ bottom: 8px; cursor: ns-resize; }
+
+  .planner-event.dragging{
+    opacity: .92;
+    transform: scale(.99);
+    box-shadow: 0 14px 40px oklch(var(--b1) / 0.28);
+    z-index: 120;
+  }
+
+  .planner-stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .planner-stat-value{
+    font-size: 28px; font-weight: 900;
+    background: linear-gradient(135deg, oklch(var(--p)), oklch(var(--s)));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .planner-stat-label{ font-size: 12px; font-weight: 800; color: oklch(var(--bc) / 0.62); text-transform: uppercase; letter-spacing: .5px; }
+
+  .dp-chip{
+    display:inline-flex; align-items:center; gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid oklch(var(--bc) / 0.12);
+    background: oklch(var(--b1) / 0.75);
+    backdrop-filter: blur(10px);
+    font-size: 12px; font-weight: 900;
+    color: oklch(var(--bc) / 0.72);
+  }
+
+  @media (max-width: 768px){
+    #dayPlannerPage{ --planner-hour-height: 68px; --planner-time-col: 70px; --planner-gutter: 8px; }
+    .planner-event-title{ font-size: 12px; }
+    .planner-event-meta{ font-size: 10px; }
+    .planner-time-slot .hour{ font-size: 14px; }
+  }
+
+  /* Scroll navigation */
+  .scroll-nav{
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+  }
+  .scroll-nav:hover{
+    opacity: 1;
+  }
+  .scroll-nav-btn{
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: oklch(var(--p));
+    color: oklch(var(--pc));
+    border: 2px solid oklch(var(--b1));
+    box-shadow: 0 4px 12px oklch(var(--b1) / 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 20px;
+  }
+  .scroll-nav-btn:hover{
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px oklch(var(--p) / 0.35);
+  }
+  .scroll-nav-btn:active{
+    transform: scale(0.95);
+  }
+</style>
+
+<div id="dayPlannerPage">
+<main class="space-y-6 max-w-7xl mx-auto">
+
+  <!-- Header -->
+  <div class="card bg-gradient-to-br from-primary/10 via-secondary/5 to-base-100 border-0 shadow-xl">
+    <div class="card-body p-6">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-3 mb-2">
+            <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
+              <i class="bi bi-calendar-check text-2xl text-primary-content"></i>
+            </div>
+            <div>
+              <h1 class="text-3xl font-extrabold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Day Planner
+              </h1>
+              <p class="text-sm text-base-content/60 mt-1">
+                Full-day calendar view with click/drag create, move, resize & overlap lanes
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm gap-2">
+            <i class="bi bi-arrow-left"></i> Dashboard
+          </a>
+
+          <div class="join">
+            <button class="btn btn-sm join-item" id="prevDayBtn" title="Previous Day"><i class="bi bi-chevron-left"></i></button>
+            <button class="btn btn-outline btn-sm join-item" id="todayBtn"><i class="bi bi-calendar-today"></i> Today</button>
+            <button class="btn btn-sm join-item" id="nextDayBtn" title="Next Day"><i class="bi bi-chevron-right"></i></button>
+          </div>
+
+          <span class="dp-chip"><i class="bi bi-calendar3"></i> <span id="selectedDateText">Today</span></span>
+          <input type="date" id="datePicker" class="input input-bordered input-sm" style="width:150px;" />
+
+          <button class="btn btn-secondary btn-sm gap-2" id="autoScheduleBtn"><i class="bi bi-magic"></i> Auto Schedule</button>
+          <button class="btn btn-primary btn-sm gap-2" id="quickAddBtn"><i class="bi bi-lightning-charge-fill"></i> Quick Add</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day Title & Stats -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="lg:col-span-2 card bg-base-100 border border-base-300 shadow-lg">
+      <div class="card-body p-5">
+        <div class="flex items-center gap-3">
+          <i class="bi bi-calendar-event text-primary text-2xl"></i>
+          <input
+            type="text"
+            id="dayTitle"
+            class="input input-ghost text-xl font-bold flex-1 focus:input-primary px-2"
+            placeholder="Name your day..."
+            value="{{ today|date:'l, F j, Y' }}"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 border border-base-300 shadow-lg">
+      <div class="card-body p-5">
+        <div class="planner-stats">
+          <div class="text-center">
+            <div class="planner-stat-value" id="eventCount">0</div>
+            <div class="planner-stat-label">Events</div>
+          </div>
+          <div class="text-center">
+            <div class="planner-stat-value" id="totalHours">0h</div>
+            <div class="planner-stat-label">Scheduled</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="card bg-base-100 border border-base-300 shadow-xl">
+    <div class="card-body p-0">
+      <div class="p-5 border-b border-base-300">
+        <div class="flex items-center justify-between">
+          <h2 class="text-lg font-bold flex items-center gap-2"><i class="bi bi-clock-history"></i> Your Schedule</h2>
+          <div class="text-sm text-base-content/60">
+            <i class="bi bi-info-circle"></i> Click to create • Drag to select • Drag events to move/resize
+          </div>
+        </div>
+      </div>
+
+      <div class="planner-sticky-toolbar px-5 py-3 flex items-center justify-between">
+        <div class="text-xs text-base-content/60 flex items-center gap-2">
+          <i class="bi bi-mouse"></i> Click create • Drag create • Drag move/resize •
+          <i class="bi bi-keyboard"></i> N new • T today • ←/→ day • Esc close
+        </div>
+        <div class="text-xs text-base-content/60 flex items-center gap-2">
+          <i class="bi bi-grid-3x3-gap"></i> Snap: <span class="badge badge-ghost badge-sm">15 min</span>
+        </div>
+      </div>
+
+      <div class="planner-container">
+        <div class="planner-time-labels" id="timeLabels"></div>
+
+        <div class="planner-timeline" id="timeline">
+          <!-- Scroll Navigation -->
+          <div class="scroll-nav" id="scrollNav">
+            <button class="scroll-nav-btn" id="scrollToMorning" title="Scroll to Morning (6 AM)">
+              <i class="bi bi-sunrise"></i>
+            </button>
+            <button class="scroll-nav-btn" id="scrollToNoon" title="Scroll to Noon (12 PM)">
+              <i class="bi bi-sun"></i>
+            </button>
+            <button class="scroll-nav-btn" id="scrollToEvening" title="Scroll to Evening (6 PM)">
+              <i class="bi bi-sunset"></i>
+            </button>
+            <button class="scroll-nav-btn" id="scrollToNow" title="Scroll to Current Time">
+              <i class="bi bi-clock"></i>
+            </button>
+          </div>
+
+          <div class="planner-spacer" id="timelineSpacer">
+            <div class="planner-grid"></div>
+
+            <!-- Hover / Drag overlays -->
+            <div class="dp-ghost" id="ghostBlock"><div class="dp-ghost-label" id="ghostLabel">09:00 – 10:00</div></div>
+            <div class="dp-drag-select" id="dragSelect"></div>
+
+            <!-- Now indicator -->
+            <div class="planner-current-time" id="currentTimeLine">
+              <div class="planner-current-time-line">
+                <div class="planner-current-time-dot"></div>
+                <div class="planner-current-time-label" id="currentTimeLabel">NOW</div>
+              </div>
+            </div>
+
+            <!-- Events -->
+            <div class="planner-events-layer" id="eventsLayer">
+              <div class="planner-empty-state" id="emptyState">
+                <i class="bi bi-calendar-plus"></i>
+                <p>Click or drag anywhere to start planning your day</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+
+<!-- Event Creation Modal -->
+<input type="checkbox" id="eventModal" class="modal-toggle" />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box max-w-2xl">
+    <h3 class="font-bold text-xl mb-6 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+        <i class="bi bi-plus-circle-fill text-primary text-xl"></i>
+      </div>
+      <span id="eventModalTitle">Create Event</span>
+    </h3>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold"><i class="bi bi-clock"></i> Start Time</span></label>
+        <input type="time" id="eventStartTime" class="input input-bordered w-full" step="900" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold"><i class="bi bi-clock-fill"></i> End Time</span></label>
+        <input type="time" id="eventEndTime" class="input input-bordered w-full" step="900" />
+      </div>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-semibold"><i class="bi bi-pencil-fill"></i> Event Title</span></label>
+      <input type="text" id="eventTitle" class="input input-bordered input-lg w-full" placeholder="What are you planning to do?" autofocus />
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-semibold"><i class="bi bi-list-check"></i> Link to Task (Optional)</span></label>
+      <select id="eventTask" class="select select-bordered w-full">
+        <option value="">-- No task linked --</option>
+      </select>
+      <label class="label">
+        <span class="label-text-alt text-base-content/60">Link this event to an existing task for better tracking</span>
+      </label>
+    </div>
+
+    <div class="form-control mb-4">
+      <label class="label"><span class="label-text font-semibold"><i class="bi bi-journal-text"></i> Description (Optional)</span></label>
+      <textarea id="eventDescription" class="textarea textarea-bordered w-full" rows="2" placeholder="Add notes or details..."></textarea>
+    </div>
+
+    <div class="modal-action">
+      <label for="eventModal" class="btn btn-ghost">Cancel</label>
+      <button id="saveEventBtn" class="btn btn-primary gap-2">
+        <i class="bi bi-check-lg"></i> <span id="saveBtnText">Create Event</span>
+      </button>
+    </div>
+  </div>
+  <label class="modal-backdrop" for="eventModal">Close</label>
+</div>
+
+<!-- Auto Schedule Modal -->
+<input type="checkbox" id="autoScheduleModal" class="modal-toggle" />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box max-w-md">
+    <h3 class="font-bold text-xl mb-6 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-secondary/10 flex items-center justify-center">
+        <i class="bi bi-magic text-secondary text-xl"></i>
+      </div>
+      <span>Smart Auto-Schedule</span>
+    </h3>
+
+    <p class="text-sm text-base-content/70 mb-6">
+      Let AI intelligently schedule your tasks based on priority, due dates, and optimal time distribution.
+    </p>
+
+    <div class="grid grid-cols-2 gap-4 mb-4">
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold"><i class="bi bi-sunrise"></i> Start Time</span></label>
+        <input type="time" id="autoScheduleStartTime" class="input input-bordered w-full" value="09:00" step="900" />
+      </div>
+      <div class="form-control">
+        <label class="label"><span class="label-text font-semibold"><i class="bi bi-sunset"></i> End Time</span></label>
+        <input type="time" id="autoScheduleEndTime" class="input input-bordered w-full" value="17:00" step="900" />
+      </div>
+    </div>
+
+    <div class="alert alert-info mb-4">
+      <i class="bi bi-info-circle"></i>
+      <span class="text-sm">This will replace any manual events you've created for this day.</span>
+    </div>
+
+    <div class="modal-action">
+      <label for="autoScheduleModal" class="btn btn-ghost">Cancel</label>
+      <button id="confirmAutoScheduleBtn" class="btn btn-secondary gap-2">
+        <i class="bi bi-magic"></i> Schedule Tasks
+      </button>
+    </div>
+  </div>
+  <label class="modal-backdrop" for="autoScheduleModal">Close</label>
+</div>
+
+<!-- Auto-Schedule Alert Modal (kept as-is) -->
+<input type="checkbox" id="autoScheduleAlertModal" class="modal-toggle" />
+<div class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box max-w-md">
+    <h3 class="font-bold text-lg mb-4 flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl flex items-center justify-center" id="alertIconContainer">
+        <i id="alertIcon" class="text-xl"></i>
+      </div>
+      <span id="alertTitle">Alert</span>
+    </h3>
+    <p id="alertMessage" class="text-base-content/80"></p>
+    <div class="modal-action">
+      <label for="autoScheduleAlertModal" class="btn btn-primary">OK</label>
+    </div>
+  </div>
+  <label class="modal-backdrop" for="autoScheduleAlertModal">Close</label>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // ================= CONFIG =================
+  const START_HOUR = 0;
+  const END_HOUR = 23;
+  const SNAP_MINUTES = 15;
+  const CSRF_TOKEN = '{{ csrf_token }}';
+
+  // ================= STATE =================
+  let events = [];
+  let editingEventId = null;
+  let currentDate = new Date().toISOString().split('T')[0];
+
+  // ================= ELEMENTS =================
+  const timeLabels = document.getElementById('timeLabels');
+  const timelineEl = document.getElementById('timeline');
+  const timelineSpacer = document.getElementById('timelineSpacer');
+
+  const eventsLayer = document.getElementById('eventsLayer');
+  const emptyState = document.getElementById('emptyState');
+
+  const ghostBlock = document.getElementById('ghostBlock');
+  const ghostLabel = document.getElementById('ghostLabel');
+  const dragSelect = document.getElementById('dragSelect');
+
+  const currentTimeLine = document.getElementById('currentTimeLine');
+  const currentTimeLabel = document.getElementById('currentTimeLabel');
+
+  const datePicker = document.getElementById('datePicker');
+  const selectedDateText = document.getElementById('selectedDateText');
+
+  const dayTitleEl = document.getElementById('dayTitle');
+  const eventModal = document.getElementById('eventModal');
+  const eventModalTitle = document.getElementById('eventModalTitle');
+  const saveBtnText = document.getElementById('saveBtnText');
+  const eventTitle = document.getElementById('eventTitle');
+  const eventTask = document.getElementById('eventTask');
+  const eventDescription = document.getElementById('eventDescription');
+  const eventStartTime = document.getElementById('eventStartTime');
+  const eventEndTime = document.getElementById('eventEndTime');
+  const saveEventBtn = document.getElementById('saveEventBtn');
+
+  // ================= TASKS CACHE =================
+  let availableTasks = {{ pending_tasks_json|safe }};
+  
+  function populateTaskDropdown() {
+    eventTask.innerHTML = '<option value="">-- No task linked --</option>';
+    availableTasks.forEach(task => {
+      const opt = document.createElement('option');
+      opt.value = task.id;
+      opt.textContent = task.title;
+      eventTask.appendChild(opt);
+    });
+  }
+
+  // ================= UTIL =================
+  const pad2 = (n) => String(n).padStart(2,'0');
+  const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+  function hourHeightPx(){
+    const v = getComputedStyle(document.getElementById('dayPlannerPage')).getPropertyValue('--planner-hour-height').trim();
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 84;
+  }
+
+  function setFullDayHeight(){
+    const totalHours = (END_HOUR - START_HOUR + 1); // 24
+    const dayPx = totalHours * hourHeightPx();
+    timelineSpacer.style.height = `${dayPx}px`;
+    timeLabels.style.height = `${dayPx}px`; // Match time labels height to timeline
+    document.getElementById('dayPlannerPage').style.setProperty('--dp-day-height', `${dayPx}px`);
+    console.log(`📏 Set full day height: ${dayPx}px (${totalHours} hours × ${hourHeightPx()}px)`);
+  }
+
+  function minutesToHHMM(mins){
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${pad2(h)}:${pad2(m)}`;
+  }
+  function hhmmToMinutes(s){
+    const [h,m] = s.split(':').map(Number);
+    return h*60 + m;
+  }
+  function clamp(mins){
+    return Math.max(START_HOUR*60, Math.min((END_HOUR+1)*60, mins)); // allow 24:00 as end
+  }
+  function snapTo(mins, step=SNAP_MINUTES){
+    return Math.round(mins/step)*step;
+  }
+  function minutesToTop(mins){
+    return ((mins - START_HOUR*60)/60) * hourHeightPx();
+  }
+  function yToMinutes(clientY){
+    const rect = timelineEl.getBoundingClientRect();
+    const y = Math.max(0, Math.min(rect.height, clientY - rect.top));
+    const yAbs = y + timelineEl.scrollTop; // key fix: account scroll
+    const minsFromStart = (yAbs / hourHeightPx()) * 60;
+    return clamp(snapTo(START_HOUR*60 + minsFromStart));
+  }
+  function escapeHtml(str){
+    const div = document.createElement('div');
+    div.textContent = str ?? '';
+    return div.innerHTML;
+  }
+  function isTodayDateStr(dateStr){
+    return dateStr === new Date().toISOString().split('T')[0];
+  }
+  function formatPrettyDate(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+  }
+  function syncDateUI(){
+    if (datePicker) datePicker.value = currentDate;
+    selectedDateText.textContent = isTodayDateStr(currentDate) ? 'Today' : formatPrettyDate(currentDate);
+  }
+
+  function overlapsAny(startMin, endMin, ignoreId=null){
+    return events.some(ev => {
+      if (ignoreId && ev.id === ignoreId) return false;
+      return startMin < ev.endMin && endMin > ev.startMin;
+    });
+  }
+
+  // ================= BUILD LEFT LABELS (FULL DAY) =================
+  function formatHourLabel(hour){
+    if (hour === 0) return { hour: '12', period:'AM' };
+    if (hour < 12) return { hour: String(hour), period:'AM' };
+    if (hour === 12) return { hour:'12', period:'PM' };
+    return { hour: String(hour-12), period:'PM' };
+  }
+  function buildTimeLabels(){
+    timeLabels.innerHTML = '';
+    for (let h=START_HOUR; h<=END_HOUR; h++){
+      const {hour, period} = formatHourLabel(h);
+      const el = document.createElement('div');
+      el.className = 'planner-time-slot';
+      el.innerHTML = `<div class="hour">${hour}</div><div class="period">${period}</div>`;
+      timeLabels.appendChild(el);
+    }
+    console.log(`✅ Built ${END_HOUR - START_HOUR + 1} time labels (${START_HOUR}:00 to ${END_HOUR}:00)`);
+  }
+
+  // ================= SCROLL SYNC (CRITICAL FIX) =================
+  function bindScrollSync(){
+    timelineEl.addEventListener('scroll', () => {
+      timeLabels.scrollTop = timelineEl.scrollTop;
+    }, { passive: true });
+  }
+
+  // ================= UI overlays =================
+  function showGhost(s,e){
+    const top = minutesToTop(s);
+    const height = Math.max(46, ((e-s)/60)*hourHeightPx());
+    ghostBlock.style.top = `${top}px`;
+    ghostBlock.style.height = `${height}px`;
+    ghostLabel.textContent = `${minutesToHHMM(s)} – ${minutesToHHMM(e)}`;
+    ghostBlock.classList.add('active');
+  }
+  function hideGhost(){ ghostBlock.classList.remove('active'); }
+
+  function showDragSelect(a,b){
+    const s = Math.min(a,b), e = Math.max(a,b);
+    dragSelect.style.top = `${minutesToTop(s)}px`;
+    dragSelect.style.height = `${Math.max(46, ((e-s)/60)*hourHeightPx())}px`;
+    dragSelect.classList.add('active');
+  }
+  function hideDragSelect(){ dragSelect.classList.remove('active'); }
+
+  // ================= CURRENT TIME =================
+  function updateCurrentTime(){
+    const now = new Date();
+    const mins = now.getHours()*60 + now.getMinutes();
+    if (isTodayDateStr(currentDate) && mins >= START_HOUR*60 && mins <= (END_HOUR+1)*60){
+      const top = minutesToTop(mins);
+      currentTimeLine.style.top = `${top}px`;
+      currentTimeLine.classList.add('active');
+      currentTimeLabel.textContent = minutesToHHMM(mins);
+    } else {
+      currentTimeLine.classList.remove('active');
+    }
+  }
+
+  function scrollToNowIfToday(){
+    if (!isTodayDateStr(currentDate)) return;
+    const now = new Date();
+    const mins = now.getHours()*60 + now.getMinutes();
+    const top = minutesToTop(mins);
+    timelineEl.scrollTo({ top: Math.max(0, top - 160), behavior:'smooth' });
+  }
+
+  // ================= MODAL =================
+  function openEventModal(startMinutes=null, ev=null){
+    populateTaskDropdown();
+    
+    if (ev){
+      editingEventId = ev.id;
+      eventTitle.value = ev.title || '';
+      eventTask.value = ev.taskId || '';
+      eventDescription.value = ev.description || '';
+      eventStartTime.value = minutesToHHMM(ev.startMin);
+      eventEndTime.value = minutesToHHMM(ev.endMin);
+      eventModalTitle.textContent = 'Edit Event';
+      saveBtnText.textContent = 'Save Changes';
+    } else {
+      editingEventId = null;
+      eventTitle.value = '';
+      eventTask.value = '';
+      eventDescription.value = '';
+      eventModalTitle.textContent = 'Create Event';
+      saveBtnText.textContent = 'Create Event';
+
+      const s = startMinutes != null ? clamp(snapTo(startMinutes)) : 9*60;
+      const e = clamp(s + 60);
+      eventStartTime.value = minutesToHHMM(s);
+      eventEndTime.value = minutesToHHMM(e);
+    }
+    eventModal.checked = true;
+    setTimeout(()=>eventTitle.focus(), 80);
+  }
+  function closeEventModal(){
+    eventModal.checked = false;
+    editingEventId = null;
+  }
+
+  // ================= ALERT =================
+  function showAlert(title, message, type='info'){
+    const alertModal = document.getElementById('autoScheduleAlertModal');
+    const alertTitle = document.getElementById('alertTitle');
+    const alertMessage = document.getElementById('alertMessage');
+    const alertIcon = document.getElementById('alertIcon');
+    const alertIconContainer = document.getElementById('alertIconContainer');
+
+    alertTitle.textContent = title;
+    alertMessage.textContent = message;
+
+    alertIconContainer.className = 'w-10 h-10 rounded-xl flex items-center justify-center';
+    alertIcon.className = 'text-xl';
+
+    if (type === 'error'){
+      alertIconContainer.classList.add('bg-error/10');
+      alertIcon.classList.add('bi-exclamation-triangle-fill','text-error');
+    } else if (type === 'success'){
+      alertIconContainer.classList.add('bg-success/10');
+      alertIcon.classList.add('bi-check-circle-fill','text-success');
+    } else if (type === 'warning'){
+      alertIconContainer.classList.add('bg-warning/10');
+      alertIcon.classList.add('bi-exclamation-circle-fill','text-warning');
+    } else {
+      alertIconContainer.classList.add('bg-info/10');
+      alertIcon.classList.add('bi-info-circle-fill','text-info');
+    }
+    alertModal.checked = true;
+  }
+
+  // ================= LOAD/SAVE (same endpoints) =================
+  async function load(){
+    try{
+      const r = await fetch(`/api/day-schedule/${currentDate}/`, { headers:{ 'X-CSRFToken': CSRF_TOKEN }});
+      if (!r.ok) throw new Error('Failed to load schedule');
+      const data = await r.json();
+      if (data.success){
+        events = (data.events || []).map(ev => ({...ev, planNames: ev.planNames || []}));
+        dayTitleEl.value = data.title || new Date(currentDate).toLocaleDateString(undefined, { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+      } else {
+        events = [];
+      }
+    } catch(e){
+      console.error(e);
+      events = [];
+    }
+    syncDateUI();
+    updateStats();
+  }
+
+  async function save(){
+    try{
+      const manual = events.filter(e => !e.isCalendarEvent);
+      const r = await fetch('/api/day-schedule/save/', {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-CSRFToken': CSRF_TOKEN },
+        body: JSON.stringify({ date: currentDate, title: dayTitleEl.value.trim(), events: manual })
+      });
+      if (!r.ok) throw new Error(`Save failed (${r.status})`);
+      const data = await r.json();
+      if (!data.success) throw new Error(data.error || 'Save failed');
+    } catch(e){
+      console.error(e);
+      showAlert('Save Error', e.message || 'Failed to save schedule', 'error');
+      throw e;
+    }
+    updateStats();
+  }
+
+  // ================= CALENDAR-LIKE LANE LAYOUT =================
+  function computeLanes(list){
+    const sorted = [...list].sort((a,b)=> (a.startMin-b.startMin) || (a.endMin-b.endMin));
+    const active = [];
+    const out = [];
+
+    function prune(t){
+      for (let i=active.length-1; i>=0; i--){
+        if (active[i].ev.endMin <= t) active.splice(i,1);
+      }
+    }
+    for (const ev of sorted){
+      prune(ev.startMin);
+      const used = new Set(active.map(x => x.lane));
+      let lane = 0;
+      while (used.has(lane)) lane++;
+      active.push({ ev, lane });
+      out.push({ ...ev, lane, _groupEnd: Math.max(ev.endMin, ...active.map(x=>x.ev.endMin)) });
+    }
+
+    // group sizing: sweep by overlap
+    const groups = [];
+    let g = [];
+    let gEnd = -Infinity;
+
+    for (const ev of sorted){
+      if (g.length === 0){ g=[ev]; gEnd=ev.endMin; continue; }
+      if (ev.startMin < gEnd){ g.push(ev); gEnd=Math.max(gEnd, ev.endMin); }
+      else { groups.push(g); g=[ev]; gEnd=ev.endMin; }
+    }
+    if (g.length) groups.push(g);
+
+    const groupLaneCount = new Map();
+    groups.forEach(group=>{
+      // collect assigned lanes
+      const ids = new Set(group.map(x=>x.id));
+      const lanes = out.filter(x => ids.has(x.id)).map(x=>x.lane);
+      const count = (lanes.length ? Math.max(...lanes)+1 : 1);
+      group.forEach(x=>groupLaneCount.set(x.id, count));
+    });
+
+    return out.map(x => ({ ...x, lanesInGroup: groupLaneCount.get(x.id) || 1 }));
+  }
+
+  // ================= RENDER =================
+  function render(){
+    // keep empty state node (re-append)
+    eventsLayer.innerHTML = '';
+    eventsLayer.appendChild(emptyState);
+
+    if (!events.length){
+      emptyState.style.display = 'block';
+      return;
+    }
+    emptyState.style.display = 'none';
+
+    const laid = computeLanes(events);
+    const H = hourHeightPx();
+
+    laid.forEach(ev => {
+      const isCal = !!ev.isCalendarEvent;
+      const top = minutesToTop(ev.startMin);
+      const height = Math.max(46, ((ev.endMin-ev.startMin)/60) * H);
+      const duration = ev.endMin - ev.startMin;
+
+      const lanes = Math.max(1, ev.lanesInGroup || 1);
+      const gapPx = 6;
+      const wPct = 100 / lanes;
+      const leftPct = ev.lane * wPct;
+
+      const el = document.createElement('div');
+      el.className = `planner-event${ev.logged ? ' logged' : ''}${isCal ? ' calendar-event' : ''}`;
+      el.style.top = `${top}px`;
+      el.style.height = `${height}px`;
+      el.style.left = `calc(${leftPct}% + ${gapPx/2}px)`;
+      el.style.width = `calc(${wPct}% - ${gapPx}px)`;
+      el.dataset.id = ev.id;
+
+      el.innerHTML = `
+        <div class="planner-event-header">
+          <div style="flex:1; min-width:0;">
+            <div class="planner-event-title">${escapeHtml(ev.title)}</div>
+          </div>
+          ${!isCal ? `
+            <div class="planner-event-actions">
+              <button class="planner-event-btn edit-btn" data-id="${ev.id}" title="Edit"><i class="bi bi-pencil"></i></button>
+              <button class="planner-event-btn delete delete-btn" data-id="${ev.id}" title="Delete"><i class="bi bi-trash"></i></button>
+            </div>
+          `:``}
+        </div>
+
+        <div class="planner-event-meta">
+          <span class="planner-event-badge time-badge"><i class="bi bi-clock"></i> ${minutesToHHMM(ev.startMin)} – ${minutesToHHMM(ev.endMin)}</span>
+          <span class="planner-event-badge"><i class="bi bi-hourglass-split"></i> ${duration} min</span>
+        </div>
+
+        ${!isCal ? `
+          <div class="dp-handle top" data-handle="top"></div>
+          <div class="dp-handle bottom" data-handle="bottom"></div>
+        `:``}
+      `;
+
+      eventsLayer.appendChild(el);
+
+      if (!isCal){
+        // click on empty part logs (optional; keep your existing behaviour if needed)
+        el.addEventListener('click', (e) => {
+          if (e.target.closest('.planner-event-btn') || e.target.closest('.dp-handle')) return;
+          // do nothing here by default (prevents accidental log)
+        });
+        attachDragHandlers(el, ev.id);
+      }
+    });
+
+    // bind buttons
+    document.querySelectorAll('.edit-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const ev = events.find(x=>x.id===btn.dataset.id);
+        if (ev) openEventModal(null, ev);
+      });
+    });
+    document.querySelectorAll('.delete-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const ev = events.find(x=>x.id===id);
+        if (!ev) return;
+        if (confirm(`Delete "${ev.title}"?`)){
+          events = events.filter(x=>x.id!==id);
+          render();
+          save().catch(()=>{});
+        }
+      });
+    });
+
+    updateStats();
+  }
+
+  // ================= DRAG MOVE / RESIZE (MANUAL) =================
+  function attachDragHandlers(el, eventId){
+    let mode = null; // 'move'|'resize-top'|'resize-bottom'
+    let startY = 0;
+    let origStart = 0, origEnd = 0;
+
+    function getEv(){ return events.find(x=>x.id===eventId); }
+
+    const onDown = (e) => {
+      const ev = getEv();
+      if (!ev || ev.isCalendarEvent) return;
+
+      if (e.target.closest('.planner-event-btn')) return;
+
+      const handle = e.target.closest('.dp-handle');
+      if (handle){
+        mode = handle.dataset.handle === 'top' ? 'resize-top' : 'resize-bottom';
+      } else {
+        mode = 'move';
+      }
+
+      startY = e.clientY;
+      origStart = ev.startMin;
+      origEnd = ev.endMin;
+
+      el.classList.add('dragging');
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const onMove = (e) => {
+      if (!mode) return;
+      const ev = getEv();
+      if (!ev) return;
+
+      const dy = e.clientY - startY;
+      const minsDelta = snapTo((dy / hourHeightPx()) * 60);
+
+      let newStart = origStart;
+      let newEnd = origEnd;
+
+      if (mode === 'move'){
+        const dur = origEnd - origStart;
+        newStart = clamp(origStart + minsDelta);
+        newEnd = clamp(newStart + dur);
+      } else if (mode === 'resize-top'){
+        newStart = clamp(origStart + minsDelta);
+        newStart = Math.min(newStart, origEnd - SNAP_MINUTES);
+      } else if (mode === 'resize-bottom'){
+        newEnd = clamp(origEnd + minsDelta);
+        newEnd = Math.max(newEnd, origStart + SNAP_MINUTES);
+      }
+
+      if (overlapsAny(newStart, newEnd, ev.id)) return;
+
+      // apply
+      ev.startMin = newStart;
+      ev.endMin = newEnd;
+
+      // lightweight redraw is ok here; lane recompute keeps layout correct
+      render();
+    };
+
+    const onUp = async () => {
+      if (!mode) return;
+      mode = null;
+      el.classList.remove('dragging');
+      try { await save(); } catch(_) {}
+    };
+
+    el.addEventListener('mousedown', onDown);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }
+
+  // ================= TIMELINE INTERACTION =================
+  let isDraggingCreate = false;
+  let dragStartMin = null;
+
+  timelineSpacer.addEventListener('mousemove', (e)=>{
+    if (e.target.closest('.planner-event')) return;
+
+    if (isDraggingCreate){
+      const cur = yToMinutes(e.clientY);
+      showDragSelect(dragStartMin, cur);
+      return;
+    }
+    const m = yToMinutes(e.clientY);
+    showGhost(m, clamp(m + 60));
+  });
+
+  timelineSpacer.addEventListener('mouseleave', ()=>{
+    if (!isDraggingCreate) hideGhost();
+  });
+
+  timelineSpacer.addEventListener('mousedown', (e)=>{
+    if (e.target.closest('.planner-event')) return;
+
+    isDraggingCreate = true;
+    dragStartMin = yToMinutes(e.clientY);
+    showDragSelect(dragStartMin, clamp(dragStartMin + 60));
+    hideGhost();
+  });
+
+  window.addEventListener('mouseup', (e)=>{
+    if (!isDraggingCreate) return;
+
+    isDraggingCreate = false;
+    const end = yToMinutes(e.clientY);
+    hideDragSelect();
+
+    let a = snapTo(Math.min(dragStartMin, end));
+    let b = snapTo(Math.max(dragStartMin, end));
+    if (b - a < 30) b = clamp(a + 60);
+
+    openEventModal(a, null);
+    eventStartTime.value = minutesToHHMM(a);
+    eventEndTime.value = minutesToHHMM(b);
+  });
+
+  timelineSpacer.addEventListener('click', (e)=>{
+    if (e.target.closest('.planner-event')) return;
+    const s = yToMinutes(e.clientY);
+    openEventModal(s, null);
+  });
+
+  // ================= SAVE EVENT =================
+  saveEventBtn.addEventListener('click', ()=>{
+    const title = (eventTitle.value || '').trim();
+    if (!title){
+      eventTitle.focus();
+      showAlert('Missing Title', 'Please enter an event title.', 'warning');
+      return;
+    }
+
+    let startMin = clamp(snapTo(hhmmToMinutes(eventStartTime.value)));
+    let endMin = clamp(snapTo(hhmmToMinutes(eventEndTime.value)));
+
+    if (endMin <= startMin){
+      showAlert('Invalid Time Range', 'End time must be after start time.', 'error');
+      return;
+    }
+
+    const ignore = editingEventId || null;
+    if (overlapsAny(startMin, endMin, ignore)){
+      showAlert('Time Conflict', 'This event overlaps with another one. Adjust the time window.', 'warning');
+      return;
+    }
+
+    const taskId = eventTask.value || null;
+    const description = (eventDescription.value || '').trim();
+
+    if (editingEventId){
+      const ev = events.find(x=>x.id===editingEventId);
+      if (ev){
+        ev.title = title;
+        ev.taskId = taskId;
+        ev.description = description;
+        ev.startMin = startMin;
+        ev.endMin = endMin;
+      }
+    } else {
+      events.push({ 
+        id: uid(), 
+        title, 
+        taskId,
+        description,
+        startMin, 
+        endMin, 
+        logged: false 
+      });
+    }
+
+    closeEventModal();
+    render();
+    save().catch(()=>{});
+  });
+
+  eventTitle.addEventListener('keydown', (e)=>{
+    if (e.key === 'Enter') saveEventBtn.click();
+  });
+
+  // ================= STATS =================
+  function updateStats(){
+    document.getElementById('eventCount').textContent = events.length;
+    const totalMinutes = events.reduce((s,ev)=> s + (ev.endMin - ev.startMin), 0);
+    const h = Math.floor(totalMinutes/60);
+    const m = totalMinutes%60;
+    document.getElementById('totalHours').textContent = m>0 ? `${h}h ${m}m` : `${h}h`;
+  }
+
+  // ================= TITLE AUTOSAVE =================
+  let titleDebounce;
+  dayTitleEl.addEventListener('input', ()=>{
+    clearTimeout(titleDebounce);
+    titleDebounce = setTimeout(()=> save().catch(()=>{}), 350);
+  });
+
+  // ================= DATE NAV =================
+  async function changeDate(days){
+    const d = new Date(currentDate);
+    d.setDate(d.getDate() + days);
+    currentDate = d.toISOString().split('T')[0];
+    await load();
+    render();
+    updateCurrentTime();
+    syncDateUI();
+    if (isTodayDateStr(currentDate)) scrollToNowIfToday();
+    else timelineEl.scrollTo({ top: 0, behavior:'smooth' });
+  }
+
+  document.getElementById('prevDayBtn').addEventListener('click', ()=> changeDate(-1));
+  document.getElementById('nextDayBtn').addEventListener('click', ()=> changeDate(1));
+  document.getElementById('todayBtn').addEventListener('click', async ()=>{
+    currentDate = new Date().toISOString().split('T')[0];
+    await load();
+    render();
+    updateCurrentTime();
+    syncDateUI();
+    scrollToNowIfToday();
+  });
+  datePicker.addEventListener('change', async ()=>{
+    if (!datePicker.value) return;
+    currentDate = datePicker.value;
+    await load();
+    render();
+    updateCurrentTime();
+    syncDateUI();
+    if (isTodayDateStr(currentDate)) scrollToNowIfToday();
+    else timelineEl.scrollTo({ top: 0, behavior:'smooth' });
+  });
+
+  // ================= AUTO SCHEDULE =================
+  document.getElementById('autoScheduleBtn').addEventListener('click', ()=>{
+    document.getElementById('autoScheduleModal').checked = true;
+  });
+
+  document.getElementById('quickAddBtn').addEventListener('click', ()=>{
+    // Quick add opens event modal at next available hour
+    const now = new Date();
+    const currentMins = now.getHours() * 60 + now.getMinutes();
+    const nextHour = Math.ceil((currentMins + 15) / 60) * 60; // round up to next hour
+    openEventModal(nextHour, null);
+  });
+
+  document.getElementById('confirmAutoScheduleBtn').addEventListener('click', async () => {
+    const autoScheduleStartTime = document.getElementById('autoScheduleStartTime');
+    const autoScheduleEndTime = document.getElementById('autoScheduleEndTime');
+    const autoScheduleModal = document.getElementById('autoScheduleModal');
+
+    const startTime = autoScheduleStartTime.value;
+    const endTime = autoScheduleEndTime.value;
+
+    if (!startTime || !endTime) {
+      showAlert('Invalid Input', 'Please enter both start and end times.', 'error');
+      return;
+    }
+
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const START_WORK = hhmmToMinutes(startTime);
+    const END_WORK = hhmmToMinutes(endTime);
+
+    if (START_WORK >= END_WORK) {
+      showAlert('Invalid Time Range', 'End time must be after start time!', 'error');
+      return;
+    }
+
+    if (START_WORK < currentMinutes && isTodayDateStr(currentDate)) {
+      showAlert('Invalid Start Time', `Start time cannot be in the past! Please choose a time after ${minutesToHHMM(currentMinutes)}`, 'error');
+      return;
+    }
+
+    // Close the modal
+    autoScheduleModal.checked = false;
+
+    // Show loading state
+    const confirmBtn = document.getElementById('confirmAutoScheduleBtn');
+    const originalText = confirmBtn.innerHTML;
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Scheduling...';
+
+    try {
+      // Call the smart scheduling API
+      const response = await fetch('/api/day-schedule/smart-schedule/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN
+        },
+        body: JSON.stringify({
+          date: currentDate,
+          start_time: startTime,
+          end_time: endTime
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Scheduling failed');
+      }
+
+      // Preserve calendar events, replace manual events with scheduled ones
+      const calendarEvents = events.filter(ev => ev.isCalendarEvent);
+      events = [...calendarEvents, ...data.events];
+
+      // Save and render
+      await save();
+      render();
+
+      // Show success message with statistics
+      const stats = data.stats;
+      let message = `✨ Successfully scheduled ${stats.scheduled_count} task${stats.scheduled_count > 1 ? 's' : ''}!\n\n`;
+      message += `📊 Work time: ${Math.floor(stats.total_work_time / 60)}h ${stats.total_work_time % 60}m\n`;
+      message += `☕ Rest time: ${Math.floor(stats.total_rest_time / 60)}h ${stats.total_rest_time % 60}m\n`;
+      
+      if (stats.category_distribution && Object.keys(stats.category_distribution).length > 0) {
+        message += `\n📋 Category breakdown:\n`;
+        for (const [cat, mins] of Object.entries(stats.category_distribution)) {
+          message += `  • ${cat}: ${mins} min\n`;
+        }
+      }
+
+      showAlert('Smart Scheduling Complete', message, 'success');
+
+    } catch (error) {
+      console.error('Auto-schedule error:', error);
+      showAlert('Scheduling Failed', error.message || 'An error occurred while scheduling tasks.', 'error');
+    } finally {
+      confirmBtn.disabled = false;
+      confirmBtn.innerHTML = originalText;
+    }
+  });
+
+  // ================= KEYBOARD =================
+  document.addEventListener('keydown', async (e)=>{
+    const modalOpen = eventModal && eventModal.checked;
+    const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+    const typing = ['input','textarea','select'].includes(tag);
+
+    if (e.key === 'Escape' && modalOpen){ closeEventModal(); return; }
+    if (typing) return;
+
+    if (e.key.toLowerCase() === 'n') openEventModal(null, null);
+    if (e.key.toLowerCase() === 't'){
+      currentDate = new Date().toISOString().split('T')[0];
+      await load(); render(); updateCurrentTime(); syncDateUI(); scrollToNowIfToday();
+    }
+    if (e.key === 'ArrowLeft') await changeDate(-1);
+    if (e.key === 'ArrowRight') await changeDate(1);
+  });
+
+  // ================= INIT =================
+  setFullDayHeight();
+  buildTimeLabels();
+  bindScrollSync();
+
+  // ================= SCROLL NAVIGATION =================
+  function scrollToHour(hour) {
+    const mins = hour * 60;
+    const top = minutesToTop(mins);
+    timelineEl.scrollTo({ top: Math.max(0, top - 100), behavior: 'smooth' });
+  }
+
+  document.getElementById('scrollToMorning')?.addEventListener('click', () => scrollToHour(6));
+  document.getElementById('scrollToNoon')?.addEventListener('click', () => scrollToHour(12));
+  document.getElementById('scrollToEvening')?.addEventListener('click', () => scrollToHour(18));
+  document.getElementById('scrollToNow')?.addEventListener('click', () => {
+    if (isTodayDateStr(currentDate)) {
+      scrollToNowIfToday();
+    } else {
+      scrollToHour(9); // Default to 9 AM for non-today dates
+    }
+  });
+
+  // Mouse wheel smooth scrolling enhancement
+  timelineEl.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) > 0) {
+      e.preventDefault();
+      const scrollAmount = e.deltaY * 0.8; // Smooth factor
+      timelineEl.scrollTop += scrollAmount;
+    }
+  }, { passive: false });
+
+  // Keyboard arrow keys for scrolling
+  timelineEl.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      timelineEl.scrollTop -= 50;
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      timelineEl.scrollTop += 50;
+    } else if (e.key === 'PageUp') {
+      e.preventDefault();
+      timelineEl.scrollTop -= timelineEl.clientHeight * 0.8;
+    } else if (e.key === 'PageDown') {
+      e.preventDefault();
+      timelineEl.scrollTop += timelineEl.clientHeight * 0.8;
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      timelineEl.scrollTop = 0;
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      timelineEl.scrollTop = timelineEl.scrollHeight;
+    }
+  });
+
+  // Make timeline focusable for keyboard navigation
+  timelineEl.setAttribute('tabindex', '0');
+
+  // keep heights correct on resize (critical for full-day rendering)
+  window.addEventListener('resize', ()=>{
+    setFullDayHeight();
+    render();
+    updateCurrentTime();
+  });
+
+  load().then(()=>{
+    render();
+    updateCurrentTime();
+    syncDateUI();
+    if (isTodayDateStr(currentDate)) scrollToNowIfToday();
+  });
+
+  setInterval(updateCurrentTime, 60000);
+});
+</script>
+</div>
+{% endblock %}

@@ -1,934 +1,341 @@
-{% extends 'tracker/base.html' %}
-{% load math_filters %}
+{% extends "tracker/base.html" %}
+{% load static %}
 
-{% block title %}Analytics - VisMatrix{% endblock %}
+
+{% block title %}Analytics – Progress Insights{% endblock %}
 
 {% block extra_head %}
 <style>
-  /* Keep it minimal + accessible (no gradients, no big motion) */
-  .chart-wrap { position: relative; height: 320px; }
-  @media (max-width: 768px) { .chart-wrap { height: 260px; } }
-
-  /* Clear focus for calendar controls and day links */
-  .cal-day:focus-visible,
-  .cal-nav:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgb(29 78 216 / 0.25);
-    border-radius: 12px;
+  /* ===== SYSTEM-DEFINED COLORS ===== */
+  :root {
+    /* Light Mode Colors (iOS/macOS) */
+    --system-bg-primary: #F2F2F7;
+    --system-bg-secondary: #FFFFFF;
+    --system-bg-tertiary: #E5E5EA;
+    --system-text-primary: #000000;
+    --system-text-secondary: #3C3C43;
+    --system-text-tertiary: #8E8E93;
+    --system-blue: #007AFF;
+    --system-green: #34C759;
+    --system-orange: #FF9500;
+    --system-red: #FF3B30;
+    --system-purple: #AF52DE;
+    --system-border: #D1D1D6;
+    --system-shadow: rgba(0, 0, 0, 0.1);
   }
 
-  /* Calendar day styles with intensity levels */
-  .cal-day {
-    border: 1px solid var(--border, #e2e8f0);
-    border-radius: 12px;
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    text-decoration: none;
-    position: relative;
-    transition: all 0.2s ease;
-  }
-  .cal-day:hover { 
-    background: rgba(226,232,240,.5); 
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgb(0 0 0 / 0.08);
+  @media (prefers-color-scheme: dark) {
+    :root {
+      /* Dark Mode Colors (iOS/macOS) */
+      --system-bg-primary: #000000;
+      --system-bg-secondary: #1C1C1E;
+      --system-bg-tertiary: #2C2C2E;
+      --system-text-primary: #FFFFFF;
+      --system-text-secondary: #EBEBF5;
+      --system-text-tertiary: #8E8E93;
+      --system-blue: #0A84FF;
+      --system-green: #30D158;
+      --system-orange: #FF9F0A;
+      --system-red: #FF453A;
+      --system-purple: #BF5AF2;
+      --system-border: #38383A;
+      --system-shadow: rgba(0, 0, 0, 0.3);
+    }
   }
 
-  .cal-day--active {
-    background: rgb(29 78 216 / 0.10);
-    border-color: rgb(29 78 216 / 0.25);
-    color: #1d4ed8;
+  /* Apply system colors to DaisyUI components */
+  .stat {
+    color: var(--system-text-primary);
   }
-  .cal-day--active:hover { background: rgb(29 78 216 / 0.16); }
   
-  /* Intensity levels for heatmap effect */
-  .cal-day--intensity-1 { background: rgb(29 78 216 / 0.10); border-color: rgb(29 78 216 / 0.20); }
-  .cal-day--intensity-2 { background: rgb(29 78 216 / 0.20); border-color: rgb(29 78 216 / 0.30); }
-  .cal-day--intensity-3 { background: rgb(29 78 216 / 0.35); border-color: rgb(29 78 216 / 0.45); }
-  .cal-day--intensity-4 { background: rgb(29 78 216 / 0.50); border-color: rgb(29 78 216 / 0.60); color: white; }
-  .cal-day--intensity-5 { background: rgb(29 78 216 / 0.75); border-color: rgb(29 78 216 / 0.85); color: white; font-weight: 700; }
+  .stat-title {
+    color: var(--system-text-tertiary);
+  }
   
-  .cal-day[data-minutes]::after {
-    content: attr(data-minutes);
-    position: absolute;
-    bottom: 2px;
-    right: 2px;
-    font-size: 8px;
-    opacity: 0.6;
+  .stat-desc {
+    color: var(--system-text-secondary);
   }
-
-  .cal-day--future {
-    opacity: .55;
-    cursor: not-allowed;
-    background: rgba(226,232,240,.35);
+  
+  .btn {
+    background-color: var(--system-bg-tertiary);
+    color: var(--system-text-primary);
+    border-color: var(--system-border);
   }
-
-  /* Small legend dots */
-  .legend-dot { width: 10px; height: 10px; border-radius: 9999px; display: inline-block; }
+  
+  .btn:hover {
+    background-color: var(--system-bg-primary);
+  }
+  
+  .btn-sm {
+    font-size: 0.875rem;
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<main class="space-y-6">
+<div class="min-h-screen px-4 py-6" style="background: linear-gradient(135deg, var(--system-bg-primary) 0%, var(--system-bg-tertiary) 100%);">
 
-  <!-- Header (simple) -->
-  <header class="card border border-base-200 bg-base-100 animate-slideUp" role="banner">
-    <div class="card-body p-5 sm:p-6">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content">
-            <span class="gradient-text">Analytics</span>
-          </h1>
-          <p class="text-sm text-base-content/70 mt-1">Trends, goals, and time breakdown.</p>
-        </div>
-
-        <div class="flex items-center gap-2 text-sm text-base-content/70">
-
-          <i class="bi bi-calendar-event text-primary text-lg" aria-hidden="true"></i>
-          <span class="font-semibold">{{ today|date:"l, F j, Y" }}</span>
-        </div>
-      </div>
-    </div>
-  </header>
-
-  <!-- Metrics with trends -->
-  <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 animate-fadeIn" aria-label="Key metrics">
-    <div class="card border border-base-200 bg-base-100 hover-lift">
-      <div class="card-body p-5">
-        <div class="flex items-start justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 ring-1 ring-primary/20">
-              <i class="bi bi-calendar-check text-primary text-xl" aria-hidden="true"></i>
-            </span>
-            <div>
-              <p class="text-xs uppercase tracking-wide text-base-content/60 font-semibold">Tasks today</p>
-              <div class="flex items-center gap-2">
-                <p class="text-3xl font-extrabold tabular-nums">{{ today_tasks_count|default:0 }}</p>
-                {% if tasks_trend %}
-                  <span class="text-sm font-bold {% if tasks_trend > 0 %}text-success{% elif tasks_trend < 0 %}text-error{% else %}text-base-content/60{% endif %}">
-                    <i class="bi bi-{% if tasks_trend > 0 %}arrow-up{% elif tasks_trend < 0 %}arrow-down{% else %}dash{% endif %}" aria-hidden="true"></i>
-                  </span>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-3 space-y-2">
-          <div class="flex items-center justify-between text-sm">
-            <span class="text-base-content/70">Completed</span>
-            <span class="font-semibold tabular-nums">{{ completed_today|default:0 }}</span>
-          </div>
-          <progress class="progress progress-primary w-full"
-            value="{% if today_tasks_count %}{{ completed_today|mul:100|div:today_tasks_count }}{% else %}0{% endif %}"
-            max="100"></progress>
-          <p class="text-xs text-base-content/60">Avg: {{ avg_daily_tasks|default:0|floatformat:1 }} tasks/day</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="card border border-base-200 bg-base-100 hover-lift">
-      <div class="card-body p-5">
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-success/10 to-success/5 ring-1 ring-success/20">
-            <i class="bi bi-fire text-success text-xl" style="filter: drop-shadow(0 2px 4px rgb(34 197 94 / 0.3));" aria-hidden="true"></i>
-          </span>
-          <div>
-            <p class="text-xs uppercase tracking-wide text-base-content/60 font-semibold">Current Streak</p>
-            <div class="flex items-baseline gap-2">
-              <p class="text-3xl font-extrabold tabular-nums">{{ current_streak|default:0 }}</p>
-              {% if best_streak and best_streak > current_streak %}
-                <span class="text-xs text-base-content/60 font-semibold">/ {{ best_streak }}</span>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        <p class="mt-3 text-sm text-base-content/70 font-medium">
-          {% if current_streak == best_streak and current_streak > 0 %}
-            🔥 Personal best! Keep going!
-          {% elif best_streak %}
-            Best: {{ best_streak }} days
-          {% else %}
-            Keep it steady—small wins daily.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-
-    <div class="card border border-base-200 bg-base-100">
-      <div class="card-body p-5">
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-base-200">
-            <i class="bi bi-activity text-primary text-lg" aria-hidden="true"></i>
-          </span>
-          <div>
-            <p class="text-xs uppercase tracking-wide text-base-content/60">This month</p>
-            <div class="flex items-center gap-2">
-              <p class="text-2xl font-extrabold tabular-nums" id="logs-this-month">{{ logs_this_month|default:0 }}</p>
-              {% if month_trend %}
-                <span class="text-xs font-semibold {% if month_trend > 0 %}text-success{% elif month_trend < 0 %}text-error{% else %}text-base-content/60{% endif %}">
-                  <i class="bi bi-{% if month_trend > 0 %}arrow-up{% elif month_trend < 0 %}arrow-down{% else %}dash{% endif %}" aria-hidden="true"></i>
-                  {{ month_trend|floatformat:0 }}%
-                </span>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-        <p class="mt-3 text-sm text-base-content/70">{% if logs_last_month %}Last month: {{ logs_last_month }}{% else %}Activity logs recorded.{% endif %}</p>
-      </div>
-    </div>
-
-    <div class="card border border-base-200 bg-base-100">
-      <div class="card-body p-5">
-        <div class="flex items-center gap-2">
-          <span class="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-base-200">
-            <i class="bi bi-stopwatch text-primary text-lg" aria-hidden="true"></i>
-          </span>
-          <div>
-            <p class="text-xs uppercase tracking-wide text-base-content/60">Total time</p>
-            <div class="flex items-baseline gap-2">
-              <p class="text-2xl font-extrabold tabular-nums">{{ total_time|default:0 }}</p>
-              <span class="text-xs text-base-content/60">min</span>
-            </div>
-          </div>
-        </div>
-        <p class="mt-3 text-sm text-base-content/70">
-          {% if avg_daily_minutes %}
-            Avg: {{ avg_daily_minutes|floatformat:0 }} min/day
-          {% else %}
-            Minutes tracked.
-          {% endif %}
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Productivity Insights -->
-  {% if best_day or most_productive_category or completion_rate_week %}
-  <section class="card border border-base-200 bg-base-100" aria-label="Productivity insights">
-    <div class="card-body p-5 sm:p-6">
-      <h2 class="text-lg font-bold flex items-center gap-2">
-        <i class="bi bi-lightbulb text-primary" aria-hidden="true"></i>
-        <span>Insights & Highlights</span>
-      </h2>
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        {% if best_day %}
-        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-success/5 to-transparent">
-          <div class="flex items-start gap-3">
-            <i class="bi bi-trophy-fill text-success text-2xl" aria-hidden="true"></i>
-            <div>
-              <p class="text-xs font-semibold text-base-content/60 uppercase">Best Day</p>
-              <p class="text-base font-bold mt-1">{{ best_day.day_name }}</p>
-              <p class="text-sm text-base-content/70 mt-1">{{ best_day.minutes }} minutes logged</p>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-        
-        {% if most_productive_category %}
-        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-primary/5 to-transparent">
-          <div class="flex items-start gap-3">
-            <i class="bi bi-star-fill text-primary text-2xl" aria-hidden="true"></i>
-            <div>
-              <p class="text-xs font-semibold text-base-content/60 uppercase">Top Category</p>
-              <p class="text-base font-bold mt-1">{{ most_productive_category.name }}</p>
-              <p class="text-sm text-base-content/70 mt-1">{{ most_productive_category.minutes }} minutes</p>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-        
-        {% if completion_rate_week %}
-        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-info/5 to-transparent">
-          <div class="flex items-start gap-3">
-            <i class="bi bi-check-circle-fill text-info text-2xl" aria-hidden="true"></i>
-            <div>
-              <p class="text-xs font-semibold text-base-content/60 uppercase">Weekly Rate</p>
-              <p class="text-base font-bold mt-1">{{ completion_rate_week }}% Complete</p>
-              <p class="text-sm text-base-content/70 mt-1">
-                {% if completion_rate_week >= 80 %}Excellent work!{% elif completion_rate_week >= 60 %}Good progress!{% else %}Keep going!{% endif %}
-              </p>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </section>
-  {% endif %}
-
-
-  {% if best_day_info or weekly_overview %}
-  <!-- Activity Insights -->
-  <section class="card border border-base-200 bg-base-100" aria-label="Activity insights">
-    <div class="card-body p-5 sm:p-6">
-      <h2 class="text-lg font-bold flex items-center gap-2">
-        <i class="bi bi-lightbulb" aria-hidden="true"></i>
-        <span>Activity Insights</span>
-      </h2>
-
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
-        
-        {% if best_day_info %}
-        <!-- Best Day -->
-        <div class="p-4 rounded-2xl border border-base-200 bg-gradient-to-br from-success/5 to-transparent">
-          <div class="flex items-start gap-3">
-            <i class="bi bi-trophy-fill text-success text-2xl" aria-hidden="true"></i>
-            <div>
-              <p class="text-xs font-semibold text-base-content/60 uppercase">Most Productive Day</p>
-              <p class="text-base font-bold mt-1">{{ best_day_info.date|date:"F j, Y" }}</p>
-              <p class="text-sm text-base-content/70 mt-1">{{ best_day_info.minutes }} minutes logged</p>
-            </div>
-          </div>
-        </div>
-        {% endif %}
-
-        {% if weekly_overview %}
-        <!-- Weekly Activity Pattern -->
-        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-          <p class="text-xs font-semibold text-base-content/60 uppercase mb-3">Last 7 Days</p>
-          <div class="flex items-end justify-between gap-1 h-20">
-            {% for day in weekly_overview %}
-            <div class="flex-1 flex flex-col items-center gap-1">
-              <div class="w-full rounded-t transition-all" 
-                   style="height: {% if day.percent > 0 %}{{ day.percent }}%{% else %}8px{% endif %}; background-color: {% if day.minutes > 0 %}oklch(var(--p)){% else %}oklch(var(--b2)){% endif %};"
-                   title="{{ day.label }}: {{ day.minutes }}m"></div>
-              <span class="text-xs text-base-content/60">{{ day.label }}</span>
-            </div>
-            {% endfor %}
-          </div>
-        </div>
-        {% endif %}
-
-      </div>
-    </div>
-  </section>
-  {% endif %}
-
-  <!-- Weekly chart -->
-  <section class="card border border-base-200 bg-base-100" aria-label="Weekly overview">
-    <div class="card-body p-5 sm:p-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-bold flex items-center gap-2">
-            <i class="bi bi-graph-up" aria-hidden="true"></i>
-            <span>Weekly progress</span>
-          </h2>
-          <p class="text-sm text-base-content/70 mt-1">Minutes logged over the last 7 days.</p>
-        </div>
-        <span class="badge badge-primary badge-outline">Last 7 days</span>
-      </div>
-
-      {% if weekly_overview %}
-      <div class="mt-4 p-4 rounded-2xl border border-base-200 bg-base-100">
-        <div class="chart-wrap">
-          <canvas id="weeklyChart" class="w-full" aria-label="Weekly minutes chart" role="img"></canvas>
-        </div>
-      </div>
-      {% else %}
-      <div class="mt-4 p-6 rounded-2xl border border-base-200 bg-base-200/40 text-center">
-        <p class="text-sm text-base-content/70">No weekly data yet.</p>
-        <a href="{% url 'log_create' %}" class="btn btn-primary btn-sm mt-3 gap-2">
-          <i class="bi bi-plus-circle" aria-hidden="true"></i>
-          <span>Log an activity</span>
-        </a>
-      </div>
-      {% endif %}
-    </div>
-  </section>
-
-  <!-- Goals + Calendar -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-    <!-- Goals -->
-    <section class="card border border-base-200 bg-base-100" aria-label="Goals">
-      <div class="card-body p-5 sm:p-6">
-        <h2 class="text-lg font-bold flex items-center gap-2">
-          <i class="bi bi-trophy" aria-hidden="true"></i>
-          <span>Daily goals</span>
-        </h2>
-        <p class="text-sm text-base-content/70 mt-1">Simple targets to keep you consistent.</p>
-
-        <div class="mt-4 space-y-4">
-          <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-            <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <i class="bi bi-stopwatch text-primary" aria-hidden="true"></i>
-                <span class="font-semibold text-sm">Time goal</span>
-              </div>
-              <span class="text-sm font-bold tabular-nums">{{ today_time|default:0 }}/60 min</span>
-            </div>
-            <progress class="progress progress-primary w-full mt-3"
-              value="{% if today_time|default:0 > 60 %}100{% else %}{{ today_time|default:0|mul:100|div:60 }}{% endif %}"
-              max="100"></progress>
-            <p class="mt-2 text-xs text-base-content/70">
-              {% widthratio today_time 60 100 %}% complete
-            </p>
-          </div>
-
-          <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-            <div class="flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <i class="bi bi-check-circle text-primary" aria-hidden="true"></i>
-                <span class="font-semibold text-sm">Tasks goal</span>
-              </div>
-              <span class="text-sm font-bold tabular-nums">{{ completed_today|default:0 }}/5 tasks</span>
-            </div>
-            <progress class="progress progress-primary w-full mt-3"
-              value="{% if completed_today|default:0 > 5 %}100{% else %}{{ completed_today|default:0|mul:100|div:5 }}{% endif %}"
-              max="100"></progress>
-            <p class="mt-2 text-xs text-base-content/70">
-              {% widthratio completed_today 5 100 %}% complete
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Calendar -->
-    <section class="card border border-base-200 bg-base-100" aria-label="Calendar">
-      <div class="card-body p-5 sm:p-6">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <h2 class="text-lg font-bold flex items-center gap-2">
-              <i class="bi bi-calendar" aria-hidden="true"></i>
-              <span id="calendar-month-year">{{ month_name }} {{ selected_year }}</span>
-            </h2>
-            <p class="text-sm text-base-content/70 mt-1">Select a day for the summary.</p>
-          </div>
-
-          <div class="flex gap-2">
-            <button id="prev-month-btn"
-                    class="cal-nav btn btn-circle btn-outline btn-sm"
-                    data-year="{{ prev_year }}" data-month="{{ prev_month }}"
-                    aria-label="Previous month">
-              <i class="bi bi-chevron-left" aria-hidden="true"></i>
-            </button>
-            <button id="next-month-btn"
-                    class="cal-nav btn btn-circle btn-outline btn-sm"
-                    data-year="{{ next_year }}" data-month="{{ next_month }}"
-                    aria-label="Next month">
-              <i class="bi bi-chevron-right" aria-hidden="true"></i>
-            </button>
-          </div>
-        </div>
-
-        <div class="mt-4 p-4 rounded-2xl border border-base-200 bg-base-100" id="calendar-grid">
-          <div class="grid grid-cols-7 gap-2 text-center mb-3">
-            {% for day_name in day_names %}
-              <div class="text-xs font-semibold text-base-content/70 py-2">{{ day_name }}</div>
-            {% endfor %}
-          </div>
-
-          <div class="grid grid-cols-7 gap-2">
-            {% for day in calendar_days %}
-              {% if day.logged %}
-                <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
-                   class="cal-day cal-day--active {% if day.intensity %}cal-day--intensity-{{ day.intensity }}{% endif %}"
-                   {% if day.minutes %}data-minutes="{{ day.minutes }}m"{% endif %}
-                   aria-label="View summary for {{ day.date|date:'F j, Y' }} ({{ day.minutes|default:0 }} minutes logged)">
-                  <span>{{ day.day }}</span>
-                </a>
-              {% elif day.is_future %}
-                <div class="cal-day cal-day--future" aria-label="{{ day.date|date:'F j, Y' }} (future day)">
-                  <span>{{ day.day }}</span>
-                </div>
-              {% else %}
-                <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
-                   class="cal-day"
-                   aria-label="View summary for {{ day.date|date:'F j, Y' }}">
-                  <span>{{ day.day }}</span>
-                </a>
-              {% endif %}
-            {% endfor %}
-          </div>
-        </div>
-
-        <div class="mt-4">
-          <p class="text-xs text-base-content/60 text-center mb-2">Activity Intensity</p>
-          <div class="flex flex-wrap items-center justify-center gap-2 text-xs text-base-content/70">
-            <span class="inline-flex items-center gap-1">
-              <span class="legend-dot" style="background: rgba(226,232,240,1)"></span> None
-            </span>
-            <span class="inline-flex items-center gap-1">
-              <span class="legend-dot" style="background: rgb(29 78 216 / 0.10)"></span> Low
-            </span>
-            <span class="inline-flex items-center gap-1">
-              <span class="legend-dot" style="background: rgb(29 78 216 / 0.30)"></span> Medium
-            </span>
-            <span class="inline-flex items-center gap-1">
-              <span class="legend-dot" style="background: rgb(29 78 216 / 0.55)"></span> High
-            </span>
-            <span class="inline-flex items-center gap-1">
-              <span class="legend-dot" style="background: rgb(29 78 216 / 0.75)"></span> Very High
-            </span>
-          </div>
-        </div>
-      </div>
-    </section>
+  <!-- ================= HEADER ================= -->
+  <div class="max-w-7xl mx-auto mb-8">
+    <h1 class="text-3xl md:text-4xl font-black mb-2" style="color: var(--system-text-primary);">
+      📊 Progress Analytics
+    </h1>
+    <p style="color: var(--system-text-secondary);">
+      Insightful breakdown of your productivity, habits, and progress.
+    </p>
   </div>
 
-  <!-- Category breakdown -->
-  {% if category_data %}
-  <section class="card border border-base-200 bg-base-100" aria-label="Category breakdown">
-    <div class="card-body p-5 sm:p-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-bold flex items-center gap-2">
-            <i class="bi bi-pie-chart" aria-hidden="true"></i>
-            <span>Time distribution</span>
-          </h2>
-          <p class="text-sm text-base-content/70 mt-1">Minutes by category (weekly).</p>
-        </div>
-        <span class="badge badge-outline">Weekly</span>
-      </div>
-
-      <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-          <div class="chart-wrap" style="height: 320px;">
-            <canvas id="categoryChart" class="w-full" aria-label="Category distribution chart" role="img"></canvas>
-          </div>
-        </div>
-
-        <div class="space-y-3">
-          {% for item in category_data %}
-          <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-            <div class="flex items-center justify-between gap-3">
-              <span class="font-semibold">{{ item.name }}</span>
-              <span class="font-bold tabular-nums">{{ item.value }} min</span>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
+  <!-- ================= KEY METRICS ================= -->
+  <div class="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+    <div class="stat rounded-2xl shadow" style="background: var(--system-bg-secondary); box-shadow: 0 4px 6px var(--system-shadow);">
+      <div class="stat-title">Tasks Today</div>
+      <div class="stat-value" style="color: var(--system-blue);">{{ today_tasks_count }}</div>
+      <div class="stat-desc">
+        {{ tasks_trend }}% vs yesterday
       </div>
     </div>
-  </section>
-  {% endif %}
 
-  <!-- Task breakdown -->
-  {% if task_data %}
-  <section class="card border border-base-200 bg-base-100" aria-label="Task breakdown">
-    <div class="card-body p-5 sm:p-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-bold flex items-center gap-2">
-            <i class="bi bi-list-task" aria-hidden="true"></i>
-            <span>Task distribution</span>
-          </h2>
-          <p class="text-sm text-base-content/70 mt-1">Minutes by task (weekly).</p>
-        </div>
-        <span class="badge badge-outline">Weekly</span>
-      </div>
-
-      <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-          <div class="chart-wrap" style="height: 320px;">
-            <canvas id="taskChart" class="w-full" aria-label="Task distribution chart" role="img"></canvas>
-          </div>
-        </div>
-
-        <div class="space-y-3">
-          {% for item in task_data %}
-          <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-            <div class="flex items-center justify-between gap-3">
-              <span class="font-semibold">{{ item.name }}</span>
-              <span class="font-bold tabular-nums">{{ item.value }} min</span>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
+    <div class="stat rounded-2xl shadow" style="background: var(--system-bg-secondary); box-shadow: 0 4px 6px var(--system-shadow);">
+      <div class="stat-title">Minutes Today</div>
+      <div class="stat-value" style="color: var(--system-purple);">{{ today_time }}</div>
+      <div class="stat-desc">
+        Avg/day: {{ avg_daily_minutes }} min
       </div>
     </div>
-  </section>
-  {% endif %}
 
-  <!-- Plan Analytics -->
-  <section class="card border border-base-200 bg-base-100" aria-label="Plan analytics">
-    <div class="card-body p-5 sm:p-6">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h2 class="text-lg font-bold flex items-center gap-2">
-            <i class="bi bi-diagram-3" aria-hidden="true"></i>
-            <span>Plan Progress</span>
-          </h2>
-          <p class="text-sm text-base-content/70 mt-1">Track your structured workflows.</p>
-        </div>
-        <a href="{% url 'plan_list' %}" class="link link-primary text-sm">View all plans</a>
+    <div class="stat rounded-2xl shadow" style="background: var(--system-bg-secondary); box-shadow: 0 4px 6px var(--system-shadow);">
+      <div class="stat-title">Current Streak</div>
+      <div class="stat-value" style="color: var(--system-green);">{{ current_streak }} 🔥</div>
+      <div class="stat-desc">
+        Best: {{ best_streak }} days
       </div>
+    </div>
 
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-              <i class="bi bi-diagram-3 text-primary" aria-hidden="true"></i>
-              <span class="font-semibold text-sm">Total Plans</span>
-            </div>
-            <span class="text-2xl font-bold tabular-nums">{{ total_plans|default:0 }}</span>
-          </div>
-        </div>
-
-        <div class="p-4 rounded-2xl border border-base-200 bg-base-100">
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
-              <i class="bi bi-check-circle text-primary" aria-hidden="true"></i>
-              <span class="font-semibold text-sm">Active Plans</span>
-            </div>
-            <span class="text-2xl font-bold tabular-nums">{{ active_plans|default:0 }}</span>
-          </div>
-        </div>
+    <div class="stat rounded-2xl shadow" style="background: var(--system-bg-secondary); box-shadow: 0 4px 6px var(--system-shadow);">
+      <div class="stat-title">This Month</div>
+      <div class="stat-value" style="color: var(--system-orange);">{{ logs_this_month }}</div>
+      <div class="stat-desc">
+        {{ month_trend }}% vs last month
       </div>
+    </div>
+  </div>
 
-      {% if plan_stats %}
-      <div class="mt-4 space-y-3">
-        {% for plan in plan_stats %}
-        <a href="{% url 'plan_detail' plan.id %}" 
-           class="block p-4 rounded-2xl border border-base-200 bg-base-100 hover:bg-base-200/40 transition">
-          <div class="flex items-start justify-between gap-4">
-            <div class="flex-1 min-w-0">
-              <h3 class="font-semibold text-sm truncate mb-2">{{ plan.title }}</h3>
-              
-              <div class="flex items-center gap-4 text-xs text-base-content/70 mb-2">
-                <span class="inline-flex items-center gap-1">
-                  <i class="bi bi-diagram-3" aria-hidden="true"></i>
-                  {{ plan.total_tasks }} task{{ plan.total_tasks|pluralize }}
-                </span>
-                <span class="inline-flex items-center gap-1">
-                  <i class="bi bi-check-circle" aria-hidden="true"></i>
-                  {{ plan.completed_tasks }} completed
-                </span>
-                {% if plan.in_progress_tasks > 0 %}
-                <span class="inline-flex items-center gap-1">
-                  <i class="bi bi-hourglass-split" aria-hidden="true"></i>
-                  {{ plan.in_progress_tasks }} in progress
-                </span>
-                {% endif %}
-              </div>
+  <!-- ================= WEEKLY LINE CHART ================= -->
+  <div class="max-w-7xl mx-auto rounded-3xl shadow-xl p-6 mb-10" style="background: var(--system-bg-secondary); box-shadow: 0 8px 20px var(--system-shadow);">
+    <h2 class="text-xl font-bold mb-4" style="color: var(--system-text-primary);">Weekly Activity</h2>
+    <canvas id="weeklyChart" height="90"></canvas>
+  </div>
 
-              <div class="flex items-center gap-2">
-                <progress class="progress progress-primary w-full h-2" 
-                          value="{{ plan.completion_rate }}" 
-                          max="100"></progress>
-                <span class="text-xs font-semibold tabular-nums whitespace-nowrap">{{ plan.completion_rate }}%</span>
-              </div>
-            </div>
+  <!-- ================= CATEGORY + TASK CHARTS ================= -->
+  <div class="max-w-7xl mx-auto grid md:grid-cols-2 gap-6 mb-10">
+    <div class="rounded-3xl shadow-xl p-6" style="background: var(--system-bg-secondary); box-shadow: 0 8px 20px var(--system-shadow);">
+      <h2 class="text-xl font-bold mb-4" style="color: var(--system-text-primary);">Time by Category</h2>
+      <canvas id="categoryChart"></canvas>
+    </div>
 
-            <div class="radial-progress text-xs" 
-                 style="--value:{{ plan.completion_rate }}; --size:3rem; --thickness:4px;"
-                 role="progressbar"
-                 aria-label="Plan progress {{ plan.completion_rate }}%">
-              <span class="text-[10px] font-bold">{{ plan.completion_rate }}%</span>
-            </div>
-          </div>
-        </a>
-        {% endfor %}
+    <div class="rounded-3xl shadow-xl p-6" style="background: var(--system-bg-secondary); box-shadow: 0 8px 20px var(--system-shadow);">
+      <h2 class="text-xl font-bold mb-4" style="color: var(--system-text-primary);">Top Tasks (Weekly)</h2>
+      <canvas id="taskChart"></canvas>
+    </div>
+  </div>
+
+  <!-- ================= CALENDAR HEATMAP ================= -->
+  <div class="max-w-7xl mx-auto rounded-3xl shadow-xl p-6 mb-10" style="background: var(--system-bg-secondary); box-shadow: 0 8px 20px var(--system-shadow);">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-bold" style="color: var(--system-text-primary);">{{ month_name }} {{ selected_year }}</h2>
+      <div class="flex gap-2">
+        <a href="?month={{ prev_month }}&year={{ prev_year }}" class="btn btn-sm">←</a>
+        <a href="?month={{ next_month }}&year={{ next_year }}" class="btn btn-sm">→</a>
       </div>
+    </div>
+
+    <div class="grid grid-cols-7 gap-2 text-center mb-2">
+      {% for d in day_names %}
+        <div class="text-xs font-semibold" style="color: var(--system-text-tertiary);">{{ d }}</div>
+      {% endfor %}
+    </div>
+
+    <div class="grid grid-cols-7 gap-2">
+      {% for day in calendar_days %}
+        {% if day.is_future %}
+          <div
+            class="aspect-square rounded-xl text-xs flex flex-col items-center justify-center cursor-not-allowed"
+            style="background: var(--system-bg-tertiary); color: var(--system-text-tertiary); opacity: 0.5;"
+            title="Future date"
+          >
+            <div class="font-bold">{{ day.day }}</div>
+          </div>
+        {% else %}
+          <a
+            href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
+            class="aspect-square rounded-xl text-xs flex flex-col items-center justify-center transition-all duration-200 hover:scale-105 hover:shadow-lg cursor-pointer {% if day.is_today %} ring-2 {% endif %}"
+            style="
+              {% if day.intensity == 0 %}background: var(--system-bg-tertiary); color: var(--system-text-primary);
+              {% elif day.intensity == 1 %}background: rgba(52, 199, 89, 0.2); color: var(--system-text-primary);
+              {% elif day.intensity == 2 %}background: rgba(52, 199, 89, 0.4); color: var(--system-text-primary);
+              {% elif day.intensity == 3 %}background: rgba(52, 199, 89, 0.6); color: #FFFFFF;
+              {% elif day.intensity == 4 %}background: rgba(52, 199, 89, 0.8); color: #FFFFFF;
+              {% elif day.intensity == 5 %}background: var(--system-green); color: #FFFFFF;
+              {% endif %}
+              {% if day.is_today %}border-color: var(--system-blue);{% endif %}
+            "
+            title="View details for {{ day.date|date:'F j, Y' }} ({{ day.minutes|default:0 }} minutes)"
+          >
+            <div class="font-bold">{{ day.day }}</div>
+            {% if day.minutes %}
+              <div>{{ day.minutes }}m</div>
+            {% endif %}
+          </a>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ================= INSIGHTS ================= -->
+  <div class="max-w-7xl mx-auto grid md:grid-cols-3 gap-6 mb-12">
+    <div class="rounded-2xl shadow p-5" style="background: var(--system-bg-secondary); box-shadow: 0 4px 6px var(--system-shadow);">
+      <h3 class="font-bold mb-1" style="color: var(--system-text-primary);">Best Day</h3>
+      {% if best_day %}
+        <p style="color: var(--system-text-secondary);">{{ best_day.name }} ({{ best_day.minutes }} min avg)</p>
       {% else %}
-      <div class="mt-4 p-6 rounded-2xl border border-base-200 bg-base-200/40 text-center">
-        <p class="text-sm text-base-content/70 mb-3">No active plans to track.</p>
-        <a href="{% url 'plan_create' %}" class="btn btn-primary btn-sm gap-2">
-          <i class="bi bi-plus-lg" aria-hidden="true"></i>
-          <span>Create Plan</span>
-        </a>
-      </div>
+        <p style="color: var(--system-text-tertiary);">Not enough data</p>
       {% endif %}
     </div>
-  </section>
 
-</main>
+    <div class="rounded-2xl shadow p-5" style="background: var(--system-bg-secondary); box-shadow: 0 4px 6px var(--system-shadow);">
+      <h3 class="font-bold mb-1" style="color: var(--system-text-primary);">Most Productive Category</h3>
+      {% if most_productive_category %}
+        <p style="color: var(--system-text-secondary);">{{ most_productive_category.name }} – {{ most_productive_category.value }} min</p>
+      {% else %}
+        <p style="color: var(--system-text-tertiary);">No data</p>
+      {% endif %}
+    </div>
+
+    <div class="rounded-2xl shadow p-5" style="background: var(--system-bg-secondary); box-shadow: 0 4px 6px var(--system-shadow);">
+      <h3 class="font-bold mb-1" style="color: var(--system-text-primary);">Weekly Completion</h3>
+      <p style="color: var(--system-text-secondary);">{{ completion_rate_week }}% completed</p>
+    </div>
+  </div>
+</div>
+
+<!-- ================= DATA SCRIPTS ================= -->
+{{ weekly_overview|json_script:"weeklyData" }}
+{{ category_data|json_script:"categoryData" }}
+{{ task_data|json_script:"taskData" }}
+
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-{{ weekly_overview|json_script:"weekly-data" }}
-{{ category_data|json_script:"category-data" }}
-{{ task_data|json_script:"task-data" }}
 
 <script>
-(function() {
-  'use strict';
-  
-  // Store chart instances for cleanup
-  let chartInstances = [];
-  
-  function initPage() {
-    // Clean up any existing charts first
-    chartInstances.forEach(chart => {
-      if (chart && typeof chart.destroy === 'function') {
-        chart.destroy();
-      }
-    });
-    chartInstances = [];
-    
-    // Global Chart.js settings
-    if (typeof Chart !== 'undefined') {
-      Chart.defaults.color = 'rgba(15, 23, 42, 0.75)';
-      Chart.defaults.font.family = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
-    }
+  const weekly = JSON.parse("{{ weekly_overview|escapejs }}");
+  const categories = JSON.parse("{{ category_data|escapejs }}");
+  const tasks = JSON.parse("{{ task_data|escapejs }}");
 
-    // Weekly chart
-    const weeklyData = JSON.parse(document.getElementById('weekly-data')?.textContent || '[]');
-    if (weeklyData.length > 0) {
-      const ctx = document.getElementById('weeklyChart')?.getContext('2d');
-      if (ctx) {
-        const labels = weeklyData.map(d => d.label);
-        const data = weeklyData.map(d => d.minutes);
+  // Get system colors
+  const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const systemBlue = getComputedStyle(document.documentElement).getPropertyValue('--system-blue').trim();
+  const systemGreen = getComputedStyle(document.documentElement).getPropertyValue('--system-green').trim();
+  const systemOrange = getComputedStyle(document.documentElement).getPropertyValue('--system-orange').trim();
+  const systemRed = getComputedStyle(document.documentElement).getPropertyValue('--system-red').trim();
+  const systemPurple = getComputedStyle(document.documentElement).getPropertyValue('--system-purple').trim();
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--system-text-primary').trim();
+  const borderColor = getComputedStyle(document.documentElement).getPropertyValue('--system-border').trim();
 
-        const weeklyChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels,
-            datasets: [{
-              label: 'Minutes logged',
-              data,
-              borderColor: 'rgb(29, 78, 216)',
-              backgroundColor: 'rgba(29, 78, 216, 0.10)',
-              borderWidth: 2,
-              fill: true,
-              tension: 0.35,
-              pointRadius: 3,
-              pointHoverRadius: 5
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { intersect: false, mode: 'index' },
-            plugins: {
-              legend: { display: false },
-              tooltip: {
-                displayColors: false,
-                callbacks: {
-                  label: (context) => `${context.parsed.y} minutes`
-                }
-              }
-            },
-            scales: {
-              y: {
-                beginAtZero: true,
-                ticks: { callback: (v) => `${v}m` },
-                grid: { color: 'rgba(15, 23, 42, 0.08)' }
-              },
-              x: {
-                grid: { color: 'rgba(15, 23, 42, 0.08)' }
-              }
-            },
-            animation: false
-          }
-        });
-        chartInstances.push(weeklyChart);
+  // Chart.js default colors
+  Chart.defaults.color = textColor;
+  Chart.defaults.borderColor = borderColor;
+
+  new Chart(document.getElementById("weeklyChart"), {
+    type: "line",
+    data: {
+      labels: weekly.map(d => d.label),
+      datasets: [{
+        label: "Minutes",
+        data: weekly.map(d => d.minutes),
+        tension: 0.4,
+        fill: true,
+        borderColor: systemBlue,
+        backgroundColor: systemBlue + '40',
+        pointBackgroundColor: systemBlue,
+        pointBorderColor: '#fff',
+        pointHoverBackgroundColor: '#fff',
+        pointHoverBorderColor: systemBlue
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: textColor }
+        }
+      },
+      scales: {
+        y: {
+          grid: { color: borderColor },
+          ticks: { color: textColor }
+        },
+        x: {
+          grid: { color: borderColor },
+          ticks: { color: textColor }
+        }
       }
     }
-
-    // Category chart
-    const categoryData = JSON.parse(document.getElementById('category-data')?.textContent || '[]');
-    if (categoryData.length > 0) {
-      const labels = categoryData.map(i => i.name);
-      const values = categoryData.map(i => i.value);
-      const ctx2 = document.getElementById('categoryChart')?.getContext('2d');
-      if (ctx2) {
-        const colors = [
-          'rgba(29, 78, 216, 0.85)',
-          'rgba(17, 94, 89, 0.85)',
-          'rgba(21, 128, 61, 0.85)',
-          'rgba(161, 98, 7, 0.85)',
-          'rgba(185, 28, 28, 0.85)',
-          'rgba(91, 33, 182, 0.85)'
-        ];
-
-        const categoryChart = new Chart(ctx2, {
-          type: 'doughnut',
-          data: {
-            labels,
-            datasets: [{
-              data: values,
-              backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-              borderColor: '#ffffff',
-              borderWidth: 2,
-              hoverOffset: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '62%',
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: { boxWidth: 10, usePointStyle: true, padding: 16 }
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const total = context.dataset.data.reduce((a,b) => a + b, 0);
-                    const pct = total ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
-                    return `${context.label}: ${context.parsed} min (${pct}%)`;
-                  }
-                }
-              }
-            },
-            animation: false
-          }
-        });
-        chartInstances.push(categoryChart);
-      }
-    }
-
-    // Task chart
-    const taskData = JSON.parse(document.getElementById('task-data')?.textContent || '[]');
-    if (taskData.length > 0) {
-      const labels = taskData.map(i => i.name);
-      const values = taskData.map(i => i.value);
-      const ctx3 = document.getElementById('taskChart')?.getContext('2d');
-      if (ctx3) {
-        const colors = [
-          'rgba(29, 78, 216, 0.85)',
-          'rgba(17, 94, 89, 0.85)',
-          'rgba(21, 128, 61, 0.85)',
-          'rgba(161, 98, 7, 0.85)',
-          'rgba(185, 28, 28, 0.85)',
-          'rgba(91, 33, 182, 0.85)',
-          'rgba(180, 83, 9, 0.85)',
-          'rgba(13, 148, 136, 0.85)',
-          'rgba(34, 197, 94, 0.85)',
-          'rgba(251, 146, 60, 0.85)'
-        ];
-
-        const taskChart = new Chart(ctx3, {
-          type: 'doughnut',
-          data: {
-            labels,
-            datasets: [{
-              data: values,
-              backgroundColor: labels.map((_, i) => colors[i % colors.length]),
-              borderColor: '#ffffff',
-              borderWidth: 2,
-              hoverOffset: 6
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '62%',
-            plugins: {
-              legend: {
-                position: 'bottom',
-                labels: { boxWidth: 10, usePointStyle: true, padding: 16 }
-              },
-              tooltip: {
-                callbacks: {
-                  label: (context) => {
-                    const total = context.dataset.data.reduce((a,b) => a + b, 0);
-                    const pct = total ? ((context.parsed / total) * 100).toFixed(1) : '0.0';
-                    return `${context.label}: ${context.parsed} min (${pct}%)`;
-                  }
-                }
-              }
-            },
-            animation: false
-          }
-        });
-        chartInstances.push(taskChart);
-      }
-    }
-
-    // Calendar navigation
-    const prevBtn = document.getElementById('prev-month-btn');
-    const nextBtn = document.getElementById('next-month-btn');
-    const monthYearDisplay = document.getElementById('calendar-month-year');
-    const calendarGrid = document.getElementById('calendar-grid');
-    const logsThisMonthStat = document.getElementById('logs-this-month');
-
-    if (prevBtn && nextBtn) {
-      function setNavLoading(isLoading) {
-        prevBtn.disabled = isLoading;
-        nextBtn.disabled = isLoading;
-        prevBtn.innerHTML = isLoading ? '<i class="bi bi-arrow-repeat"></i>' : '<i class="bi bi-chevron-left"></i>';
-        nextBtn.innerHTML = isLoading ? '<i class="bi bi-arrow-repeat"></i>' : '<i class="bi bi-chevron-right"></i>';
-      }
-
-      function updateCalendar(year, month) {
-        setNavLoading(true);
-
-        fetch(`{% url 'analytics' %}?year=${year}&month=${month}`, {
-          method: 'GET',
-          headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(r => r.json())
-        .then(data => {
-          if (monthYearDisplay) {
-            monthYearDisplay.textContent = `${data.month_name} ${data.selected_year}`;
-          }
-
-          prevBtn.setAttribute('data-year', data.prev_year);
-          prevBtn.setAttribute('data-month', data.prev_month);
-          nextBtn.setAttribute('data-year', data.next_year);
-          nextBtn.setAttribute('data-month', data.next_month);
-
-          if (calendarGrid) {
-            let html = '<div class="grid grid-cols-7 gap-2 text-center mb-3">';
-            data.day_names.forEach(dayName => {
-              html += `<div class="text-xs font-semibold text-base-content/70 py-2">${dayName}</div>`;
-            });
-            html += '</div><div class="grid grid-cols-7 gap-2">';
-
-            data.calendar_days.forEach(day => {
-              const date = new Date(day.date);
-              const y = date.getFullYear();
-              const m = date.getMonth() + 1;
-              const d = date.getDate();
-              const dailyUrl = `{% url 'daily_summary' 0 0 0 %}`.replace('0/0/0', `${y}/${m}/${d}`);
-
-              if (day.logged) {
-                html += `<a href="${dailyUrl}" class="cal-day cal-day--active" aria-label="View summary for ${date.toDateString()} (active day)">${day.day}</a>`;
-              } else if (day.is_future) {
-                html += `<div class="cal-day cal-day--future" aria-label="${date.toDateString()} (future day)">${day.day}</div>`;
-              } else {
-                html += `<a href="${dailyUrl}" class="cal-day" aria-label="View summary for ${date.toDateString()}">${day.day}</a>`;
-              }
-            });
-
-            html += '</div>';
-            calendarGrid.innerHTML = html;
-          }
-
-          if (logsThisMonthStat) {
-            logsThisMonthStat.textContent = data.logs_this_month;
-          }
-
-          const url = new URL(window.location);
-          url.searchParams.set('year', data.selected_year);
-          url.searchParams.set('month', data.selected_month);
-          window.history.pushState({}, '', url);
-        })
-        .catch(err => console.error('Error updating calendar:', err))
-        .finally(() => setNavLoading(false));
-      }
-
-      prevBtn.addEventListener('click', function() {
-        updateCalendar(this.getAttribute('data-year'), this.getAttribute('data-month'));
-      });
-
-      nextBtn.addEventListener('click', function() {
-        updateCalendar(this.getAttribute('data-year'), this.getAttribute('data-month'));
-      });
-    }
-  }
-
-  // Initialize when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPage, { once: true });
-  } else {
-    initPage();
-  }
-
-  // Clean up charts when navigating away
-  window.addEventListener('beforeunload', function() {
-    chartInstances.forEach(chart => {
-      if (chart && typeof chart.destroy === 'function') {
-        chart.destroy();
-      }
-    });
   });
-})();
+
+  new Chart(document.getElementById("categoryChart"), {
+    type: "doughnut",
+    data: {
+      labels: categories.map(c => c.name),
+      datasets: [{
+        data: categories.map(c => c.value),
+        backgroundColor: [systemBlue, systemGreen, systemOrange, systemRed, systemPurple, '#5AC8FA', '#FFD60A'],
+        borderWidth: 2,
+        borderColor: isDark ? '#1C1C1E' : '#FFFFFF'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: textColor }
+        }
+      }
+    }
+  });
+
+  new Chart(document.getElementById("taskChart"), {
+    type: "bar",
+    data: {
+      labels: tasks.map(t => t.name),
+      datasets: [{
+        data: tasks.map(t => t.value),
+        backgroundColor: systemGreen,
+        borderRadius: 6
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          grid: { display: false },
+          ticks: { color: textColor }
+        },
+        x: {
+          grid: { color: borderColor },
+          ticks: { color: textColor }
+        }
+      }
+    }
+  });
+
+  // Update charts when theme changes
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    location.reload();
+  });
 </script>
+
 {% endblock %}

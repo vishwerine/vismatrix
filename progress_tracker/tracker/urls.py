@@ -23,6 +23,7 @@ urlpatterns = [
     
     # Day schedule API endpoints
     path("api/day-schedule/save/", views.save_day_schedule, name="save_day_schedule"),
+    path("api/day-schedule/smart-schedule/", views.smart_schedule_tasks, name="smart_schedule_tasks"),
     path("api/day-schedule/<str:schedule_date>/", views.load_day_schedule, name="load_day_schedule"),
 
     path("progress/", views.progress_view, name="progress"),

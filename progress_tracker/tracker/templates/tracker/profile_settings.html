@@ -132,26 +132,24 @@
     </div>
   </section>
 
-    <section class="card border border-base-200 bg-base-100">
-    
-      <div class="card-body p-6">
+  <!-- Calendar Integration Card -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-6">
       <h2 class="card-title text-lg font-bold mb-3">
         <i class="bi bi-shield-lock text-success" aria-hidden="true"></i>
-        Connect External Calendars (for eg. Google Calendar, iCloud Calendar etc.)
+        Connect External Calendars
       </h2>
       
-            
-        <div class="btn btn-primary gap-2">
-        <a href="{% url 'calendar_settings' %}">
-            <i class="bi bi-calendar-check text-lg opacity-80" aria-hidden="true"></i>
-            Calendar Settings
-          </a>
-        </div>
-        
-      </div>
-   
-
-    </section>
+      <p class="text-sm text-base-content/80 mb-4">
+        Sync your schedule with Google Calendar, iCloud Calendar, and other external calendar services.
+      </p>
+      
+      <a href="{% url 'calendar_settings' %}" class="btn btn-primary gap-2">
+        <i class="bi bi-calendar-check text-lg" aria-hidden="true"></i>
+        <span>Calendar Settings</span>
+      </a>
+    </div>
+  </section>
 
   <!-- Account Information Card -->
   <section class="card border border-base-200 bg-base-100">

@@ -73,6 +73,16 @@ def day_planner(request):
         task.plan_names = task_to_plans.get(task.id, [])
         pending_tasks.append(task)
     
+    # Prepare tasks as JSON for dropdown
+    import json
+    pending_tasks_json = json.dumps([{
+        'id': task.id,
+        'title': task.title,
+        'category': task.category.name if task.category else None,
+        'priority': task.priority,
+        'due_date': task.due_date.isoformat() if task.due_date else None,
+    } for task in pending_tasks])
+    
     # Get today's logs
     today_logs = (
         DailyLog.objects.filter(user=request.user, date=today)
@@ -83,6 +93,7 @@ def day_planner(request):
     context = {
         "today": today,
         "pending_tasks": pending_tasks,
+        "pending_tasks_json": pending_tasks_json,
         "plan_tasks": plan_tasks,
         "today_logs": today_logs,
     }
@@ -757,6 +768,35 @@ def task_create(request):
         if form.is_valid():
             task = form.save(commit=False)
             task.user = request.user
+            
+            # Auto-classify task only if user didn't manually select a category
+            if not task.category:
+                from .services import semantic_classifier_remote
+                try:
+                    # Combine title and description for better classification
+                    text = f"{task.title} {task.description or ''}".strip()
+                    category_name, scores = semantic_classifier_remote.classify_text(text)
+                    
+                    # Try to find or create the category
+                    from django.db.models import Q
+                    category = Category.objects.filter(
+                        Q(name__iexact=category_name) & (Q(is_global=True) | Q(user=request.user))
+                    ).first()
+                    
+                    if not category:
+                        # Fallback to Uncategorized
+                        category = Category.objects.filter(
+                            Q(name__iexact='Uncategorized') & (Q(is_global=True) | Q(user=request.user))
+                        ).first()
+                    
+                    if category:
+                        task.category = category
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to auto-classify task: {str(e)}")
+                    # Continue without category - will use model default
+            
             task.save()
             
             # Check if this is from a plan (AJAX request with plan_id)
@@ -1101,6 +1141,104 @@ def load_day_schedule(request, schedule_date):
     except Exception as e:
         logger.error(f"Error in load_day_schedule: {str(e)}")
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+def smart_schedule_tasks(request):
+    """
+    Smart auto-scheduling endpoint that creates an optimized schedule
+    based on task priority, due dates, duration, and category balance.
+    """
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            schedule_date = data.get('date')
+            start_time = data.get('start_time')  # HH:MM format
+            end_time = data.get('end_time')      # HH:MM format
+            
+            if not all([schedule_date, start_time, end_time]):
+                return JsonResponse({
+                    'success': False, 
+                    'error': 'Missing required fields: date, start_time, end_time'
+                }, status=400)
+            
+            # Parse date
+            try:
+                from datetime import datetime
+                schedule_date_obj = datetime.strptime(schedule_date, '%Y-%m-%d').date()
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid date format'}, status=400)
+            
+            # Parse times (HH:MM) to minutes from midnight
+            try:
+                start_h, start_m = map(int, start_time.split(':'))
+                end_h, end_m = map(int, end_time.split(':'))
+                start_minutes = start_h * 60 + start_m
+                end_minutes = end_h * 60 + end_m
+            except (ValueError, AttributeError):
+                return JsonResponse({'success': False, 'error': 'Invalid time format'}, status=400)
+            
+            if start_minutes >= end_minutes:
+                return JsonResponse({'success': False, 'error': 'End time must be after start time'}, status=400)
+            
+            # Get all pending and in-progress tasks for this user
+            tasks_qs = Task.objects.filter(
+                user=request.user,
+                status__in=['pending', 'in_progress']
+            ).select_related('category').order_by('due_date', '-priority')
+            
+            # Build task->plan mapping
+            from .models import Plan, PlanNode
+            active_plans = Plan.objects.filter(user=request.user, is_active=True)
+            task_to_plans = {}
+            
+            for plan in active_plans:
+                nodes = PlanNode.objects.filter(plan=plan).select_related('task')
+                for node in nodes:
+                    if node.task and node.task.status in ['pending', 'in_progress']:
+                        if node.task.id not in task_to_plans:
+                            task_to_plans[node.task.id] = []
+                        task_to_plans[node.task.id].append(plan.title)
+            
+            # Convert tasks to dictionary format for scheduler
+            tasks_data = []
+            for task in tasks_qs:
+                tasks_data.append({
+                    'id': task.id,
+                    'title': task.title,
+                    'priority': task.priority,
+                    'due_date': task.due_date.isoformat() if task.due_date else None,
+                    'category_name': task.category.name if task.category else 'Uncategorized',
+                    'estimated_duration': task.estimated_duration,
+                    'plan_names': task_to_plans.get(task.id, [])
+                })
+            
+            if not tasks_data:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'No tasks available to schedule. Add some tasks first!'
+                }, status=400)
+            
+            # Use the smart scheduler
+            from .services.smart_scheduler import SmartScheduler
+            scheduler = SmartScheduler(start_minutes, end_minutes, schedule_date_obj)
+            scheduled_events, stats = scheduler.schedule_tasks(tasks_data)
+            
+            logger.info(f"Smart scheduling complete: {stats}")
+            
+            return JsonResponse({
+                'success': True,
+                'events': scheduled_events,
+                'stats': stats,
+                'message': f"Scheduled {stats['scheduled_count']} tasks"
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"Error in smart_schedule_tasks: {str(e)}", exc_info=True)
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
 
 @login_required
 def log_delete(request, pk):

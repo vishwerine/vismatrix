@@ -18,6 +18,16 @@ class TaskForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
+        
+        # Set defaults for new tasks only (not when editing)
+        if 'instance' not in kwargs or not kwargs['instance'].pk:
+            initial = kwargs.get('initial', {})
+            if 'estimated_duration' not in initial:
+                from django.utils import timezone
+                initial['estimated_duration'] = 60  # 60 minutes default
+                initial['due_date'] = timezone.localdate()  # Today
+                kwargs['initial'] = initial
+        
         super(TaskForm, self).__init__(*args, **kwargs)
         if user:
             from django.db.models import Q
@@ -25,6 +35,9 @@ class TaskForm(forms.ModelForm):
                 Q(is_global=True) | Q(user=user)
             )
             self.fields['category'].label_from_instance = self.label_from_instance
+            # Make category optional - will auto-classify if not selected
+            self.fields['category'].required = False
+            self.fields['category'].empty_label = "🤖 Auto-detect (recommended)"
     
     def label_from_instance(self, obj):
         if obj.is_global:

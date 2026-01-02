@@ -100,6 +100,17 @@
 
           <!-- Actions -->
           <div class="pt-2 border-t border-base-200">
+            <!-- Auto-classification info -->
+            <div class="alert bg-info/10 border border-info/20 mb-4">
+              <div class="flex items-start gap-3">
+                <i class="bi bi-robot text-info text-lg mt-0.5" aria-hidden="true"></i>
+                <div class="flex-1 text-sm">
+                  <p class="font-semibold text-base-content">🤖 Smart Category Detection</p>
+                  <p class="text-base-content/70 mt-1">Leave category as "Auto-detect" and we'll use AI to classify your task. Or manually select a category if you prefer!</p>
+                </div>
+              </div>
+            </div>
+
             <div class="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
               <div class="flex flex-col sm:flex-row gap-3">
                 <button type="submit" class="btn btn-primary gap-2">
@@ -137,7 +148,7 @@
           <li>Write specific titles (“Gym — legs”, “Read 20 pages”).</li>
           <li>Set a realistic due date to reduce pressure.</li>
           <li>Use priority to decide what to do first.</li>
-          <li>Categories make analytics much more useful.</li>
+          <li><strong>Category is automatically detected</strong> using AI if you leave it as "Auto-detect", or you can manually select one.</li>
         </ul>
       </div>
     </aside>

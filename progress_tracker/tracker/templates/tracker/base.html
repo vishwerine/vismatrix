@@ -30,6 +30,12 @@
       const systemPrefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
       const theme = (saved === 'light' || saved === 'dark') ? saved : (systemPrefersDark ? 'dark' : 'light');
       document.documentElement.setAttribute('data-theme', theme);
+      
+      // Detect localhost and disable heavy animations for better dev performance
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        document.documentElement.setAttribute('data-env', 'development');
+        console.log('🚀 Development mode: Performance optimizations enabled');
+      }
     })();
   </script>
 
@@ -250,6 +256,8 @@
       backdrop-filter: blur(10px);
       background: rgb(255 255 255 / 0.95);
       color: var(--text);
+      position: relative;
+      z-index: 100;
     }
     [data-theme="dark"] .vm-dropdown {
       border: 1px solid rgb(148 163 184 / 0.25);
@@ -326,17 +334,98 @@
       0% { background-position: -1000px 0; }
       100% { background-position: 1000px 0; }
     }
-    .animate-fadeIn { animation: fadeIn 0.5s ease-out; }
-    .animate-slideUp { animation: slideUp 0.6s ease-out; }
+    .animate-fadeIn { 
+      animation: fadeIn 0.5s ease-out;
+      animation-fill-mode: both;
+      will-change: transform, opacity;
+    }
+    .animate-slideUp { 
+      animation: slideUp 0.6s ease-out;
+      animation-fill-mode: both;
+      will-change: transform, opacity;
+    }
     .skeleton {
       background: linear-gradient(90deg, var(--surface-2) 0%, var(--border) 50%, var(--surface-2) 100%);
       background-size: 1000px 100%;
       animation: shimmer 2s infinite linear;
       border-radius: 8px;
+      will-change: background-position;
     }
 
-    .hover-lift { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-    .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgb(0 0 0 / 0.12); }
+    .hover-lift { 
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      will-change: transform;
+    }
+    .hover-lift:hover { 
+      transform: translateY(-4px); 
+      box-shadow: 0 12px 28px rgb(0 0 0 / 0.12); 
+    }
+    
+    /* Prevent layout shifts and jank */
+    * {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+    
+    /* Optimize for development mode */
+    @media (prefers-reduced-motion: reduce) {
+      .animate-fadeIn,
+      .animate-slideUp,
+      .skeleton,
+      .hover-lift {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+    
+    /* Disable heavy animations on localhost for better performance */
+    [data-env="development"] .animate-fadeIn,
+    [data-env="development"] .animate-slideUp {
+      animation-duration: 0.1s !important;
+    }
+    
+    [data-env="development"] .hover-lift {
+      transition-duration: 0.1s !important;
+    }
+    
+    [data-env="development"] .skeleton {
+      animation: none !important;
+      background: var(--surface-2) !important;
+    }
+    
+    /* PERFORMANCE: Optimize for data-heavy pages */
+    body.data-heavy * {
+      /* Disable ALL transitions and animations */
+      transition: none !important;
+      animation: none !important;
+    }
+    
+    body.data-heavy article,
+    body.data-heavy .card,
+    body.data-heavy .btn {
+      /* Disable expensive effects */
+      box-shadow: none !important;
+    }
+    
+    body.data-heavy .avatar {
+      /* Simplify avatars */
+      box-shadow: none !important;
+      background: var(--primary) !important;
+    }
+    
+    body.data-heavy article:hover,
+    body.data-heavy .card:hover,
+    body.data-heavy a:hover {
+      /* Disable ALL hover effects */
+      background-color: inherit !important;
+      border-color: inherit !important;
+      transform: none !important;
+    }
+    
+    /* Disable hover during scroll for ultra-smooth scrolling */
+    body.is-scrolling * {
+      pointer-events: none !important;
+    }
 
     .gradient-text {
       background: linear-gradient(135deg, var(--primary) 0%, #60a5fa 100%);
@@ -347,6 +436,28 @@
 
     .badge { font-weight: 600; letter-spacing: 0.3px; transition: all 0.2s ease; }
     .badge:hover { transform: scale(1.05); }
+
+    /* ==========================================
+       Z-INDEX HIERARCHY (for reference)
+       ==========================================
+       - Skip link: 1000 (accessibility, must be on top)
+       - DaisyUI Modals: 9999+ (built-in, highest layer)
+       - Toasts: 9999 (notifications)
+       - User Menu Dropdown: 100 (vm-dropdown)
+       - Task Dropdowns: 90 (task menus)
+       - Task Cards (open): 85 (raised cards)
+       - Navbar: 60 (top navigation)
+       - Mini Chat: 60 (desktop chat widget)
+       - Day Planner Current Time: 50
+       - Mobile Bottom Nav: 40
+       - Day Planner Events (hover): 35
+       - Day Planner Scroll Nav: 30
+       - Day Planner Events Layer: 30
+       - Day Planner Drag Select: 25
+       - Day Planner Ghost: 20
+       - Day Planner Sticky Toolbar: 10
+       - Default/Cards: 1
+       ========================================== */
   </style>
 </head>
 
@@ -354,7 +465,7 @@
   <a href="#main-content" class="skip-link">Skip to main content</a>
 
   <!-- Top Navigation -->
-  <nav class="navbar vm-navbar sticky top-0 z-50 safe-area-pt" role="navigation" aria-label="Main navigation">
+  <nav class="navbar vm-navbar sticky top-0 z-[60] safe-area-pt" role="navigation" aria-label="Main navigation">
     <div class="flex-1">
       <a href="{% url 'dashboard' %}" class="flex items-center gap-3 hover:opacity-90 transition">
         <div class="flex items-center gap-2">
@@ -441,7 +552,7 @@
 
         <ul
           id="userMenuDropdown"
-          class="vm-dropdown dropdown-content z-[1] menu p-0 mt-2 w-64 hidden"
+          class="vm-dropdown dropdown-content z-[100] menu p-0 mt-2 w-64 hidden"
           role="menu"
         >
           <li class="menu-title">Hi, {{ user.username }}</li>
@@ -921,6 +1032,9 @@ document.addEventListener('DOMContentLoaded', function () {
   function startPolling() {
     stopPolling();
     pollTimer = setInterval(async () => {
+      // Check if we're still authenticated and page is active
+      if (document.hidden) return;
+      
       // always refresh unread count/friends
       await loadFriends(false);
 
@@ -932,8 +1046,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function stopPolling() {
-    if (pollTimer) clearInterval(pollTimer);
-    pollTimer = null;
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    // Also abort any in-flight requests
+    if (friendsAbort) friendsAbort.abort();
+    if (messagesAbort) messagesAbort.abort();
   }
 
   minimiseBtn && minimiseBtn.addEventListener('click', () => {
@@ -1016,11 +1135,22 @@ document.addEventListener('DOMContentLoaded', function () {
   loadFriends(true);
   startPolling();
 
-  window.addEventListener('beforeunload', stopPolling);
+  // Properly cleanup on page unload/hide
+  const cleanup = () => {
+    stopPolling();
+    if (friendsAbort) friendsAbort.abort();
+    if (messagesAbort) messagesAbort.abort();
+  };
+  
+  window.addEventListener('beforeunload', cleanup, { once: true, passive: true });
+  
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopPolling();
-    else startPolling();
-  });
+    if (document.hidden) {
+      stopPolling();
+    } else if (!pollTimer) {
+      startPolling();
+    }
+  }, { passive: true });
 });
 </script>
 
