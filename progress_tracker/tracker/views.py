@@ -2285,15 +2285,22 @@ def daily_summary(request, year, month, day):
 def notifications(request):
     """View notifications for stars received and new messages from friends"""
     
-    # Get all stars received by the current user
+    # Filter notifications to last 30 days for stars and 7 days for messages
+    from datetime import timedelta
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    
+    # Get all stars received by the current user (last 30 days)
     # Stars on tasks
     task_stars = ActivityReaction.objects.filter(
-        task__user=request.user
+        task__user=request.user,
+        created_at__gte=thirty_days_ago
     ).select_related('user', 'task').order_by('-created_at')
     
     # Stars on daily logs
     log_stars = ActivityReaction.objects.filter(
-        daily_log__user=request.user
+        daily_log__user=request.user,
+        created_at__gte=thirty_days_ago
     ).select_related('user', 'daily_log').order_by('-created_at')
     
     # Combine and sort by creation date
@@ -2351,13 +2358,15 @@ def notifications(request):
                 # Get the latest unread message
                 latest_msg = unread_qs.order_by('-created_at').first()
                 if latest_msg:
-                    unread_messages.append({
-                        'conversation_id': conv.id,
-                        'other_user': other,
-                        'unread_count': unread_count,
-                        'latest_message': latest_msg.body,
-                        'latest_timestamp': latest_msg.created_at,
-                    })
+                    # Only show messages from last 7 days
+                    if latest_msg.created_at >= seven_days_ago:
+                        unread_messages.append({
+                            'conversation_id': conv.id,
+                            'other_user': other,
+                            'unread_count': unread_count,
+                            'latest_message': latest_msg.body,
+                            'latest_timestamp': latest_msg.created_at,
+                        })
         except ConversationMember.DoesNotExist:
             pass
     
