@@ -56,12 +56,14 @@
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar bg-base-100 sticky top-0 z-50 border-b border-base-300">
   <div class="flex-1">
-    <a href="{% url 'dashboard' %}" class="flex items-center gap-3 font-black">
-      <img src="{% static 'branding/vismatrixicon.png' %}" class="w-9 h-9 rounded-xl">
-         VisMatrix<span class="text-primary">.space</span>
+    <a href="{% url 'dashboard' %}" class="flex items-center gap-2 md:gap-3 font-black text-sm md:text-base">
+      <img src="{% static 'branding/vismatrixicon.png' %}" class="w-8 h-8 md:w-9 md:h-9 rounded-xl">
+      <span class="hidden sm:inline">VisMatrix<span class="text-primary">.space</span></span>
+      <span class="sm:hidden">VM<span class="text-primary">.s</span></span>
     </a>
   </div>
 
+  <!-- Desktop Navigation -->
   <div class="hidden lg:flex gap-1">
     <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'dashboard' %}btn-active{% endif %}">
       <i class="bi bi-bar-chart"></i> Dashboard
@@ -72,18 +74,24 @@
     <a href="{% url 'analytics' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'analytics' %}btn-active{% endif %}">
       <i class="bi bi-graph-up"></i> Analytics
     </a>
+    <a href="{% url 'friends_list' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'friends_list' %}btn-active{% endif %}">
+      <i class="bi bi-people"></i> Friends
+    </a>
+    <a href="{% url 'plan_list' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'plan_list' or request.resolver_match.url_name == 'plan_detail' %}btn-active{% endif %}">
+      <i class="bi bi-diagram-3"></i> Plans
+    </a>
   </div>
 
   {% if user.is_authenticated %}
-  <!-- DaisyUI handles dropdown -->
+  <!-- User Profile Dropdown -->
   <div class="dropdown dropdown-end" id="profileDropdown">
     <label tabindex="0" class="btn btn-ghost btn-circle avatar" id="profileDropdownToggle">
-      <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold">
+      <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm md:text-base">
         {{ user.username|first|upper }}
       </div>
     </label>
 
-    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-64" id="profileDropdownMenu">
+    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-64 mt-3" id="profileDropdownMenu">
       <li class="menu-title">Hi, {{ user.username }}</li>
 
       <li>
@@ -102,17 +110,17 @@
   </div>
   {% else %}
   <a href="/accounts/login/" class="btn btn-primary btn-sm">
-    <i class="bi bi-box-arrow-in-right"></i> Login
+    <i class="bi bi-box-arrow-in-right"></i> <span class="hidden sm:inline">Login</span>
   </a>
   {% endif %}
 </nav>
 
 <!-- ================= MAIN ================= -->
-<main class="flex-1 w-full max-w-7xl mx-auto px-4 py-6">
+<main class="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 pb-20 lg:pb-6">
   {% if messages %}
-  <div class="toast toast-top toast-center">
+  <div class="toast toast-top toast-center z-50">
     {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }}">
+    <div class="alert alert-{{ message.tags|default:'info' }} shadow-lg">
       {{ message }}
     </div>
     {% endfor %}
@@ -121,6 +129,32 @@
 
   {% block content %}{% endblock %}
 </main>
+
+<!-- ================= BOTTOM NAV (Mobile Only) ================= -->
+{% if user.is_authenticated %}
+<nav class="btm-nav lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-base-100 border-t border-base-300 h-16 shadow-lg">
+  <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active text-primary{% endif %}">
+    <i class="bi bi-bar-chart text-xl"></i>
+    <span class="btm-nav-label text-xs">Dashboard</span>
+  </a>
+  <a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active text-primary{% endif %}">
+    <i class="bi bi-calendar-check text-xl"></i>
+    <span class="btm-nav-label text-xs">Planner</span>
+  </a>
+  <a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active text-primary{% endif %}">
+    <i class="bi bi-graph-up text-xl"></i>
+    <span class="btm-nav-label text-xs">Analytics</span>
+  </a>
+  <a href="{% url 'friends_list' %}" class="{% if request.resolver_match.url_name == 'friends_list' %}active text-primary{% endif %}">
+    <i class="bi bi-people text-xl"></i>
+    <span class="btm-nav-label text-xs">Friends</span>
+  </a>
+  <a href="{% url 'plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' or request.resolver_match.url_name == 'plan_detail' %}active text-primary{% endif %}">
+    <i class="bi bi-diagram-3 text-xl"></i>
+    <span class="btm-nav-label text-xs">Plans</span>
+  </a>
+</nav>
+{% endif %}
 
 <!-- ================= THEME TOGGLE ================= -->
 <script>
@@ -150,19 +184,20 @@
 <!-- ================= DROPDOWN TOGGLE ================= -->
 <script>
   document.addEventListener('DOMContentLoaded', () => {
-    const toggle = document.getElementById('profileDropdownToggle');
-    const menu = document.getElementById('profileDropdownMenu');
+    // Profile dropdown handler
+    const profileToggle = document.getElementById('profileDropdownToggle');
+    const profileMenu = document.getElementById('profileDropdownMenu');
     
-    if (toggle && menu) {
+    if (profileToggle && profileMenu) {
       let isOpen = false;
       
-      toggle.addEventListener('click', (e) => {
+      profileToggle.addEventListener('click', (e) => {
         // Use setTimeout to check state after DaisyUI processes the click
         setTimeout(() => {
           if (isOpen) {
             // Was already open, close it
-            menu.blur();
-            toggle.blur();
+            profileMenu.blur();
+            profileToggle.blur();
             isOpen = false;
           } else {
             // Just opened
@@ -172,7 +207,7 @@
       });
       
       // Track when dropdown closes naturally
-      menu.addEventListener('blur', () => {
+      profileMenu.addEventListener('blur', () => {
         isOpen = false;
       });
 
@@ -180,8 +215,8 @@
       document.addEventListener('click', (e) => {
         const dropdown = document.getElementById('profileDropdown');
         if (dropdown && !dropdown.contains(e.target)) {
-          menu.blur();
-          toggle.blur();
+          profileMenu.blur();
+          profileToggle.blur();
           isOpen = false;
         }
       });
