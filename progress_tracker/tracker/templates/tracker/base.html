@@ -117,6 +117,7 @@
 
 <!-- ================= MAIN ================= -->
 <main class="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 pb-20 lg:pb-6">
+  {% comment %}
   {% if messages %}
   <div class="toast toast-top toast-center z-50">
     {% for message in messages %}
@@ -126,6 +127,7 @@
     {% endfor %}
   </div>
   {% endif %}
+  {% endcomment %}
 
   {% block content %}{% endblock %}
 </main>
