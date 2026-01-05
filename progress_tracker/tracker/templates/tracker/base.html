@@ -71,6 +71,9 @@
     <a href="{% url 'day_planner' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'day_planner' %}btn-active{% endif %}">
       <i class="bi bi-calendar-check"></i> Day Planner
     </a>
+    <a href="{% url 'task_list' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'task_list' %}btn-active{% endif %}">
+      <i class="bi bi-list-check"></i> Tasks
+    </a>
     <a href="{% url 'analytics' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'analytics' %}btn-active{% endif %}">
       <i class="bi bi-graph-up"></i> Analytics
     </a>
