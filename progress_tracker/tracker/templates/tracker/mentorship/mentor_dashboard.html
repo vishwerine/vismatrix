@@ -1,0 +1,194 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Mentor Dashboard - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="container mx-auto px-4 py-6 max-w-6xl">
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold mb-2">
+        <i class="bi bi-star"></i>
+        Mentor Dashboard
+      </h1>
+      <p class="text-gray-600">Manage your mentees and requests</p>
+    </div>
+    <a href="{% url 'become_mentor' %}" class="btn btn-outline btn-sm">
+      <i class="bi bi-pencil"></i>
+      Edit Profile
+    </a>
+  </div>
+
+  <!-- Stats -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="card bg-base-100 shadow">
+      <div class="card-body p-4">
+        <div class="stat-title text-sm">Active Mentees</div>
+        <div class="stat-value text-2xl">{{ active_count }}/{{ mentor_profile.max_mentees }}</div>
+        <div class="stat-desc">
+          {% if can_accept_more %}
+            <span class="text-success">Accepting new mentees</span>
+          {% else %}
+            <span class="text-warning">At capacity</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body p-4">
+        <div class="stat-title text-sm">Pending Requests</div>
+        <div class="stat-value text-2xl">{{ pending_requests.count }}</div>
+        <div class="stat-desc">Awaiting your response</div>
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow">
+      <div class="card-body p-4">
+        <div class="stat-title text-sm">Categories</div>
+        <div class="flex flex-wrap gap-1 mt-2">
+          {% for category in mentor_profile.get_categories_display %}
+          <span class="badge badge-sm badge-primary">{{ category }}</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pending Requests -->
+  {% if pending_requests %}
+  <div class="card bg-base-100 shadow mb-6">
+    <div class="card-body">
+      <h2 class="card-title mb-4">
+        <i class="bi bi-inbox"></i>
+        Pending Requests ({{ pending_requests.count }})
+      </h2>
+
+      <div class="space-y-4">
+        {% for request in pending_requests %}
+        <div class="card bg-base-200">
+          <div class="card-body p-4">
+            <div class="flex items-start gap-4">
+              <div class="avatar placeholder">
+                <div class="bg-neutral text-neutral-content rounded-full w-12">
+                  <span>{{ request.mentee.username|first|upper }}</span>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  {% if request.friendship_id %}
+                  <a href="{% url 'view_friend_profile' request.friendship_id %}" class="font-bold link link-primary hover:underline">
+                    {{ request.mentee.username }}
+                  </a>
+                  {% else %}
+                  <a href="{% url 'view_user_profile' request.mentee.id %}" class="font-bold link link-primary hover:underline">
+                    {{ request.mentee.username }}
+                  </a>
+                  {% endif %}
+                  <span class="badge badge-sm badge-primary">{{ request.get_category_display }}</span>
+                  <a href="{% url 'start_chat' request.mentee.username %}" class="btn btn-ghost btn-xs gap-1" title="Send message">
+                    <i class="bi bi-chat-dots"></i>
+                  </a>
+                </div>
+                <p class="text-sm text-gray-600 mb-1">{{ request.created_at|date:"M j, Y" }}</p>
+                <p class="text-sm whitespace-pre-line">{{ request.message }}</p>
+
+                <form method="post" action="{% url 'respond_to_mentorship_request' request.id %}" class="mt-3">
+                  {% csrf_token %}
+                  <div class="form-control mb-3">
+                    <textarea name="response_message" class="textarea textarea-bordered textarea-sm" placeholder="Optional: Add a personal message..." rows="2"></textarea>
+                  </div>
+                  <div class="flex gap-2">
+                    <button type="submit" name="action" value="accept" class="btn btn-success btn-sm">
+                      <i class="bi bi-check-lg"></i>
+                      Accept
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn btn-outline btn-sm">
+                      <i class="bi bi-x-lg"></i>
+                      Decline
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Active Mentees -->
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title mb-4">
+        <i class="bi bi-people"></i>
+        Active Mentees ({{ active_mentees.count }})
+      </h2>
+
+      {% if active_mentees %}
+      <div class="overflow-x-auto">
+        <table class="table table-zebra">
+          <thead>
+            <tr>
+              <th>Mentee</th>
+              <th>Category</th>
+              <th>Since</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for mentorship in active_mentees %}
+            <tr>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="avatar placeholder">
+                    <div class="bg-neutral text-neutral-content rounded-full w-8">
+                      <span class="text-xs">{{ mentorship.mentee.username|first|upper }}</span>
+                    </div>
+                  </div>
+                  {% if mentorship.friendship_id %}
+                  <a href="{% url 'view_friend_profile' mentorship.friendship_id %}" class="font-semibold link link-primary hover:underline">
+                    {{ mentorship.mentee.username }}
+                  </a>
+                  {% else %}
+                  <a href="{% url 'view_user_profile' mentorship.mentee.id %}" class="font-semibold link link-primary hover:underline">
+                    {{ mentorship.mentee.username }}
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-primary badge-sm">{{ mentorship.get_category_display }}</span>
+              </td>
+              <td class="text-sm">{{ mentorship.updated_at|date:"M j, Y" }}</td>
+              <td>
+                <div class="flex gap-1">
+                  <a href="{% url 'start_chat' mentorship.mentee.username %}" class="btn btn-ghost btn-xs gap-1" title="Send message">
+                    <i class="bi bi-chat-dots"></i>
+                    Message
+                  </a>
+                  <form method="post" action="{% url 'complete_mentorship' mentorship.id %}" style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-xs" onclick="return confirm('Mark this mentorship as completed?')">
+                      <i class="bi bi-check-circle"></i>
+                      Complete
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-8 text-gray-500">
+        <i class="bi bi-inbox text-4xl mb-2"></i>
+        <p>No active mentees yet.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</main>
+{% endblock %}

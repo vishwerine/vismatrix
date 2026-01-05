@@ -1,0 +1,103 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Quickstart - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="container mx-auto px-4 py-6 max-w-6xl">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold mb-2">
+      <i class="bi bi-lightning-charge-fill text-warning"></i>
+      Quickstart Your Journey
+    </h1>
+    <p class="text-gray-600">
+      Choose a pre-built plan to get started quickly with carefully curated tasks.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    
+    <!-- Fitness Journey -->
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i class="bi bi-heart-pulse text-success"></i>
+          Fitness Journey
+        </h2>
+        <p class="text-sm mb-3">
+          Transform your health with cardio, strength training, nutrition, and recovery goals.
+        </p>
+        <ul class="text-sm space-y-1 mb-4">
+          <li>✓ Weekly workout routines</li>
+          <li>✓ Nutrition tracking</li>
+          <li>✓ Progressive milestones</li>
+        </ul>
+        <form method="post" action="{% url 'quickstart_create_plan' 'fitness' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm w-full">
+            <i class="bi bi-rocket-takeoff"></i>
+            Start Fitness Plan
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Competitive Exams -->
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i class="bi bi-book text-primary"></i>
+          Competitive Exams
+        </h2>
+        <p class="text-sm mb-3">
+          Ace your exams with structured study plans, practice tests, and revision strategies.
+        </p>
+        <ul class="text-sm space-y-1 mb-4">
+          <li>✓ Subject-wise study schedule</li>
+          <li>✓ Mock tests & practice</li>
+          <li>✓ Revision milestones</li>
+        </ul>
+        <form method="post" action="{% url 'quickstart_create_plan' 'exam' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary btn-sm w-full">
+            <i class="bi bi-rocket-takeoff"></i>
+            Start Exam Prep Plan
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Work Goals -->
+    <div class="card bg-base-100 shadow">
+      <div class="card-body">
+        <h2 class="card-title">
+          <i class="bi bi-briefcase text-accent"></i>
+          Work Goals
+        </h2>
+        <p class="text-sm mb-3">
+          Boost professional growth with skill development, networking, and project milestones.
+        </p>
+        <ul class="text-sm space-y-1 mb-4">
+          <li>✓ Skill development tasks</li>
+          <li>✓ Networking activities</li>
+          <li>✓ Career milestones</li>
+        </ul>
+        <form method="post" action="{% url 'quickstart_create_plan' 'work' %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-accent btn-sm w-full">
+            <i class="bi bi-rocket-takeoff"></i>
+            Start Work Goals Plan
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="text-center">
+    <a href="{% url 'dashboard' %}" class="btn btn-outline btn-sm">
+      <i class="bi bi-arrow-left"></i>
+      Back to Dashboard
+    </a>
+  </div>
+</main>
+{% endblock %}

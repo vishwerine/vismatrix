@@ -105,6 +105,11 @@ def day_planner(request):
 def dashboard(request):
     """Main dashboard showing today's overview + weekly summary."""
 
+    # --- Award daily visit points and update streak ---
+    from .models import UserPoints
+    user_points, created = UserPoints.objects.get_or_create(user=request.user)
+    user_points.update_daily_visit()
+
     # --- Dates / ranges ---
     # Use server-local datetime date to avoid timezone mismatches
     today = timezone.now().date()
@@ -321,6 +326,48 @@ def dashboard(request):
         plan.completed_tasks = completed_tasks
         plans_with_stats.append(plan)
 
+    # --- Load a random quote from quotes.jsonl ---
+    import random
+    import os
+    
+    random_quote = None
+    quotes_file = os.path.join(os.path.dirname(__file__), '..', 'quotes', 'quotes.jsonl')
+    
+    try:
+        if os.path.exists(quotes_file):
+            with open(quotes_file, 'r', encoding='utf-8') as f:
+                quotes = f.readlines()
+                if quotes:
+                    selected_quote = random.choice(quotes)
+                    random_quote = json.loads(selected_quote)
+    except Exception as e:
+        logger.error(f"Error loading quotes: {str(e)}")
+        # Fallback quote if file can't be read
+        random_quote = {
+            "quote": "The only way to do great work is to love what you do.",
+            "author": "Steve Jobs"
+        }
+
+    # --- Unread notifications count ---
+    from .models import Notification
+    unread_notifications_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    
+    # --- Unread app notifications count ---
+    from .models import UserNotification
+    unread_app_notifications_count = UserNotification.objects.filter(user=request.user, is_read=False).count()
+
+    # --- Check if user is a mentor ---
+    from .models import MentorProfile
+    is_mentor = MentorProfile.objects.filter(user=request.user).exists()
+
+    # --- Leaderboard (top 10 users by points) ---
+    leaderboard = UserPoints.objects.select_related('user').order_by('-total_points')[:10]
+    
+    # Find current user's rank
+    user_rank = None
+    if user_points.total_points > 0:
+        user_rank = UserPoints.objects.filter(total_points__gt=user_points.total_points).count() + 1
+
     context = {
         "today": today,
         "today_tasks_count": today_tasks_count,
@@ -335,10 +382,17 @@ def dashboard(request):
         "pending_friend_requests": pending_friend_requests,
         "star_notifications_count": star_notifications_count,
         "unread_message_count": unread_message_count,
+        "unread_notifications_count": unread_notifications_count,
+        "unread_app_notifications_count": unread_app_notifications_count,
         "active_plans": plans_with_stats,
         "logs_this_month": logs_this_month,
         "calendar_days": calendar_days,
         "day_names": day_names,
+        "random_quote": random_quote,
+        "is_mentor": is_mentor,
+        "leaderboard": leaderboard,
+        "user_points": user_points,
+        "user_rank": user_rank,
     }
     return render(request, "tracker/dashboard.html", context)
 
@@ -863,7 +917,41 @@ def task_update(request, pk):
 def task_complete(request, pk):
     """Mark task as completed"""
     task = get_object_or_404(Task, pk=pk, user=request.user)
+    
+    # Check if task was already completed to avoid duplicate points
+    was_completed = task.status == 'completed'
+    
     task.mark_completed()
+    
+    # Award points only if this is the first time completing
+    if not was_completed:
+        from .models import UserPoints
+        user_points, created = UserPoints.objects.get_or_create(user=request.user)
+        user_points.add_points(100, f"Completed task: {task.title}")
+        messages.success(request, f"Task completed! +100 points")
+        
+        # Check if this task completion resulted in any plan completions
+        from .models import PlanNode, PointsActivity
+        plan_nodes = PlanNode.objects.filter(task=task).select_related('plan')
+        
+        for node in plan_nodes:
+            plan = node.plan
+            if plan.user == request.user and plan.is_active:
+                # Check if all tasks in this plan are now completed
+                total_nodes = plan.nodes.count()
+                completed_nodes = plan.nodes.filter(task__status='completed').count()
+                
+                if total_nodes > 0 and completed_nodes == total_nodes:
+                    # Plan is complete! Check if we already awarded points
+                    already_awarded = PointsActivity.objects.filter(
+                        user=request.user,
+                        reason__contains=f"Completed plan: {plan.title}"
+                    ).exists()
+                    
+                    if not already_awarded:
+                        user_points.add_points(1000, f"Completed plan: {plan.title}")
+                        messages.success(request, f"🎉 Plan '{plan.title}' completed! +1000 points!")
+    
     return redirect('task_list')
 
 @login_required
@@ -947,7 +1035,13 @@ def log_create(request):
                 if log.task and log.task.category:
                     log.category = log.task.category
                 log.save()
-                messages.success(request, "Activity logged successfully!")
+                
+                # Award points for logging activity
+                from .models import UserPoints
+                user_points, created = UserPoints.objects.get_or_create(user=request.user)
+                user_points.add_points(10, f"Logged activity: {log.activity}")
+                
+                messages.success(request, "Activity logged successfully! +10 points")
                 return redirect("log_list")
             except Exception as e:
                 logger.error(f"Error saving daily log for user {request.user.id}: {str(e)}")
@@ -1593,6 +1687,8 @@ def friend_requests(request):
 @login_required
 def friends_list(request):
     """View all friends with their recent progress"""
+    from .models import UserPoints
+    
     friends = Friendship.objects.filter(user=request.user).select_related('friend')
     
     today = timezone.now().date()
@@ -1622,12 +1718,23 @@ def friends_list(request):
         # Calculate percentage: logs_count / 7 days * 100, capped at 100%
         activity_percent = min(100, int((logs_count / 7) * 100)) if logs_count > 0 else 0
         
+        # Get friend's points
+        user_points = UserPoints.objects.filter(user=friend).first()
+        total_points = user_points.total_points if user_points else 0
+        
+        # Calculate friend's rank
+        friend_rank = None
+        if user_points:
+            friend_rank = UserPoints.objects.filter(total_points__gt=user_points.total_points).count() + 1
+        
         friends_data.append({
             'friend': friend,
             'friendship': friendship,
             'completed_tasks': completed_tasks,
             'total_time': total_time,
             'activity_percent': activity_percent,
+            'points': total_points,
+            'rank': friend_rank,
         })
     
     context = {'friends_data': friends_data}
@@ -2213,6 +2320,11 @@ def toggle_star_reaction(request):
         reaction.delete()
         starred = False
     else:
+        # Star created - award points to the activity owner
+        from .models import UserPoints
+        activity_owner = activity.user
+        owner_points, created_points = UserPoints.objects.get_or_create(user=activity_owner)
+        owner_points.add_points(75, f"Received star from {request.user.username}")
         starred = True
     
     # Get updated star count
@@ -2722,6 +2834,21 @@ def plan_detail(request, pk):
     completed_nodes = nodes.filter(task__status='completed').count()
     in_progress_nodes = nodes.filter(task__status='in_progress').count()
     pending_nodes = nodes.filter(task__status='pending').count()
+    
+    # Check if plan just completed and award points
+    if total_nodes > 0 and completed_nodes == total_nodes and plan.is_active:
+        from .models import UserPoints, PointsActivity
+        
+        # Check if we already awarded points for this plan completion
+        already_awarded = PointsActivity.objects.filter(
+            user=request.user,
+            reason__contains=f"Completed plan: {plan.title}"
+        ).exists()
+        
+        if not already_awarded:
+            user_points, created = UserPoints.objects.get_or_create(user=request.user)
+            user_points.add_points(1000, f"Completed plan: {plan.title}")
+            messages.success(request, f"🎉 Plan completed! +1000 points!")
     
     # Prepare node data for visualization
     nodes_data = []
@@ -3524,3 +3651,613 @@ def icloud_calendar_update_settings(request):
         messages.error(request, f"Failed to update settings: {str(e)}")
     
     return redirect('calendar_settings')
+
+
+@login_required
+def quickstart(request):
+    """Quickstart page showing pre-built plan options."""
+    return render(request, 'tracker/quickstart.html')
+
+
+@login_required
+def quickstart_create_plan(request, plan_type):
+    """Create a pre-built plan based on the selected type."""
+    if request.method != 'POST':
+        return redirect('quickstart')
+    
+    # Define plan templates
+    plan_templates = {
+        'fitness': {
+            'title': 'Fitness Journey',
+            'description': 'A comprehensive fitness plan to transform your health with structured workout routines, nutrition tracking, and recovery goals.',
+            'tasks': [
+                {'title': 'Set fitness baseline - Weight, measurements, and fitness test', 'priority': 'high', 'category': 'Health'},
+                {'title': 'Create weekly workout schedule', 'priority': 'high', 'category': 'Health'},
+                {'title': 'Cardio workout - 30 min running/cycling', 'priority': 'medium', 'category': 'Health'},
+                {'title': 'Strength training - Upper body', 'priority': 'medium', 'category': 'Health'},
+                {'title': 'Strength training - Lower body', 'priority': 'medium', 'category': 'Health'},
+                {'title': 'Strength training - Core workout', 'priority': 'medium', 'category': 'Health'},
+                {'title': 'Meal prep - Plan healthy meals for the week', 'priority': 'high', 'category': 'Health'},
+                {'title': 'Track daily nutrition and water intake', 'priority': 'medium', 'category': 'Health'},
+                {'title': 'Rest day - Stretching and recovery', 'priority': 'low', 'category': 'Health'},
+                {'title': 'Weekly progress check - Weight and measurements', 'priority': 'medium', 'category': 'Health'},
+                {'title': 'HIIT workout - High intensity interval training', 'priority': 'medium', 'category': 'Health'},
+                {'title': 'Yoga or flexibility session', 'priority': 'low', 'category': 'Health'},
+            ],
+            'dependencies': [
+                # Workouts depend on baseline and schedule
+                (2, [0, 1]),  # Cardio depends on baseline and schedule
+                (3, [0, 1]),  # Upper body depends on baseline and schedule
+                (4, [0, 1]),  # Lower body depends on baseline and schedule
+                (5, [0, 1]),  # Core depends on baseline and schedule
+                (7, [6]),     # Track nutrition depends on meal prep
+                (9, [2, 3, 4, 5]),  # Weekly check depends on doing workouts
+                (10, [0, 1]), # HIIT depends on baseline and schedule
+                (11, [0, 1]), # Yoga depends on baseline and schedule
+            ]
+        },
+        'exam': {
+            'title': 'Competitive Exam Preparation',
+            'description': 'A structured study plan to ace your competitive exams with subject coverage, practice tests, and effective revision strategies.',
+            'tasks': [
+                {'title': 'Create detailed study timetable', 'priority': 'high', 'category': 'Study'},
+                {'title': 'Collect and organize study materials', 'priority': 'high', 'category': 'Study'},
+                {'title': 'Mathematics - Complete Chapter 1', 'priority': 'high', 'category': 'Study'},
+                {'title': 'Mathematics - Practice problems set 1', 'priority': 'medium', 'category': 'Study'},
+                {'title': 'English - Grammar and comprehension', 'priority': 'medium', 'category': 'Study'},
+                {'title': 'English - Vocabulary building (50 words)', 'priority': 'low', 'category': 'Study'},
+                {'title': 'Science - Physics concepts review', 'priority': 'high', 'category': 'Study'},
+                {'title': 'Science - Chemistry formulas memorization', 'priority': 'medium', 'category': 'Study'},
+                {'title': 'Mock test - Full length practice exam', 'priority': 'high', 'category': 'Study'},
+                {'title': 'Analyze mock test results and weak areas', 'priority': 'high', 'category': 'Study'},
+                {'title': 'Revision - All completed chapters', 'priority': 'medium', 'category': 'Study'},
+                {'title': 'Current affairs - Weekly update', 'priority': 'low', 'category': 'Study'},
+                {'title': 'Speed and accuracy practice', 'priority': 'medium', 'category': 'Study'},
+                {'title': 'Previous year question papers', 'priority': 'high', 'category': 'Study'},
+            ],
+            'dependencies': [
+                # Study chapters depend on timetable and materials
+                (2, [0, 1]),  # Math Chapter depends on timetable and materials
+                (3, [2]),     # Math Practice depends on completing chapter
+                (4, [0, 1]),  # English depends on timetable and materials
+                (5, [4]),     # Vocabulary depends on grammar
+                (6, [0, 1]),  # Physics depends on timetable and materials
+                (7, [0, 1]),  # Chemistry depends on timetable and materials
+                (8, [2, 4, 6, 7]),  # Mock test depends on covering subjects
+                (9, [8]),     # Analyze results depends on mock test
+                (10, [9]),    # Revision depends on analysis
+                (13, [8]),    # Previous year papers depend on mock test
+            ]
+        },
+        'work': {
+            'title': 'Professional Growth Goals',
+            'description': 'Accelerate your career growth with targeted skill development, strategic networking, and achievement milestones.',
+            'tasks': [
+                {'title': 'Define career goals and 6-month targets', 'priority': 'high', 'category': 'Work'},
+                {'title': 'Identify 3 key skills to develop', 'priority': 'high', 'category': 'Work'},
+                {'title': 'Complete online course - Module 1', 'priority': 'medium', 'category': 'Work'},
+                {'title': 'Complete online course - Module 2', 'priority': 'medium', 'category': 'Work'},
+                {'title': 'Build portfolio project - Phase 1', 'priority': 'high', 'category': 'Work'},
+                {'title': 'Build portfolio project - Phase 2', 'priority': 'high', 'category': 'Work'},
+                {'title': 'Network - Connect with 5 industry professionals', 'priority': 'medium', 'category': 'Work'},
+                {'title': 'Attend industry webinar or workshop', 'priority': 'low', 'category': 'Work'},
+                {'title': 'Update resume and LinkedIn profile', 'priority': 'medium', 'category': 'Work'},
+                {'title': 'Read industry book or research papers', 'priority': 'low', 'category': 'Work'},
+                {'title': 'Contribute to open source project', 'priority': 'medium', 'category': 'Work'},
+                {'title': 'Write technical blog post', 'priority': 'low', 'category': 'Work'},
+                {'title': 'Seek feedback from mentor or peers', 'priority': 'medium', 'category': 'Work'},
+                {'title': 'Monthly progress review and goal adjustment', 'priority': 'high', 'category': 'Work'},
+            ],
+            'dependencies': [
+                # Skills and courses depend on goals
+                (1, [0]),     # Identify skills depends on defining goals
+                (2, [1]),     # Course Module 1 depends on identifying skills
+                (3, [2]),     # Course Module 2 depends on Module 1
+                (4, [1]),     # Portfolio Phase 1 depends on identifying skills
+                (5, [4]),     # Portfolio Phase 2 depends on Phase 1
+                (8, [2, 3]),  # Update resume depends on completing courses
+                (10, [2, 3]), # Open source depends on completing courses
+                (11, [4, 5]), # Blog post depends on portfolio project
+                (12, [2, 3, 4, 5]),  # Feedback depends on having work to show
+                (13, [6, 8, 10, 11, 12]),  # Monthly review depends on activities
+            ]
+        }
+    }
+    
+    if plan_type not in plan_templates:
+        messages.error(request, "Invalid plan type selected.")
+        return redirect('quickstart')
+    
+    template = plan_templates[plan_type]
+    
+    try:
+        # Create the plan
+        plan = Plan.objects.create(
+            user=request.user,
+            title=template['title'],
+            description=template['description'],
+            is_active=True
+        )
+        
+        # Create tasks and add them to the plan
+        created_nodes = []
+        for task_data in template['tasks']:
+            # Get or create category
+            category, _ = Category.objects.get_or_create(
+                name=task_data['category'],
+                user=request.user,
+                defaults={'color': '#3B82F6'}
+            )
+            
+            # Create task
+            task = Task.objects.create(
+                user=request.user,
+                title=task_data['title'],
+                category=category,
+                priority=task_data['priority'],
+                status='pending'
+            )
+            
+            # Create plan node
+            node = PlanNode.objects.create(
+                plan=plan,
+                task=task,
+                order=len(created_nodes) + 1
+            )
+            created_nodes.append(node)
+        
+        # Add dependencies
+        if 'dependencies' in template:
+            for task_index, dependency_indices in template['dependencies']:
+                node = created_nodes[task_index]
+                for dep_index in dependency_indices:
+                    dependency_node = created_nodes[dep_index]
+                    node.dependencies.add(dependency_node)
+        
+        messages.success(
+            request, 
+            f'Successfully created "{template["title"]}" plan with {len(created_nodes)} tasks! '
+            f'View it in your <a href="/plans/{plan.id}/" class="underline">Plans</a>.'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating quickstart plan for user {request.user.id}: {str(e)}")
+        messages.error(request, f"Failed to create plan: {str(e)}")
+        return redirect('quickstart')
+    
+    return redirect('plan_detail', pk=plan.id)
+
+
+# ============================================================================
+# MENTORSHIP VIEWS
+# ============================================================================
+
+@login_required
+def mentor_list(request):
+    """List all available mentors with filtering by category."""
+    from .models import MentorProfile
+    
+    category_filter = request.GET.get('category', '')
+    
+    mentors = MentorProfile.objects.filter(is_active=True).select_related('user')
+    
+    # Filter mentors based on category (compatible with SQLite)
+    mentor_list = []
+    for mentor in mentors:
+        # Check if category filter matches
+        if category_filter and category_filter not in mentor.categories:
+            continue
+        
+        mentor_list.append({
+            'profile': mentor,
+            'user': mentor.user,
+            'active_mentees': mentor.active_mentees_count(),
+            'categories_display': mentor.get_categories_display(),
+        })
+    
+    context = {
+        'mentor_list': mentor_list,
+        'category_filter': category_filter,
+        'categories': MentorProfile.CATEGORY_CHOICES,
+    }
+    
+    return render(request, 'tracker/mentorship/mentor_list.html', context)
+
+
+@login_required
+def mentor_profile_view(request, mentor_id):
+    """View a mentor's profile and apply for mentorship."""
+    from .models import MentorProfile, MentorshipRequest
+    
+    mentor_profile = get_object_or_404(MentorProfile, id=mentor_id)
+    
+    # Check if user already has a request to this mentor
+    existing_requests = MentorshipRequest.objects.filter(
+        mentee=request.user,
+        mentor_profile=mentor_profile
+    )
+    
+    context = {
+        'mentor_profile': mentor_profile,
+        'active_mentees': mentor_profile.active_mentees_count(),
+        'categories_display': mentor_profile.get_categories_display(),
+        'existing_requests': existing_requests,
+        'can_accept_more': mentor_profile.can_accept_more_mentees(),
+    }
+    
+    return render(request, 'tracker/mentorship/mentor_profile.html', context)
+
+
+@login_required
+def become_mentor(request):
+    """Register as a mentor or update mentor profile."""
+    from .models import MentorProfile
+    
+    try:
+        mentor_profile = MentorProfile.objects.get(user=request.user)
+        is_new = False
+    except MentorProfile.DoesNotExist:
+        mentor_profile = None
+        is_new = True
+    
+    if request.method == 'POST':
+        # Get form data
+        categories = request.POST.getlist('categories')
+        bio = request.POST.get('bio', '').strip()
+        experience_years = int(request.POST.get('experience_years', 0))
+        specializations = request.POST.get('specializations', '').strip()
+        max_mentees = int(request.POST.get('max_mentees', 5))
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if not categories:
+            messages.error(request, "Please select at least one category.")
+            return redirect('become_mentor')
+        
+        if not bio:
+            messages.error(request, "Please provide a bio.")
+            return redirect('become_mentor')
+        
+        if mentor_profile:
+            # Update existing
+            mentor_profile.categories = categories
+            mentor_profile.bio = bio
+            mentor_profile.experience_years = experience_years
+            mentor_profile.specializations = specializations
+            mentor_profile.max_mentees = max_mentees
+            mentor_profile.is_active = is_active
+            mentor_profile.save()
+            messages.success(request, "Mentor profile updated successfully!")
+        else:
+            # Create new
+            mentor_profile = MentorProfile.objects.create(
+                user=request.user,
+                categories=categories,
+                bio=bio,
+                experience_years=experience_years,
+                specializations=specializations,
+                max_mentees=max_mentees,
+                is_active=is_active
+            )
+            messages.success(request, "Welcome! You're now a mentor on VisMatrix!")
+        
+        return redirect('mentor_dashboard')
+    
+    context = {
+        'mentor_profile': mentor_profile,
+        'is_new': is_new,
+        'categories': MentorProfile.CATEGORY_CHOICES,
+    }
+    
+    return render(request, 'tracker/mentorship/become_mentor.html', context)
+
+
+@login_required
+def apply_for_mentorship(request, mentor_id):
+    """Apply for mentorship from a specific mentor."""
+    from .models import MentorProfile, MentorshipRequest
+    
+    mentor_profile = get_object_or_404(MentorProfile, id=mentor_id)
+    
+    if request.method == 'POST':
+        category = request.POST.get('category')
+        message = request.POST.get('message', '').strip()
+        
+        if not category or category not in dict(MentorProfile.CATEGORY_CHOICES):
+            messages.error(request, "Please select a valid category.")
+            return redirect('mentor_profile', mentor_id=mentor_id)
+        
+        if category not in mentor_profile.categories:
+            messages.error(request, "This mentor doesn't offer mentorship in that category.")
+            return redirect('mentor_profile', mentor_id=mentor_id)
+        
+        if not message:
+            messages.error(request, "Please tell the mentor why you want mentorship.")
+            return redirect('mentor_profile', mentor_id=mentor_id)
+        
+        # Check if already applied
+        existing = MentorshipRequest.objects.filter(
+            mentee=request.user,
+            mentor_profile=mentor_profile,
+            category=category
+        ).first()
+        
+        if existing:
+            messages.warning(request, "You already have a request for this category with this mentor.")
+            return redirect('mentor_profile', mentor_id=mentor_id)
+        
+        # Create request
+        from .models import Notification
+        mentorship_request = MentorshipRequest.objects.create(
+            mentee=request.user,
+            mentor_profile=mentor_profile,
+            category=category,
+            message=message
+        )
+        
+        # Create notification for mentor
+        category_display = dict(MentorProfile.CATEGORY_CHOICES).get(category, category)
+        Notification.objects.create(
+            user=mentor_profile.user,
+            notification_type='mentorship_request',
+            title='New Mentorship Request',
+            message=f"{request.user.username} requested mentorship in {category_display}",
+            mentorship_request=mentorship_request
+        )
+        
+        messages.success(request, f"Your mentorship request has been sent to {mentor_profile.user.username}!")
+        return redirect('my_mentorships')
+    
+    return redirect('mentor_profile', mentor_id=mentor_id)
+
+
+@login_required
+def mentor_dashboard(request):
+    """Dashboard for mentors to manage their mentees and requests."""
+    from .models import MentorProfile, MentorshipRequest
+    
+    try:
+        mentor_profile = MentorProfile.objects.get(user=request.user)
+    except MentorProfile.DoesNotExist:
+        messages.info(request, "You're not registered as a mentor yet.")
+        return redirect('become_mentor')
+    
+    # Get pending requests
+    pending_requests = MentorshipRequest.objects.filter(
+        mentor_profile=mentor_profile,
+        status='pending'
+    ).select_related('mentee').order_by('-created_at')
+    
+    # Get accepted mentees
+    active_mentees = MentorshipRequest.objects.filter(
+        mentor_profile=mentor_profile,
+        status='accepted'
+    ).select_related('mentee').order_by('-updated_at')
+    
+    # Add friendship information to each mentee
+    for req in pending_requests:
+        friendship = Friendship.objects.filter(
+            Q(user=request.user, friend=req.mentee) | Q(user=req.mentee, friend=request.user)
+        ).first()
+        req.friendship_id = friendship.id if friendship else None
+    
+    for mentorship in active_mentees:
+        friendship = Friendship.objects.filter(
+            Q(user=request.user, friend=mentorship.mentee) | Q(user=mentorship.mentee, friend=request.user)
+        ).first()
+        mentorship.friendship_id = friendship.id if friendship else None
+    
+    context = {
+        'mentor_profile': mentor_profile,
+        'pending_requests': pending_requests,
+        'active_mentees': active_mentees,
+        'active_count': mentor_profile.active_mentees_count(),
+        'can_accept_more': mentor_profile.can_accept_more_mentees(),
+    }
+    
+    return render(request, 'tracker/mentorship/mentor_dashboard.html', context)
+
+
+@login_required
+def respond_to_mentorship_request(request, request_id):
+    """Accept or reject a mentorship request."""
+    from .models import MentorshipRequest
+    
+    mentorship_request = get_object_or_404(MentorshipRequest, id=request_id)
+    
+    # Verify this is the mentor
+    if mentorship_request.mentor_profile.user != request.user:
+        messages.error(request, "You don't have permission to respond to this request.")
+        return redirect('mentor_dashboard')
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        response_message = request.POST.get('response_message', '').strip()
+        
+        if action == 'accept':
+            # Check if can accept more mentees
+            if not mentorship_request.mentor_profile.can_accept_more_mentees():
+                messages.error(request, "You've reached your maximum number of mentees.")
+                return redirect('mentor_dashboard')
+            
+            mentorship_request.status = 'accepted'
+            mentorship_request.response_message = response_message
+            mentorship_request.responded_at = timezone.now()
+            mentorship_request.save()
+            
+            # Automatically create friendship if not already friends
+            existing_friendship = Friendship.objects.filter(
+                Q(user=request.user, friend=mentorship_request.mentee) | 
+                Q(user=mentorship_request.mentee, friend=request.user)
+            ).first()
+            
+            if not existing_friendship:
+                Friendship.objects.create(
+                    user=request.user,
+                    friend=mentorship_request.mentee
+                )
+                messages.success(request, f"You and {mentorship_request.mentee.username} are now friends!")
+            
+            # Create notification for mentee
+            from .models import Notification
+            Notification.objects.create(
+                user=mentorship_request.mentee,
+                notification_type='mentorship_accepted',
+                title='Mentorship Request Accepted!',
+                message=f"{request.user.username} accepted your mentorship request for {mentorship_request.get_category_display()}",
+                mentorship_request=mentorship_request
+            )
+            
+            # Award points for accepting a mentee
+            from .models import UserPoints
+            user_points, created = UserPoints.objects.get_or_create(user=request.user)
+            user_points.add_points(100, f"Accepted mentee: {mentorship_request.mentee.username}")
+            
+            messages.success(request, f"You've accepted {mentorship_request.mentee.username} as your mentee! +100 points")
+            
+        elif action == 'reject':
+            mentorship_request.status = 'rejected'
+            mentorship_request.response_message = response_message
+            mentorship_request.responded_at = timezone.now()
+            mentorship_request.save()
+            
+            # Create notification for mentee
+            from .models import Notification
+            Notification.objects.create(
+                user=mentorship_request.mentee,
+                notification_type='mentorship_rejected',
+                title='Mentorship Request Update',
+                message=f"{request.user.username} has responded to your mentorship request for {mentorship_request.get_category_display()}",
+                mentorship_request=mentorship_request
+            )
+            
+            messages.info(request, "Request has been declined.")
+        
+        return redirect('mentor_dashboard')
+    
+    return redirect('mentor_dashboard')
+
+
+@login_required
+def my_mentorships(request):
+    """View user's mentorship requests and active mentorships."""
+    from .models import MentorshipRequest
+    
+    # Get all mentorship requests made by this user
+    my_requests = MentorshipRequest.objects.filter(
+        mentee=request.user
+    ).select_related('mentor_profile__user').order_by('-created_at')
+    
+    context = {
+        'my_requests': my_requests,
+    }
+    
+    return render(request, 'tracker/mentorship/my_mentorships.html', context)
+
+
+@login_required
+def complete_mentorship(request, request_id):
+    """Mark a mentorship as completed."""
+    from .models import MentorshipRequest
+    
+    mentorship_request = get_object_or_404(MentorshipRequest, id=request_id)
+    
+    # Only mentor can mark as completed
+    if mentorship_request.mentor_profile.user != request.user:
+        messages.error(request, "Only the mentor can complete a mentorship.")
+        return redirect('my_mentorships')
+    
+    if request.method == 'POST':
+        mentorship_request.status = 'completed'
+        mentorship_request.save()
+        
+        # Create notification for mentee
+        from .models import Notification
+        Notification.objects.create(
+            user=mentorship_request.mentee,
+            notification_type='mentorship_completed',
+            title='Mentorship Completed',
+            message=f"Your mentorship with {request.user.username} has been marked as completed",
+            mentorship_request=mentorship_request
+        )
+        
+        messages.success(request, "Mentorship marked as completed!")
+        return redirect('mentor_dashboard')
+    
+    return redirect('mentor_dashboard')
+
+
+@login_required
+def notifications_list(request):
+    """List all notifications for the user."""
+    from .models import Notification
+    
+    # Get all notifications for the user
+    notifications = Notification.objects.filter(user=request.user).select_related('mentorship_request')
+    
+    # Mark notifications as read when viewed
+    unread_notifications = notifications.filter(is_read=False)
+    for notification in unread_notifications:
+        notification.mark_as_read()
+    
+    context = {
+        'notifications': notifications[:50],  # Limit to 50 most recent
+    }
+    
+    return render(request, 'tracker/notifications_list.html', context)
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """Mark a single notification as read."""
+    from .models import Notification
+    
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.mark_as_read()
+    
+    return redirect('notifications_list')
+
+
+@login_required
+def get_unread_notification_count(request):
+    """API endpoint to get unread notification count."""
+    from .models import Notification
+    
+    count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({'count': count})
+
+
+@login_required
+def recent_notifications(request):
+    """List all recent app notifications (Django messages stored in DB)."""
+    from .models import UserNotification
+    
+    # Get all notifications for the user
+    notifications = UserNotification.objects.filter(user=request.user)
+    
+    # Count unread
+    unread_count = notifications.filter(is_read=False).count()
+    
+    # Mark all as read when viewed
+    unread_notifications = notifications.filter(is_read=False)
+    for notification in unread_notifications:
+        notification.mark_as_read()
+    
+    context = {
+        'notifications': notifications[:100],  # Limit to 100 most recent
+        'unread_count': unread_count,
+    }
+    
+    return render(request, 'tracker/recent_notifications.html', context)
+
+
+@login_required
+def clear_all_notifications(request):
+    """Delete all read notifications for the user."""
+    from .models import UserNotification
+    
+    if request.method == 'POST':
+        deleted_count = UserNotification.objects.filter(user=request.user, is_read=True).delete()[0]
+        # Don't use messages.success here to avoid recursion
+        return JsonResponse({'success': True, 'deleted': deleted_count})
+    
+    return redirect('recent_notifications')

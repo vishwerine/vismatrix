@@ -1,0 +1,112 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Become a Mentor - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="container mx-auto px-4 py-6 max-w-3xl">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold mb-2">
+      <i class="bi bi-star"></i>
+      {% if is_new %}Become a Mentor{% else %}Update Mentor Profile{% endif %}
+    </h1>
+    <p class="text-gray-600">
+      Share your experience and help others achieve their goals.
+    </p>
+  </div>
+
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <form method="post">
+        {% csrf_token %}
+
+        <!-- Categories -->
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Mentorship Categories *</span>
+          </label>
+          <div class="space-y-2">
+            {% for value, label in categories %}
+            <label class="label cursor-pointer justify-start gap-3">
+              <input type="checkbox" name="categories" value="{{ value }}" class="checkbox checkbox-primary"
+                {% if mentor_profile and value in mentor_profile.categories %}checked{% endif %}>
+              <span class="label-text">
+                <i class="bi bi-{% if value == 'health' %}heart-pulse{% elif value == 'work' %}briefcase{% else %}book{% endif %}"></i>
+                {{ label }}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+          <label class="label">
+            <span class="label-text-alt text-gray-600">Select all categories you can mentor in</span>
+          </label>
+        </div>
+
+        <!-- Bio -->
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Bio *</span>
+          </label>
+          <textarea name="bio" class="textarea textarea-bordered h-32" placeholder="Tell potential mentees about your background, experience, and what you can help them with..." required>{% if mentor_profile %}{{ mentor_profile.bio }}{% endif %}</textarea>
+          <label class="label">
+            <span class="label-text-alt text-gray-600">Share your story and expertise</span>
+          </label>
+        </div>
+
+        <!-- Experience Years -->
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Years of Experience</span>
+          </label>
+          <input type="number" name="experience_years" min="0" max="50" 
+                 value="{% if mentor_profile %}{{ mentor_profile.experience_years }}{% else %}0{% endif %}" 
+                 class="input input-bordered" placeholder="0">
+        </div>
+
+        <!-- Specializations -->
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Specializations</span>
+          </label>
+          <textarea name="specializations" class="textarea textarea-bordered h-24" placeholder="E.g., Marathon training, Software engineering, Competitive exam preparation...">{% if mentor_profile %}{{ mentor_profile.specializations }}{% endif %}</textarea>
+          <label class="label">
+            <span class="label-text-alt text-gray-600">Specific areas of expertise (optional)</span>
+          </label>
+        </div>
+
+        <!-- Max Mentees -->
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Maximum Mentees</span>
+          </label>
+          <input type="number" name="max_mentees" min="1" max="20" 
+                 value="{% if mentor_profile %}{{ mentor_profile.max_mentees }}{% else %}5{% endif %}" 
+                 class="input input-bordered" placeholder="5">
+          <label class="label">
+            <span class="label-text-alt text-gray-600">How many mentees can you actively support?</span>
+          </label>
+        </div>
+
+        <!-- Active Status -->
+        <div class="form-control mb-6">
+          <label class="label cursor-pointer justify-start gap-3">
+            <input type="checkbox" name="is_active" class="toggle toggle-primary"
+              {% if not mentor_profile or mentor_profile.is_active %}checked{% endif %}>
+            <span class="label-text font-semibold">Currently accepting new mentees</span>
+          </label>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary flex-1">
+            <i class="bi bi-check-lg"></i>
+            {% if is_new %}Become a Mentor{% else %}Update Profile{% endif %}
+          </button>
+          <a href="{% if mentor_profile %}{% url 'mentor_dashboard' %}{% else %}{% url 'dashboard' %}{% endif %}" class="btn btn-outline">
+            Cancel
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}

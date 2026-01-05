@@ -93,9 +93,12 @@
                 {{ item.friend.username|first|upper }}
               </div>
               <div class="min-w-0 flex-1">
-                <h3 class="font-bold text-base md:text-lg truncate"
+                <h3 class="font-bold text-base md:text-lg truncate flex items-center gap-2"
                     style="color: var(--text);">
-                  {{ item.friend.get_full_name|default:item.friend.username }}
+                  <span>{{ item.friend.get_full_name|default:item.friend.username }}</span>
+                  {% if item.rank %}
+                  <span class="badge badge-primary badge-xs">#{{ item.rank }}</span>
+                  {% endif %}
                 </h3>
                 <p class="text-xs md:text-sm truncate" style="color: var(--muted);">
                   @{{ item.friend.username }}
@@ -116,6 +119,12 @@
                   {{ item.total_time|default:"0" }}
                 </div>
                 <div class="text-xs" style="color: var(--muted);">min</div>
+              </div>
+              <div class="text-center">
+                <div class="text-sm md:text-base font-bold" style="color: var(--primary);">
+                  {{ item.points|default:"0" }}
+                </div>
+                <div class="text-xs" style="color: var(--muted);">pts</div>
               </div>
             </div>
           </div>

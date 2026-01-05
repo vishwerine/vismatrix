@@ -103,6 +103,15 @@
 
       <div class="divider"></div>
 
+      <li>
+        <a href="{% url 'recent_notifications' %}">
+          <i class="bi bi-bell"></i>
+          <span>Notifications</span>
+          {% if unread_app_notifications_count > 0 %}
+          <span class="badge badge-primary badge-sm">{{ unread_app_notifications_count }}</span>
+          {% endif %}
+        </a>
+      </li>
       <li><a href="{% url 'profile_settings' %}"><i class="bi bi-person"></i> Profile</a></li>
       <li><a href="{% url 'about' %}"><i class="bi bi-info-circle"></i> About</a></li>
       <li><a href="/accounts/logout/" class="text-error"><i class="bi bi-box-arrow-right"></i> Logout</a></li>

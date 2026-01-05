@@ -532,3 +532,238 @@ class DaySchedule(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.date}"
+
+
+class MentorProfile(models.Model):
+    """Profile for users who volunteer as mentors"""
+    CATEGORY_CHOICES = [
+        ('health', 'Health & Fitness'),
+        ('work', 'Work & Career'),
+        ('study', 'Study & Education'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='mentor_profile')
+    categories = models.JSONField(default=list, help_text="List of categories: health, work, study")
+    bio = models.TextField(help_text="Tell mentees about your expertise and experience")
+    experience_years = models.PositiveIntegerField(default=0, help_text="Years of experience in your field")
+    specializations = models.TextField(blank=True, help_text="Specific areas of expertise")
+    max_mentees = models.PositiveIntegerField(default=5, help_text="Maximum number of active mentees")
+    is_active = models.BooleanField(default=True, help_text="Whether actively accepting new mentees")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.user.username} - Mentor"
+    
+    def get_categories_display(self):
+        """Return human-readable category names"""
+        category_map = dict(self.CATEGORY_CHOICES)
+        return [category_map.get(cat, cat) for cat in self.categories]
+    
+    def active_mentees_count(self):
+        """Count current active mentees"""
+        return self.mentorship_requests.filter(status='accepted').count()
+    
+    def can_accept_more_mentees(self):
+        """Check if mentor can accept more mentees"""
+        return self.is_active and self.active_mentees_count() < self.max_mentees
+
+
+class MentorshipRequest(models.Model):
+    """Mentorship applications from users to mentors"""
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('accepted', 'Accepted'),
+        ('rejected', 'Rejected'),
+        ('completed', 'Completed'),
+    ]
+    
+    mentee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='mentorship_requests')
+    mentor_profile = models.ForeignKey(MentorProfile, on_delete=models.CASCADE, related_name='mentorship_requests')
+    category = models.CharField(max_length=20, choices=MentorProfile.CATEGORY_CHOICES)
+    message = models.TextField(help_text="Why do you want this mentorship?")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Response from mentor
+    response_message = models.TextField(blank=True)
+    responded_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        unique_together = [['mentee', 'mentor_profile', 'category']]
+    
+    def __str__(self):
+        return f"{self.mentee.username} -> {self.mentor_profile.user.username} ({self.category})"
+
+
+class Notification(models.Model):
+    """System notifications for users"""
+    NOTIFICATION_TYPES = [
+        ('mentorship_request', 'New Mentorship Request'),
+        ('mentorship_accepted', 'Mentorship Accepted'),
+        ('mentorship_rejected', 'Mentorship Rejected'),
+        ('mentorship_completed', 'Mentorship Completed'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    notification_type = models.CharField(max_length=30, choices=NOTIFICATION_TYPES)
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    
+    # Optional link to related object
+    mentorship_request = models.ForeignKey(MentorshipRequest, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+    
+    def mark_as_read(self):
+        """Mark notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()
+
+
+class UserPoints(models.Model):
+    """Track points and streaks for gamification"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='points_profile')
+    total_points = models.IntegerField(default=0)
+    
+    # Streak tracking
+    current_streak = models.IntegerField(default=0)
+    longest_streak = models.IntegerField(default=0)
+    last_visit_date = models.DateField(null=True, blank=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-total_points']
+        verbose_name = "User Points"
+        verbose_name_plural = "User Points"
+        indexes = [
+            models.Index(fields=['-total_points']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.total_points} points"
+    
+    def add_points(self, points, reason=""):
+        """Add points to user's total"""
+        self.total_points += points
+        self.save()
+        
+        # Create activity log
+        PointsActivity.objects.create(
+            user=self.user,
+            points=points,
+            reason=reason
+        )
+    
+    def update_daily_visit(self):
+        """Update streak for daily visits and award points"""
+        today = timezone.now().date()
+        
+        # If this is the first visit ever
+        if not self.last_visit_date:
+            self.current_streak = 1
+            self.longest_streak = 1
+            self.last_visit_date = today
+            self.add_points(50, "Daily visit")
+            self.save()
+            return
+        
+        # If already visited today, do nothing
+        if self.last_visit_date == today:
+            return
+        
+        # Check if consecutive day
+        yesterday = today - timezone.timedelta(days=1)
+        if self.last_visit_date == yesterday:
+            self.current_streak += 1
+            self.add_points(50, "Daily visit")
+            
+            # Update longest streak
+            if self.current_streak > self.longest_streak:
+                self.longest_streak = self.current_streak
+            
+            # Bonus for 3-day streak
+            if self.current_streak == 3:
+                self.add_points(500, "3-day streak bonus!")
+            # Continue giving streak bonuses at multiples of 3
+            elif self.current_streak > 3 and self.current_streak % 3 == 0:
+                self.add_points(500, f"{self.current_streak}-day streak bonus!")
+        else:
+            # Streak broken
+            self.current_streak = 1
+            self.add_points(50, "Daily visit")
+        
+        self.last_visit_date = today
+        self.save()
+
+
+class PointsActivity(models.Model):
+    """Log of points earned by users"""
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='points_activities')
+    points = models.IntegerField()
+    reason = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Points Activity"
+        verbose_name_plural = "Points Activities"
+    
+    def __str__(self):
+        return f"{self.user.username} +{self.points} - {self.reason}"
+
+
+class UserNotification(models.Model):
+    """Store app notifications for users (separate from mentorship notifications)"""
+    LEVEL_CHOICES = [
+        ('success', 'Success'),
+        ('info', 'Info'),
+        ('warning', 'Warning'),
+        ('error', 'Error'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_notifications')
+    level = models.CharField(max_length=10, choices=LEVEL_CHOICES, default='info')
+    message = models.TextField()
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "User Notification"
+        verbose_name_plural = "User Notifications"
+        indexes = [
+            models.Index(fields=['user', 'is_read', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.level}: {self.message[:50]}"
+    
+    def mark_as_read(self):
+        """Mark notification as read"""
+        if not self.is_read:
+            self.is_read = True
+            self.read_at = timezone.now()
+            self.save()

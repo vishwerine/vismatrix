@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule
+from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -86,3 +86,61 @@ class DayScheduleAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'title']
     readonly_fields = ['created_at', 'updated_at']
     ordering = ['-date']
+
+
+@admin.register(MentorProfile)
+class MentorProfileAdmin(admin.ModelAdmin):
+    list_display = ['user', 'experience_years', 'max_mentees', 'is_active', 'created_at']
+    list_filter = ['is_active', 'experience_years']
+    search_fields = ['user__username', 'bio', 'specializations']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-created_at']
+
+
+@admin.register(MentorshipRequest)
+class MentorshipRequestAdmin(admin.ModelAdmin):
+    list_display = ['mentee', 'mentor_profile', 'category', 'status', 'created_at']
+    list_filter = ['status', 'category', 'created_at']
+    search_fields = ['mentee__username', 'mentor_profile__user__username', 'message']
+    readonly_fields = ['created_at', 'updated_at', 'responded_at']
+    ordering = ['-created_at']
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'notification_type', 'title', 'is_read', 'created_at']
+    list_filter = ['notification_type', 'is_read', 'created_at']
+    search_fields = ['user__username', 'title', 'message']
+    readonly_fields = ['created_at', 'read_at']
+    ordering = ['-created_at']
+
+
+@admin.register(UserPoints)
+class UserPointsAdmin(admin.ModelAdmin):
+    list_display = ['user', 'total_points', 'current_streak', 'longest_streak', 'last_visit_date']
+    list_filter = ['last_visit_date']
+    search_fields = ['user__username']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-total_points']
+
+
+@admin.register(PointsActivity)
+class PointsActivityAdmin(admin.ModelAdmin):
+    list_display = ['user', 'points', 'reason', 'created_at']
+    list_filter = ['created_at', 'reason']
+    search_fields = ['user__username', 'reason']
+    readonly_fields = ['created_at']
+    ordering = ['-created_at']
+
+
+@admin.register(UserNotification)
+class UserNotificationAdmin(admin.ModelAdmin):
+    list_display = ['user', 'level', 'message_preview', 'is_read', 'created_at']
+    list_filter = ['level', 'is_read', 'created_at']
+    search_fields = ['user__username', 'message']
+    readonly_fields = ['created_at', 'read_at']
+    ordering = ['-created_at']
+    
+    def message_preview(self, obj):
+        return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
+    message_preview.short_description = 'Message'

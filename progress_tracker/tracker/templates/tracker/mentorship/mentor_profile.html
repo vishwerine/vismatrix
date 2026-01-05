@@ -1,0 +1,138 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ mentor_profile.user.username }} - Mentor Profile{% endblock %}
+
+{% block content %}
+<main class="container mx-auto px-4 py-6 max-w-4xl">
+  <div class="mb-4">
+    <a href="{% url 'mentor_list' %}" class="btn btn-outline btn-sm">
+      <i class="bi bi-arrow-left"></i>
+      Back to Mentors
+    </a>
+  </div>
+
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <!-- Header -->
+      <div class="flex items-start gap-4 mb-6">
+        <div class="avatar placeholder">
+          <div class="bg-primary text-primary-content rounded-full w-20">
+            <span class="text-2xl">{{ mentor_profile.user.username|first|upper }}</span>
+          </div>
+        </div>
+        <div class="flex-1">
+          <h1 class="text-2xl font-bold mb-1">{{ mentor_profile.user.username }}</h1>
+          <p class="text-gray-600 mb-2">{{ mentor_profile.experience_years }} years of experience</p>
+          <div class="flex flex-wrap gap-2">
+            {% for category in categories_display %}
+            <span class="badge badge-primary">{{ category }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Bio -->
+      <div class="mb-6">
+        <h2 class="font-bold text-lg mb-2">About</h2>
+        <p class="text-gray-700 whitespace-pre-line">{{ mentor_profile.bio }}</p>
+      </div>
+
+      <!-- Specializations -->
+      {% if mentor_profile.specializations %}
+      <div class="mb-6">
+        <h2 class="font-bold text-lg mb-2">Specializations</h2>
+        <p class="text-gray-700 whitespace-pre-line">{{ mentor_profile.specializations }}</p>
+      </div>
+      {% endif %}
+
+      <!-- Stats -->
+      <div class="mb-6">
+        <div class="flex items-center gap-2 text-sm text-gray-600">
+          <i class="bi bi-people"></i>
+          <span>Currently mentoring {{ active_mentees }}/{{ mentor_profile.max_mentees }} mentees</span>
+        </div>
+      </div>
+
+      <!-- Apply Section -->
+      {% if can_accept_more and mentor_profile.user != user %}
+      <div class="divider"></div>
+      
+      <h2 class="font-bold text-lg mb-4">Apply for Mentorship</h2>
+
+      <!-- Check existing requests -->
+      {% if existing_requests %}
+      <div class="space-y-3">
+        {% for request in existing_requests %}
+        <div class="alert {% if request.status == 'pending' %}alert-info{% elif request.status == 'accepted' %}alert-success{% elif request.status == 'rejected' %}alert-error{% else %}alert-warning{% endif %}">
+          <div>
+            <div class="font-bold">{{ request.get_category_display }} - {{ request.get_status_display }}</div>
+            {% if request.status == 'pending' %}
+            <p class="text-sm">Your request is pending review by the mentor.</p>
+            {% elif request.status == 'accepted' %}
+            <p class="text-sm">Congratulations! Your mentorship has been accepted.</p>
+            {% if request.response_message %}
+            <p class="text-sm mt-1 italic">"{{ request.response_message }}"</p>
+            {% endif %}
+            {% elif request.status == 'rejected' %}
+            <p class="text-sm">This request was declined.</p>
+            {% if request.response_message %}
+            <p class="text-sm mt-1 italic">"{{ request.response_message }}"</p>
+            {% endif %}
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Application Form -->
+      {% if not existing_requests or existing_requests.count < mentor_profile.categories|length %}
+      <form method="post" action="{% url 'apply_for_mentorship' mentor_profile.id %}" class="mt-4">
+        {% csrf_token %}
+        
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Category</span>
+          </label>
+          <select name="category" class="select select-bordered" required>
+            <option value="">Choose a category...</option>
+            {% for cat in mentor_profile.categories %}
+            <option value="{{ cat }}">
+              {% if cat == 'health' %}Health & Fitness
+              {% elif cat == 'work' %}Work & Career
+              {% elif cat == 'study' %}Study & Education
+              {% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-control mb-4">
+          <label class="label">
+            <span class="label-text font-semibold">Why do you want this mentorship?</span>
+          </label>
+          <textarea name="message" class="textarea textarea-bordered h-32" placeholder="Tell the mentor about your goals and why you'd like their guidance..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-primary w-full">
+          <i class="bi bi-send"></i>
+          Send Mentorship Request
+        </button>
+      </form>
+      {% endif %}
+
+      {% elif not can_accept_more %}
+      <div class="alert alert-warning">
+        <i class="bi bi-info-circle"></i>
+        <span>This mentor is currently at capacity and not accepting new mentees.</span>
+      </div>
+      {% elif mentor_profile.user == user %}
+      <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i>
+        <span>This is your mentor profile. <a href="{% url 'mentor_dashboard' %}" class="link">Manage your mentees</a></span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</main>
+{% endblock %}

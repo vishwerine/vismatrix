@@ -8,6 +8,10 @@ urlpatterns = [
     path("dashboard/", views.dashboard, name="dashboard"),
     path("analytics/", views.analytics, name="analytics"),
     path("day-planner/", views.day_planner, name="day_planner"),
+    
+    # Quickstart
+    path("quickstart/", views.quickstart, name="quickstart"),
+    path("quickstart/create/<str:plan_type>/", views.quickstart_create_plan, name="quickstart_create_plan"),
 
     path("tasks/", views.task_list, name="task_list"),
     path("tasks/new/", views.task_create, name="task_create"),
@@ -103,5 +107,24 @@ urlpatterns = [
 
     # Profile Settings
     path("profile/settings/", views.profile_settings, name="profile_settings"),
+
+    # Mentorship
+    path("mentors/", views.mentor_list, name="mentor_list"),
+    path("mentors/<int:mentor_id>/", views.mentor_profile_view, name="mentor_profile"),
+    path("mentors/<int:mentor_id>/apply/", views.apply_for_mentorship, name="apply_for_mentorship"),
+    path("mentor/become/", views.become_mentor, name="become_mentor"),
+    path("mentor/dashboard/", views.mentor_dashboard, name="mentor_dashboard"),
+    path("mentor/requests/<int:request_id>/respond/", views.respond_to_mentorship_request, name="respond_to_mentorship_request"),
+    path("mentor/requests/<int:request_id>/complete/", views.complete_mentorship, name="complete_mentorship"),
+    path("my-mentorships/", views.my_mentorships, name="my_mentorships"),
+    
+    # Notifications
+    path("notifications-list/", views.notifications_list, name="notifications_list"),
+    path("notifications/<int:notification_id>/read/", views.mark_notification_read, name="mark_notification_read"),
+    path("api/notifications/unread-count/", views.get_unread_notification_count, name="unread_notification_count"),
+    
+    # Recent Notifications (Django messages)
+    path("recent-notifications/", views.recent_notifications, name="recent_notifications"),
+    path("notifications/clear-all/", views.clear_all_notifications, name="clear_all_notifications"),
 
 ]

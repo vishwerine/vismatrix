@@ -1,0 +1,94 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Find a Mentor - VisMatrix{% endblock %}
+
+{% block content %}
+<main class="container mx-auto px-4 py-6 max-w-6xl">
+  <div class="mb-6">
+    <h1 class="text-3xl font-bold mb-2">
+      <i class="bi bi-people"></i>
+      Find a Mentor
+    </h1>
+    <p class="text-gray-600">
+      Connect with experienced mentors in Health, Work, or Study.
+    </p>
+  </div>
+
+  <!-- Category Filter -->
+  <div class="card bg-base-100 shadow mb-6">
+    <div class="card-body p-4">
+      <div class="flex flex-wrap gap-2">
+        <a href="{% url 'mentor_list' %}" class="btn btn-sm {% if not category_filter %}btn-primary{% else %}btn-outline{% endif %}">
+          All Mentors
+        </a>
+        {% for value, label in categories %}
+        <a href="{% url 'mentor_list' %}?category={{ value }}" class="btn btn-sm {% if category_filter == value %}btn-primary{% else %}btn-outline{% endif %}">
+          <i class="bi bi-{% if value == 'health' %}heart-pulse{% elif value == 'work' %}briefcase{% else %}book{% endif %}"></i>
+          {{ label }}
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Mentor List -->
+  {% if mentor_list %}
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for mentor in mentor_list %}
+    <div class="card bg-base-100 shadow hover:shadow-lg transition">
+      <div class="card-body">
+        <div class="flex items-start gap-3 mb-3">
+          <div class="avatar placeholder">
+            <div class="bg-primary text-primary-content rounded-full w-12">
+              <span class="text-lg">{{ mentor.user.username|first|upper }}</span>
+            </div>
+          </div>
+          <div class="flex-1 min-w-0">
+            <h2 class="font-bold text-lg">{{ mentor.user.username }}</h2>
+            <p class="text-sm text-gray-600">{{ mentor.profile.experience_years }} years experience</p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap gap-1 mb-3">
+          {% for category in mentor.categories_display %}
+          <span class="badge badge-sm badge-primary">{{ category }}</span>
+          {% endfor %}
+        </div>
+
+        <p class="text-sm mb-3 line-clamp-3">{{ mentor.profile.bio|truncatewords:20 }}</p>
+
+        <div class="text-xs text-gray-600 mb-3">
+          <i class="bi bi-people"></i>
+          {{ mentor.active_mentees }}/{{ mentor.profile.max_mentees }} mentees
+        </div>
+
+        <a href="{% url 'mentor_profile' mentor.profile.id %}" class="btn btn-primary btn-sm w-full">
+          View Profile
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card bg-base-100 shadow">
+    <div class="card-body text-center py-12">
+      <i class="bi bi-person-x text-4xl text-gray-400 mb-3"></i>
+      <p class="text-gray-600">No mentors found in this category.</p>
+      <a href="{% url 'mentor_list' %}" class="btn btn-outline btn-sm mt-3">View All Mentors</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Become a Mentor CTA -->
+  <div class="card bg-gradient-to-br from-primary/10 to-transparent border border-primary/30 mt-6">
+    <div class="card-body text-center">
+      <h3 class="font-bold text-lg mb-2">Want to Help Others?</h3>
+      <p class="text-sm text-gray-600 mb-4">Share your experience and become a mentor on VisMatrix.</p>
+      <a href="{% url 'become_mentor' %}" class="btn btn-primary btn-sm">
+        <i class="bi bi-star"></i>
+        Become a Mentor
+      </a>
+    </div>
+  </div>
+</main>
+{% endblock %}
