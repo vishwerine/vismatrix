@@ -604,6 +604,8 @@ class MentorshipRequest(models.Model):
 class Notification(models.Model):
     """System notifications for users"""
     NOTIFICATION_TYPES = [
+        ('friend_request', 'Friend Request'),
+        ('friend_accepted', 'Friend Request Accepted'),
         ('mentorship_request', 'New Mentorship Request'),
         ('mentorship_accepted', 'Mentorship Accepted'),
         ('mentorship_rejected', 'Mentorship Rejected'),
@@ -616,8 +618,9 @@ class Notification(models.Model):
     message = models.TextField()
     is_read = models.BooleanField(default=False)
     
-    # Optional link to related object
+    # Optional link to related objects
     mentorship_request = models.ForeignKey(MentorshipRequest, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
+    friend_request = models.ForeignKey(FriendRequest, on_delete=models.CASCADE, null=True, blank=True, related_name='notifications')
     
     created_at = models.DateTimeField(auto_now_add=True)
     read_at = models.DateTimeField(null=True, blank=True)

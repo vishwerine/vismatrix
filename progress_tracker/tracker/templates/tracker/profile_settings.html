@@ -184,5 +184,138 @@
       </div>
     </div>
   </section>
+
+  <!-- Data & Privacy Card -->
+  <section class="card border border-base-200 bg-base-100">
+    <div class="card-body p-6">
+      <h2 class="card-title text-lg font-bold mb-3">
+        <i class="bi bi-download text-primary" aria-hidden="true"></i>
+        Data & Privacy
+      </h2>
+      
+      <div class="space-y-4">
+        <!-- Download Data -->
+        <div class="border border-base-300 rounded-lg p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <h3 class="font-semibold mb-1">Download Your Data</h3>
+              <p class="text-sm text-base-content/70">
+                Download a copy of all your data including tasks, logs, plans, and activity history in JSON format.
+              </p>
+            </div>
+            <a href="{% url 'download_user_data' %}" class="btn btn-primary btn-sm gap-2 whitespace-nowrap">
+              <i class="bi bi-download" aria-hidden="true"></i>
+              <span>Download</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Delete Account -->
+        <div class="border border-error/30 bg-error/5 rounded-lg p-4">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+              <h3 class="font-semibold mb-1 text-error">Delete Account</h3>
+              <p class="text-sm text-base-content/70 mb-2">
+                Permanently delete your account and all associated data. This action cannot be undone.
+              </p>
+              <ul class="text-xs text-base-content/60 space-y-1 list-disc list-inside">
+                <li>All your tasks, logs, and plans will be permanently deleted</li>
+                <li>Your username will become available for others to use</li>
+                <li>Friend connections will be removed</li>
+              </ul>
+            </div>
+            <button 
+              onclick="deleteAccountModal.showModal()" 
+              class="btn btn-error btn-sm gap-2 whitespace-nowrap"
+              aria-label="Delete account">
+              <i class="bi bi-trash" aria-hidden="true"></i>
+              <span>Delete</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
+
+<!-- Delete Account Confirmation Modal -->
+<dialog id="deleteAccountModal" class="modal">
+  <div class="modal-box max-w-md">
+    <h3 class="font-bold text-lg text-error mb-4">
+      <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+      Delete Account
+    </h3>
+    
+    <div class="space-y-4">
+      <div class="alert alert-error">
+        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+        <span class="text-sm">This action is permanent and cannot be undone!</span>
+      </div>
+
+      <p class="text-sm">
+        Are you absolutely sure you want to delete your account? All your data will be permanently removed:
+      </p>
+
+      <ul class="text-sm space-y-1 list-disc list-inside text-base-content/80">
+        <li>All tasks and activity logs</li>
+        <li>All plans and schedules</li>
+        <li>Friend connections and messages</li>
+        <li>Analytics and progress data</li>
+        <li>Calendar integrations</li>
+      </ul>
+
+      <div class="form-control">
+        <label class="label">
+          <span class="label-text font-semibold">Type your username to confirm:</span>
+        </label>
+        <input 
+          type="text" 
+          id="deleteConfirmUsername" 
+          placeholder="enter your username"
+          class="input input-bordered w-full"
+          autocomplete="off">
+      </div>
+
+      <form method="post" action="{% url 'delete_account' %}" id="deleteAccountForm">
+        {% csrf_token %}
+        <div class="modal-action">
+          <button type="button" class="btn btn-ghost" onclick="deleteAccountModal.close()">Cancel</button>
+          <button 
+            type="submit" 
+            id="confirmDeleteBtn"
+            class="btn btn-error gap-2"
+            disabled>
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span>Delete My Account</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+  // Delete account confirmation logic
+  document.addEventListener('DOMContentLoaded', () => {
+    const usernameInput = document.getElementById('deleteConfirmUsername');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    const expectedUsername = '{{ user.username }}';
+    
+    if (usernameInput && confirmBtn) {
+      usernameInput.addEventListener('input', () => {
+        confirmBtn.disabled = usernameInput.value !== expectedUsername;
+      });
+
+      // Reset when modal closes
+      deleteAccountModal.addEventListener('close', () => {
+        usernameInput.value = '';
+        confirmBtn.disabled = true;
+      });
+    }
+  });
+</script>
+
 {% endblock %}

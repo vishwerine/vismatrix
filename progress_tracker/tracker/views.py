@@ -1469,7 +1469,7 @@ def user_list(request):
 @require_http_methods(["POST"])
 @rate_limit(requests_per_minute=10)  # Limit friend requests to prevent spam
 def send_friend_request(request, user_id):
-    """Send a friend request that automatically creates mutual friendship (AJAX & redirect support)"""
+    """Send a friend request to another user (AJAX & redirect support)"""
     
     # Prevent self-requests
     if user_id == request.user.id:
@@ -1493,38 +1493,55 @@ def send_friend_request(request, user_id):
         messages.info(request, f"You are already friends with {to_user.username}")
         return redirect('user_list')
     
-    # Check if reverse friendship exists (they added you first)
-    reverse_friendship = Friendship.objects.filter(user=to_user, friend=request.user).exists()
+    # Check if a pending request already exists
+    existing_request = FriendRequest.objects.filter(
+        from_user=request.user,
+        to_user=to_user,
+        status='pending'
+    ).first()
     
-    if reverse_friendship:
+    if existing_request:
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return JsonResponse({'status': 'warning', 'message': f'{to_user.username} already has you as a friend'}, status=400)
-        messages.info(request, f"{to_user.username} already has you as a friend")
+            return JsonResponse({'status': 'warning', 'message': f'Friend request already sent to {to_user.username}'}, status=400)
+        messages.info(request, f"Friend request already sent to {to_user.username}")
         return redirect('user_list')
     
-    # ===== AUTO-ACCEPT: Create mutual friendship =====
-    # Create friendship from current user to target user
-    friendship1, created1 = Friendship.objects.get_or_create(
-        user=request.user,
-        friend=to_user
-    )
-    
-    # Create reverse friendship from target user to current user
-    friendship2, created2 = Friendship.objects.get_or_create(
-        user=to_user,
-        friend=request.user
-    )
-    
-    # Delete any pending friend requests between them
-    FriendRequest.objects.filter(
-        from_user__in=[request.user, to_user],
-        to_user__in=[request.user, to_user],
+    # Check if the other user already sent you a request (auto-accept)
+    reverse_request = FriendRequest.objects.filter(
+        from_user=to_user,
+        to_user=request.user,
         status='pending'
-    ).delete()
+    ).first()
+    
+    if reverse_request:
+        # Auto-accept: they already requested you, so accept their request
+        reverse_request.accept()
+        
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'status': 'success', 'message': f'You are now friends with {to_user.username}!'}, status=201)
+        messages.success(request, f"You are now friends with {to_user.username}!")
+        return redirect('user_list')
+    
+    # Create new friend request
+    friend_request = FriendRequest.objects.create(
+        from_user=request.user,
+        to_user=to_user,
+        status='pending'
+    )
+    
+    # Create notification for the recipient
+    from .models import Notification
+    Notification.objects.create(
+        user=to_user,
+        notification_type='friend_request',
+        title='New Friend Request',
+        message=f'{request.user.get_full_name() or request.user.username} sent you a friend request',
+        friend_request=friend_request
+    )
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({'status': 'success', 'message': f'You are now friends with {to_user.username}!'}, status=201)
-    messages.success(request, f"You are now friends with {to_user.username}!")
+        return JsonResponse({'status': 'success', 'message': f'Friend request sent to {to_user.username}'}, status=201)
+    messages.success(request, f"Friend request sent to {to_user.username}")
     
     return redirect('user_list')
 
@@ -1548,11 +1565,20 @@ def accept_friend_request(request, request_id):
         return JsonResponse({'status': 'error', 'message': 'Request not found'}, status=404)
     
     try:
-        # Mark as accepted
-        friend_request.status = 'accepted'
-        friend_request.save()
-        
         from_user = friend_request.from_user
+        
+        # Use the model's accept method which creates bidirectional friendship
+        friend_request.accept()
+        
+        # Create notification for the requester
+        from .models import Notification
+        Notification.objects.create(
+            user=from_user,
+            notification_type='friend_accepted',
+            title='Friend Request Accepted',
+            message=f'{request.user.get_full_name() or request.user.username} accepted your friend request'
+        )
+        
         return JsonResponse({
             'status': 'success',
             'message': f'You are now friends with {from_user.username}'
@@ -2395,101 +2421,8 @@ def daily_summary(request, year, month, day):
 
 @login_required
 def notifications(request):
-    """View notifications for stars received and new messages from friends"""
-    
-    # Filter notifications to last 30 days for stars and 7 days for messages
-    from datetime import timedelta
-    thirty_days_ago = timezone.now() - timedelta(days=30)
-    seven_days_ago = timezone.now() - timedelta(days=7)
-    
-    # Get all stars received by the current user (last 30 days)
-    # Stars on tasks
-    task_stars = ActivityReaction.objects.filter(
-        task__user=request.user,
-        created_at__gte=thirty_days_ago
-    ).select_related('user', 'task').order_by('-created_at')
-    
-    # Stars on daily logs
-    log_stars = ActivityReaction.objects.filter(
-        daily_log__user=request.user,
-        created_at__gte=thirty_days_ago
-    ).select_related('user', 'daily_log').order_by('-created_at')
-    
-    # Combine and sort by creation date
-    all_stars = []
-    
-    for star in task_stars:
-        all_stars.append({
-            'type': 'task',
-            'user': star.user,
-            'activity': star.task.title,
-            'timestamp': star.created_at,
-            'activity_id': star.task.id,
-        })
-    
-    for star in log_stars:
-        all_stars.append({
-            'type': 'log',
-            'user': star.user,
-            'activity': star.daily_log.activity,
-            'timestamp': star.created_at,
-            'activity_id': star.daily_log.id,
-        })
-    
-    # Sort by timestamp (most recent first)
-    all_stars.sort(key=lambda x: x['timestamp'], reverse=True)
-    
-    # Get total star count
-    total_stars = len(all_stars)
-    
-    # Get unread messages from conversations
-    from .models import Conversation, ConversationMember, Message
-    unread_messages = []
-    
-    me = request.user
-    # Get all conversations for the current user
-    conversations = Conversation.objects.filter(
-        Q(user1=me) | Q(user2=me)
-    ).select_related('user1', 'user2').order_by('-updated_at')
-    
-    for conv in conversations:
-        # Get the other user
-        other = conv.user2 if conv.user1 == me else conv.user1
-        
-        # Get the membership record
-        try:
-            membership = ConversationMember.objects.get(conversation=conv, user=me)
-            # Count unread messages
-            unread_qs = conv.messages.all()
-            if membership.last_read_message_id:
-                unread_qs = unread_qs.filter(id__gt=membership.last_read_message_id)
-            
-            unread_count = unread_qs.count()
-            
-            if unread_count > 0:
-                # Get the latest unread message
-                latest_msg = unread_qs.order_by('-created_at').first()
-                if latest_msg:
-                    # Only show messages from last 7 days
-                    if latest_msg.created_at >= seven_days_ago:
-                        unread_messages.append({
-                            'conversation_id': conv.id,
-                            'other_user': other,
-                            'unread_count': unread_count,
-                            'latest_message': latest_msg.body,
-                            'latest_timestamp': latest_msg.created_at,
-                        })
-        except ConversationMember.DoesNotExist:
-            pass
-    
-    context = {
-        'stars': all_stars,
-        'total_stars': total_stars,
-        'unread_messages': unread_messages,
-        'total_unread_messages': len(unread_messages),
-    }
-    
-    return render(request, 'tracker/notifications.html', context)
+    """Redirect to the unified notifications list page"""
+    return redirect('notifications_list')
 
 
 def about(request):
@@ -3230,6 +3163,104 @@ def profile_settings(request):
         'form': form,
     }
     return render(request, 'tracker/profile_settings.html', context)
+
+
+@login_required
+def download_user_data(request):
+    """Export all user data as JSON for download"""
+    from django.http import HttpResponse
+    import json
+    from datetime import datetime
+    
+    user = request.user
+    
+    # Collect all user data
+    data = {
+        'export_date': datetime.now().isoformat(),
+        'user': {
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'date_joined': user.date_joined.isoformat(),
+            'last_login': user.last_login.isoformat() if user.last_login else None,
+        },
+        'tasks': list(Task.objects.filter(user=user).values(
+            'title', 'description', 'status', 'priority', 'due_date', 
+            'created_at', 'completed_at', 'estimated_duration', 
+            'actual_duration', 'category__name', 'is_global'
+        )),
+        'daily_logs': list(DailyLog.objects.filter(user=user).values(
+            'activity', 'date', 'duration', 'description', 
+            'category__name', 'created_at', 'task__title'
+        )),
+        'categories': list(Category.objects.filter(user=user).values(
+            'name', 'color', 'created_at'
+        )),
+        'plans': [],
+        'day_schedules': list(DaySchedule.objects.filter(user=user).values(
+            'date', 'title', 'events_data', 'created_at', 'updated_at'
+        )),
+        'friendships': list(Friendship.objects.filter(
+            Q(user=user) | Q(friend=user)
+        ).values('user__username', 'friend__username', 'created_at')),
+    }
+    
+    # Get plans with nodes
+    plans = Plan.objects.filter(user=user).prefetch_related('nodes')
+    for plan in plans:
+        plan_data = {
+            'title': plan.title,
+            'description': plan.description,
+            'is_active': plan.is_active,
+            'created_at': plan.created_at.isoformat(),
+            'updated_at': plan.updated_at.isoformat(),
+            'nodes': list(plan.nodes.values(
+                'task__title', 'task__description', 'task__status', 
+                'position_x', 'position_y', 'order'
+            ))
+        }
+        data['plans'].append(plan_data)
+    
+    # Create response
+    response = HttpResponse(
+        json.dumps(data, indent=2, default=str),
+        content_type='application/json'
+    )
+    response['Content-Disposition'] = f'attachment; filename="vismatrix_data_{user.username}_{datetime.now().strftime("%Y%m%d")}.json"'
+    
+    logger.info(f"User {user.username} downloaded their data")
+    return response
+
+
+@login_required
+def delete_account(request):
+    """Permanently delete user account and all associated data"""
+    if request.method != 'POST':
+        messages.error(request, "Invalid request method.")
+        return redirect('profile_settings')
+    
+    user = request.user
+    username = user.username
+    
+    try:
+        # Log the deletion
+        logger.warning(f"User {username} (id: {user.id}) requested account deletion")
+        
+        # Django's ORM will handle cascade deletions for related objects
+        # This includes: tasks, logs, categories, plans, friendships, etc.
+        user.delete()
+        
+        # Add a success message before logout
+        messages.success(request, f"Your account has been permanently deleted. Goodbye, {username}!")
+        
+        # Redirect to landing page (user will be logged out automatically)
+        return redirect('landing_page')
+        
+    except Exception as e:
+        logger.error(f"Error deleting account for {username}: {str(e)}")
+        messages.error(request, "An error occurred while deleting your account. Please try again or contact support.")
+        return redirect('profile_settings')
 
 
 @login_required
@@ -4188,19 +4219,96 @@ def complete_mentorship(request, request_id):
 
 @login_required
 def notifications_list(request):
-    """List all notifications for the user."""
+    """List all notifications for the user - combined view with system notifications, stars, and messages."""
     from .models import Notification
+    from datetime import timedelta
     
-    # Get all notifications for the user
-    notifications = Notification.objects.filter(user=request.user).select_related('mentorship_request')
+    # Get system notifications (friend requests, mentorship, etc.)
+    system_notifications = Notification.objects.filter(user=request.user).select_related('mentorship_request', 'friend_request', 'friend_request__from_user')
     
     # Mark notifications as read when viewed
-    unread_notifications = notifications.filter(is_read=False)
+    unread_notifications = system_notifications.filter(is_read=False)
     for notification in unread_notifications:
         notification.mark_as_read()
     
+    # Get stars received (last 30 days)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    
+    # Stars on tasks
+    task_stars = ActivityReaction.objects.filter(
+        task__user=request.user,
+        created_at__gte=thirty_days_ago
+    ).select_related('user', 'task').order_by('-created_at')
+    
+    # Stars on daily logs
+    log_stars = ActivityReaction.objects.filter(
+        daily_log__user=request.user,
+        created_at__gte=thirty_days_ago
+    ).select_related('user', 'daily_log').order_by('-created_at')
+    
+    # Combine and sort stars by creation date
+    all_stars = []
+    
+    for star in task_stars:
+        all_stars.append({
+            'type': 'task',
+            'user': star.user,
+            'activity': star.task.title,
+            'timestamp': star.created_at,
+            'activity_id': star.task.id,
+        })
+    
+    for star in log_stars:
+        all_stars.append({
+            'type': 'log',
+            'user': star.user,
+            'activity': star.daily_log.activity,
+            'timestamp': star.created_at,
+            'activity_id': star.daily_log.id,
+        })
+    
+    all_stars.sort(key=lambda x: x['timestamp'], reverse=True)
+    
+    # Get unread messages from conversations
+    from .models import Conversation, ConversationMember, Message
+    unread_messages = []
+    
+    me = request.user
+    conversations = Conversation.objects.filter(
+        Q(user1=me) | Q(user2=me)
+    ).select_related('user1', 'user2').order_by('-updated_at')
+    
+    for conv in conversations:
+        other = conv.user2 if conv.user1 == me else conv.user1
+        
+        try:
+            membership = ConversationMember.objects.get(conversation=conv, user=me)
+            unread_qs = conv.messages.all()
+            if membership.last_read_message_id:
+                unread_qs = unread_qs.filter(id__gt=membership.last_read_message_id)
+            
+            unread_count = unread_qs.count()
+            
+            if unread_count > 0:
+                latest_msg = unread_qs.order_by('-created_at').first()
+                if latest_msg and latest_msg.created_at >= seven_days_ago:
+                    unread_messages.append({
+                        'conversation_id': conv.id,
+                        'other_user': other,
+                        'unread_count': unread_count,
+                        'latest_message': latest_msg.body,
+                        'latest_timestamp': latest_msg.created_at,
+                    })
+        except ConversationMember.DoesNotExist:
+            pass
+    
     context = {
-        'notifications': notifications[:50],  # Limit to 50 most recent
+        'notifications': system_notifications[:50],
+        'stars': all_stars,
+        'total_stars': len(all_stars),
+        'unread_messages': unread_messages,
+        'total_unread_messages': len(unread_messages),
     }
     
     return render(request, 'tracker/notifications_list.html', context)

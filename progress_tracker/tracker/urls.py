@@ -107,6 +107,8 @@ urlpatterns = [
 
     # Profile Settings
     path("profile/settings/", views.profile_settings, name="profile_settings"),
+    path("profile/download-data/", views.download_user_data, name="download_user_data"),
+    path("profile/delete-account/", views.delete_account, name="delete_account"),
 
     # Mentorship
     path("mentors/", views.mentor_list, name="mentor_list"),

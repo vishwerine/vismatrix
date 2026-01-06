@@ -12,10 +12,15 @@
   <!-- Icons -->
   <link rel="icon" type="image/png" href="{% static 'branding/vismatrixicon.png' %}">
 
+  <!-- Preconnect for faster CDN loading -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+
   <!-- Tailwind + DaisyUI (CDN OK for now) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/fonts/bootstrap-icons.woff2" as="font" type="font/woff2" crossorigin>
 
   <!-- THEME BOOTSTRAP (before paint) -->
   <script>
@@ -48,6 +53,24 @@
       box-shadow: var(--focus);
       border-radius: 10px;
     }
+
+    /* iOS icon font fix - ensure Bootstrap Icons display properly */
+    [class^="bi-"]::before,
+    [class*=" bi-"]::before {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      font-style: normal;
+      font-variant: normal;
+      text-rendering: auto;
+      line-height: 1;
+      display: inline-block;
+    }
+
+    /* Ensure icon fonts load with fallback */
+    .bi {
+      font-family: "bootstrap-icons" !important;
+      speak: never;
+    }
   </style>
 </head>
 
@@ -59,7 +82,7 @@
     <a href="{% url 'dashboard' %}" class="flex items-center gap-2 md:gap-3 font-black text-sm md:text-base">
       <img src="{% static 'branding/vismatrixicon.png' %}" class="w-8 h-8 md:w-9 md:h-9 rounded-xl">
       <span class="hidden sm:inline">VisMatrix<span class="text-primary">.space</span></span>
-      <span class="sm:hidden">VM<span class="text-primary">.s</span></span>
+      <span class="sm:hidden">VisMatrix<span class="text-primary">.space</span></span>
     </a>
   </div>
 

@@ -3,24 +3,103 @@
 {% block title %}Notifications - VisMatrix{% endblock %}
 
 {% block content %}
-<main class="container mx-auto px-4 py-6 max-w-4xl">
-  <div class="mb-6">
-    <h1 class="text-3xl font-bold mb-2">
-      <i class="bi bi-bell"></i>
-      Notifications
+<main class="container mx-auto px-4 py-6 max-w-4xl space-y-6">
+  
+  <!-- Header -->
+  <header class="flex flex-col gap-1" aria-label="Notifications header">
+    <h1 class="text-2xl md:text-3xl font-black text-base-content flex items-center gap-2">
+      <i class="bi bi-bell" aria-hidden="true"></i>
+      <span>Notifications</span>
     </h1>
-    <p class="text-gray-600">Stay updated with your mentorship activities</p>
-  </div>
+    <div class="flex flex-wrap items-center gap-3 text-sm md:text-base text-base-content/70">
+      <p>All your updates in one place</p>
+      {% if notifications.count > 0 %}
+      <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary">
+        <i class="bi bi-bell-fill" aria-hidden="true"></i>
+        <span>{{ notifications.count }} system</span>
+      </span>
+      {% endif %}
+      {% if total_stars > 0 %}
+      <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-warning/10 text-warning">
+        <i class="bi bi-star-fill" aria-hidden="true"></i>
+        <span>{{ total_stars }} star{{ total_stars|pluralize }}</span>
+      </span>
+      {% endif %}
+      {% if total_unread_messages > 0 %}
+      <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-info/10 text-info">
+        <i class="bi bi-chat-dots" aria-hidden="true"></i>
+        <span>{{ total_unread_messages }} message{{ total_unread_messages|pluralize }}</span>
+      </span>
+      {% endif %}
+    </div>
+  </header>
 
+  <!-- New Messages Section -->
+  {% if unread_messages %}
+  <section class="card bg-base-100 shadow-md border border-base-200" aria-label="New messages">
+    <div class="card-body p-4 md:p-6">
+      <h2 class="card-title text-lg flex items-center gap-2">
+        <i class="bi bi-chat-dots text-info" aria-hidden="true"></i>
+        <span>New Messages</span>
+      </h2>
+
+      <div class="space-y-4 mt-4">
+        {% for msg in unread_messages %}
+        <a href="{% url 'conversation_detail' msg.conversation_id %}" class="flex gap-3 relative pb-4 last:pb-0 border-l border-base-300 ml-2 pl-4 hover:bg-base-200/50 p-2 -m-2 rounded-lg transition">
+          <div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-info ring-2 ring-base-100"></div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 mb-1">
+              <div class="avatar placeholder">
+                <div class="bg-neutral-focus text-neutral-content rounded-full w-8 h-8">
+                  <span class="text-sm">{{ msg.other_user.username|first|upper }}</span>
+                </div>
+              </div>
+              <div class="flex-1 min-w-0">
+                <span class="font-medium">{{ msg.other_user.username }}</span>
+                <span class="text-sm text-base-content/60 ml-1">sent you</span>
+                <span class="badge badge-info badge-xs">{{ msg.unread_count }} message{{ msg.unread_count|pluralize }}</span>
+              </div>
+            </div>
+            <p class="text-sm font-medium mb-1 text-base-content/80 line-clamp-2">
+              "{{ msg.latest_message }}"
+            </p>
+            <p class="text-xs text-base-content/60 flex items-center gap-1">
+              <i class="bi bi-clock" aria-hidden="true"></i>
+              <span>{{ msg.latest_timestamp|timesince }} ago</span>
+            </p>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- System Notifications Section -->
   {% if notifications %}
-  <div class="space-y-3">
+  <section class="card bg-base-100 shadow-md border border-base-200">
+    <div class="card-body p-4 md:p-6">
+      <h2 class="card-title text-lg flex items-center gap-2">
+        <i class="bi bi-bell-fill text-primary" aria-hidden="true"></i>
+        <span>System Notifications</span>
+      </h2>
+
+      <div class="space-y-3 mt-4">
     {% for notification in notifications %}
     <div class="card bg-base-100 shadow {% if not notification.is_read %}border-l-4 border-primary{% endif %}">
       <div class="card-body p-4">
         <div class="flex items-start gap-3">
           <!-- Icon based on notification type -->
           <div class="flex-shrink-0">
-            {% if notification.notification_type == 'mentorship_request' %}
+            {% if notification.notification_type == 'friend_request' %}
+            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <i class="bi bi-person-plus-fill text-primary text-lg"></i>
+            </div>
+            {% elif notification.notification_type == 'friend_accepted' %}
+            <div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
+              <i class="bi bi-people-fill text-success text-lg"></i>
+            </div>
+            {% elif notification.notification_type == 'mentorship_request' %}
             <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <i class="bi bi-person-plus text-primary text-lg"></i>
             </div>
@@ -55,7 +134,29 @@
             </div>
 
             <!-- Action buttons -->
-            {% if notification.mentorship_request %}
+            {% if notification.friend_request and notification.friend_request.status == 'pending' and notification.notification_type == 'friend_request' %}
+            <div class="mt-3 flex gap-2" id="friend-request-{{ notification.friend_request.id }}">
+              <button 
+                onclick="handleFriendRequest({{ notification.friend_request.id }}, 'accept')"
+                class="btn btn-success btn-sm gap-2">
+                <i class="bi bi-check-circle"></i>
+                Accept
+              </button>
+              <button 
+                onclick="handleFriendRequest({{ notification.friend_request.id }}, 'reject')"
+                class="btn btn-error btn-sm gap-2">
+                <i class="bi bi-x-circle"></i>
+                Reject
+              </button>
+            </div>
+            {% elif notification.friend_request and notification.notification_type == 'friend_accepted' %}
+            <div class="mt-3">
+              <a href="{% url 'friends_list' %}" class="btn btn-outline btn-sm">
+                <i class="bi bi-people"></i>
+                View Friends
+              </a>
+            </div>
+            {% elif notification.mentorship_request %}
             <div class="mt-3 flex gap-2">
               {% if notification.notification_type == 'mentorship_request' %}
               <a href="{% url 'mentor_dashboard' %}" class="btn btn-primary btn-sm">
@@ -75,8 +176,62 @@
       </div>
     </div>
     {% endfor %}
-  </div>
-  {% else %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Stars Received Section -->
+  <section class="card bg-base-100 shadow-md border border-base-200" aria-label="Stars received">
+    <div class="card-body p-4 md:p-6">
+      <h2 class="card-title text-lg flex items-center gap-2">
+        <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+        <span>Stars Received</span>
+      </h2>
+
+      {% if stars %}
+      <div class="space-y-4 mt-4">
+        {% for star in stars %}
+        <div class="flex gap-3 relative pb-4 last:pb-0 border-l border-base-300 ml-2 pl-4">
+          <div class="absolute -left-[5px] top-1 w-2.5 h-2.5 rounded-full bg-warning ring-2 ring-base-100"></div>
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <div class="avatar placeholder">
+                <div class="bg-neutral-focus text-neutral-content rounded-full w-8 h-8">
+                  <span class="text-sm">{{ star.user.username|first|upper }}</span>
+                </div>
+              </div>
+              <div class="flex-1">
+                <span class="font-medium">{{ star.user.username }}</span>
+                <span class="text-sm text-base-content/60 ml-1">starred your</span>
+                {% if star.type == 'task' %}
+                <span class="badge badge-success badge-xs">task</span>
+                {% else %}
+                <span class="badge badge-info badge-xs">activity</span>
+                {% endif %}
+              </div>
+            </div>
+            <p class="text-sm font-medium mb-1">"{{ star.activity }}"</p>
+            <p class="text-xs text-base-content/60 flex items-center gap-1">
+              <i class="bi bi-clock" aria-hidden="true"></i>
+              <span>{{ star.timestamp|timesince }} ago</span>
+            </p>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="flex flex-col items-center justify-center py-8 text-center opacity-60">
+        <i class="bi bi-star text-4xl text-warning/50 mb-2" aria-hidden="true"></i>
+        <p class="text-sm">No stars received yet</p>
+        <p class="text-xs text-base-content/60 mt-1">Complete tasks and log activities to get stars from friends!</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- Empty State (if nothing at all) -->
+  {% if not notifications and not stars and not unread_messages %}
   <div class="card bg-base-100 shadow">
     <div class="card-body text-center py-12">
       <i class="bi bi-bell-slash text-4xl text-gray-400 mb-3"></i>
@@ -86,4 +241,86 @@
   </div>
   {% endif %}
 </main>
-{% endblock %}
+
+<script>
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function handleFriendRequest(requestId, action) {
+    const container = document.getElementById(`friend-request-${requestId}`);
+    if (!container) return;
+
+    const originalHTML = container.innerHTML;
+    container.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Processing...';
+
+    const url = action === 'accept' 
+      ? `/friends/requests/${requestId}/accept/`
+      : `/friends/requests/${requestId}/reject/`;
+
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => {
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return response.json();
+    })
+    .then(data => {
+      if (data.status === 'success') {
+        showToast(data.message, 'success');
+        if (action === 'accept') {
+          container.innerHTML = '<span class="badge badge-success gap-2"><i class="bi bi-check-circle"></i> Friends now!</span>';
+        } else {
+          container.innerHTML = '<span class="badge badge-ghost gap-2"><i class="bi bi-x-circle"></i> Rejected</span>';
+        }
+      } else {
+        showToast(data.message || 'Action failed', 'error');
+        container.innerHTML = originalHTML;
+      }
+    })
+    .catch(error => {
+      showToast('Error: ' + error.message, 'error');
+      container.innerHTML = originalHTML;
+    });
+  }
+
+  function showToast(message, type = 'info') {
+    const container = document.getElementById('toast-container') || (() => {
+      const div = document.createElement('div');
+      div.id = 'toast-container';
+      div.className = 'fixed bottom-20 md:bottom-4 right-4 space-y-2 z-50';
+      document.body.appendChild(div);
+      return div;
+    })();
+
+    const alertClass = {
+      success: 'alert-success',
+      error: 'alert-error',
+      warning: 'alert-warning',
+      info: 'alert-info'
+    }[type] || 'alert-info';
+
+    const alert = document.createElement('div');
+    alert.className = `alert ${alertClass} shadow-lg max-w-xs text-sm`;
+    alert.innerHTML = `<span>${message}</span>`;
+    container.appendChild(alert);
+
+    setTimeout(() => alert.remove(), 3000);
+  }
+</script>{% endblock %}
