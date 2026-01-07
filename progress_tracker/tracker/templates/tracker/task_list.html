@@ -536,7 +536,6 @@
                       data-edit-url="{% url 'task_update' task.id %}"
                       {% if task.title != 'General Activity' %}data-delete-url="{% url 'task_delete' task.id %}"{% endif %}
                       aria-label="Task actions"
-                      onclick="event.stopPropagation()"
                     >
                       <i class="bi bi-three-dots-vertical text-lg" aria-hidden="true"></i>
                     </button>
@@ -844,10 +843,11 @@
       // Reset transform
       sheet.style.transform = '';
       touchStartY = 0;
-      touchCurrentY = 0
-    const handleEscapeKey = (e) => {
-      if (e.key === 'Escape') closeAll();
-    };
+      touchCurrentY = 0;
+    }, { passive: true });
+
+    console.log('Bottom sheet initialized');
+  })();
 
     document.addEventListener('keydown', handleEscapeKey);
     
@@ -968,7 +968,7 @@
       if (!card) return;
       
       // Don't navigate if clicking on interactive elements (including the menu button/dropdown)
-      const isInteractive = e.target.closest('input, button, a, .dropdown, .task-menu, .task-checkbox');
+      const isInteractive = e.target.closest('input, button, a, .dropdown, .task-menu-trigger, .task-checkbox');
       if (isInteractive) return;
       
       // Get task ID and navigate to edit page
@@ -985,7 +985,7 @@
     
     document.addEventListener('touchstart', (e) => {
       // Don't apply touch feedback if touching interactive elements
-      if (e.target.closest('input, button, a, .dropdown, .task-menu, .task-checkbox')) {
+      if (e.target.closest('input, button, a, .dropdown, .task-menu-trigger, .task-checkbox')) {
         return;
       }
       
