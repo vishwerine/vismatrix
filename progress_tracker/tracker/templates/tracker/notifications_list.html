@@ -1,4 +1,5 @@
 {% extends 'tracker/base.html' %}
+{% load notification_filters %}
 
 {% block title %}Notifications - VisMatrix{% endblock %}
 
@@ -86,34 +87,46 @@
 
       <div class="space-y-3 mt-4">
     {% for notification in notifications %}
-    <div class="card bg-base-100 shadow {% if not notification.is_read %}border-l-4 border-primary{% endif %}">
+    <div class="card bg-base-100 shadow {% if not notification.is_read %}border-l-4 border-primary{% endif %} {% if notification.extra_data and 'TIMER_SESSION:' in notification.extra_data %}bg-gradient-to-r from-info/5 to-primary/5{% endif %} transition-all">
       <div class="card-body p-4">
         <div class="flex items-start gap-3">
-          <!-- Icon based on notification type -->
+          <!-- Icon based on notification content -->
           <div class="flex-shrink-0">
-            {% if notification.notification_type == 'friend_request' %}
+            {% if 'timer session' in notification.message|lower or 'join session' in notification.message|lower %}
+            <div class="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center">
+              <i class="bi bi-alarm-fill text-info text-lg"></i>
+            </div>
+            {% elif 'friend request' in notification.message|lower %}
             <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
               <i class="bi bi-person-plus-fill text-primary text-lg"></i>
             </div>
-            {% elif notification.notification_type == 'friend_accepted' %}
+            {% elif notification.is_timer_notification %}
+            <div class="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center">
+              <i class="bi bi-alarm-fill text-info text-lg"></i>
+            </div>
+            {% elif 'accepted' in notification.message|lower and 'friend' in notification.message|lower %}
             <div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
               <i class="bi bi-people-fill text-success text-lg"></i>
             </div>
-            {% elif notification.notification_type == 'mentorship_request' %}
+            {% elif 'mentorship' in notification.message|lower %}
             <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <i class="bi bi-person-plus text-primary text-lg"></i>
+              <i class="bi bi-mortarboard-fill text-primary text-lg"></i>
             </div>
-            {% elif notification.notification_type == 'mentorship_accepted' %}
+            {% elif notification.level == 'success' %}
             <div class="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
-              <i class="bi bi-check-circle text-success text-lg"></i>
+              <i class="bi bi-check-circle-fill text-success text-lg"></i>
             </div>
-            {% elif notification.notification_type == 'mentorship_rejected' %}
+            {% elif notification.level == 'warning' %}
             <div class="w-10 h-10 rounded-full bg-warning/10 flex items-center justify-center">
-              <i class="bi bi-info-circle text-warning text-lg"></i>
+              <i class="bi bi-exclamation-triangle-fill text-warning text-lg"></i>
             </div>
-            {% elif notification.notification_type == 'mentorship_completed' %}
-            <div class="w-10 h-10 rounded-full bg-info/10 flex items-center justify-center">
-              <i class="bi bi-trophy text-info text-lg"></i>
+            {% elif notification.level == 'error' %}
+            <div class="w-10 h-10 rounded-full bg-error/10 flex items-center justify-center">
+              <i class="bi bi-x-circle-fill text-error text-lg"></i>
+            </div>
+            {% else %}
+            <div class="w-10 h-10 rounded-full bg-base-200 flex items-center justify-center">
+              <i class="bi bi-bell-fill text-base-content/50 text-lg"></i>
             </div>
             {% endif %}
           </div>
@@ -121,9 +134,14 @@
           <div class="flex-1 min-w-0">
             <div class="flex items-start justify-between gap-2">
               <div class="flex-1 min-w-0">
-                <h3 class="font-bold text-base mb-1">{{ notification.title }}</h3>
-                <p class="text-sm text-gray-700">{{ notification.message }}</p>
-                <p class="text-xs text-gray-500 mt-2">
+                <div class="text-sm text-base-content/80 mb-2 notification-message-text">
+                  {% if notification.is_timer_notification %}
+                    {{ notification.timer_text }}
+                  {% else %}
+                    {{ notification.message }}
+                  {% endif %}
+                </div>
+                <p class="text-xs text-base-content/60 mt-2 notification-timestamp">
                   <i class="bi bi-clock"></i>
                   {{ notification.created_at|timesince }} ago
                 </p>
@@ -133,8 +151,23 @@
               {% endif %}
             </div>
 
-            <!-- Action buttons -->
-            {% if notification.friend_request and notification.friend_request.status == 'pending' and notification.notification_type == 'friend_request' %}
+            <!-- Timer invitation button -->
+            {% if notification.is_timer_notification %}
+            <div class="mt-3 flex items-center gap-3 flex-wrap">
+              <a href="{% url 'task_timer' notification.timer_task_id %}?session={{ notification.timer_session_code }}" 
+                 class="btn btn-primary btn-sm gap-2 shadow-md hover:shadow-lg">
+                <i class="bi bi-play-circle-fill"></i>
+                Join Timer Session
+              </a>
+              <span class="text-xs text-info flex items-center gap-1">
+                <i class="bi bi-lightning-fill"></i>
+                Click to start collaborating
+              </span>
+            </div>
+            {% endif %}
+
+            <!-- Legacy action buttons for old notifications with related objects -->
+            {% if notification.friend_request and notification.friend_request.status == 'pending' %}
             <div class="mt-3 flex gap-2" id="friend-request-{{ notification.friend_request.id }}">
               <button 
                 onclick="handleFriendRequest({{ notification.friend_request.id }}, 'accept')"
@@ -149,7 +182,7 @@
                 Reject
               </button>
             </div>
-            {% elif notification.friend_request and notification.notification_type == 'friend_accepted' %}
+            {% elif notification.friend_request %}
             <div class="mt-3">
               <a href="{% url 'friends_list' %}" class="btn btn-outline btn-sm">
                 <i class="bi bi-people"></i>
@@ -158,17 +191,10 @@
             </div>
             {% elif notification.mentorship_request %}
             <div class="mt-3 flex gap-2">
-              {% if notification.notification_type == 'mentorship_request' %}
               <a href="{% url 'mentor_dashboard' %}" class="btn btn-primary btn-sm">
                 <i class="bi bi-eye"></i>
-                Review Request
+                View Mentorships
               </a>
-              {% elif notification.notification_type == 'mentorship_accepted' or notification.notification_type == 'mentorship_rejected' %}
-              <a href="{% url 'my_mentorships' %}" class="btn btn-outline btn-sm">
-                <i class="bi bi-eye"></i>
-                View Details
-              </a>
-              {% endif %}
             </div>
             {% endif %}
           </div>

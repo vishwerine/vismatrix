@@ -770,3 +770,67 @@ class UserNotification(models.Model):
             self.is_read = True
             self.read_at = timezone.now()
             self.save()
+
+
+class TimerSession(models.Model):
+    """Collaborative timer sessions for group work"""
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='timer_sessions')
+    host = models.ForeignKey(User, on_delete=models.CASCADE, related_name='hosted_timer_sessions')
+    participants = models.ManyToManyField(User, related_name='timer_sessions', blank=True)
+    
+    # Session details
+    mode = models.CharField(max_length=20, default='work', choices=[
+        ('work', 'Work Session'),
+        ('break', 'Short Break'),
+        ('longBreak', 'Long Break'),
+    ])
+    duration = models.IntegerField(help_text="Duration in minutes")
+    started_at = models.DateTimeField(null=True, blank=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    # Sharing
+    share_code = models.CharField(max_length=20, unique=True, db_index=True)
+    is_public = models.BooleanField(default=False, help_text="Allow anyone with the link to join")
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['share_code']),
+            models.Index(fields=['host', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Timer: {self.task.title} by {self.host.username} ({self.share_code})"
+    
+    def generate_share_code(self):
+        """Generate a unique share code for the session"""
+        import random
+        import string
+        while True:
+            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+            if not TimerSession.objects.filter(share_code=code).exists():
+                return code
+
+
+class UserProfile(models.Model):
+    """Extended user profile with timezone preferences"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='userprofile')
+    timezone = models.CharField(
+        max_length=63,
+        default='UTC',
+        help_text="User's preferred timezone"
+    )
+    bio = models.TextField(blank=True, help_text="User biography")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "User Profile"
+        verbose_name_plural = "User Profiles"
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.timezone}"

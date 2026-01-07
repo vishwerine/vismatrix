@@ -248,6 +248,90 @@
         </div>
       </section>
 
+      {% if active_timer_sessions %}
+      <!-- Active Public Timer Sessions -->
+      <section class="card border border-info/30 bg-gradient-to-br from-info/5 to-transparent" aria-label="Active timer sessions">
+        <div class="card-body p-5">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold flex items-center gap-2">
+              <i class="bi bi-broadcast text-info" aria-hidden="true"></i>
+              <span>Live Timer Sessions</span>
+              <span class="badge badge-info badge-sm">{{ active_timer_sessions|length }}</span>
+            </h2>
+          </div>
+
+          <div class="mt-3 space-y-2">
+            {% for session in active_timer_sessions %}
+            <div class="p-3 rounded-xl border border-info/20 bg-base-100 hover:bg-info/5 transition">
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center gap-2 mb-1">
+                    <div class="avatar placeholder">
+                      <div class="bg-info text-info-content rounded-full w-7 h-7">
+                        <span class="text-xs font-bold">{{ session.host.username|first|upper }}</span>
+                      </div>
+                    </div>
+                    <span class="text-xs font-semibold text-base-content/80">{{ session.host.username }}</span>
+                    {% if session.started_at and not session.ended_at %}
+                    <span class="flex items-center gap-1">
+                      <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                      </span>
+                      <span class="text-xs text-success font-medium">Live</span>
+                    </span>
+                    {% elif session.ended_at %}
+                    <span class="flex items-center gap-1">
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-warning"></span>
+                      <span class="text-xs text-warning font-medium">Paused</span>
+                    </span>
+                    {% else %}
+                    <span class="flex items-center gap-1">
+                      <span class="relative inline-flex rounded-full h-2 w-2 bg-base-content/40"></span>
+                      <span class="text-xs text-base-content/60 font-medium">Waiting</span>
+                    </span>
+                    {% endif %}
+                  </div>
+                  
+                  <p class="text-sm font-semibold truncate">{{ session.task.title }}</p>
+                  
+                  <div class="flex flex-wrap items-center gap-2 mt-1">
+                    {% if session.task.category %}
+                    <span class="badge badge-outline badge-xs gap-1">
+                      <i class="bi bi-tag" aria-hidden="true"></i>
+                      {{ session.task.category.name }}
+                    </span>
+                    {% endif %}
+                    <span class="badge badge-info badge-xs gap-1">
+                      <i class="bi bi-alarm" aria-hidden="true"></i>
+                      {{ session.duration }}m {{ session.get_mode_display }}
+                    </span>
+                    <span class="badge badge-ghost badge-xs gap-1">
+                      <i class="bi bi-people" aria-hidden="true"></i>
+                      {{ session.participants.count }} participant{{ session.participants.count|pluralize }}
+                    </span>
+                  </div>
+                </div>
+                
+                <a href="{% url 'task_timer' session.task.id %}?session={{ session.share_code }}"
+                   class="btn btn-info btn-sm gap-1 flex-shrink-0"
+                   aria-label="Join {{ session.host.username }}'s timer session">
+                  <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
+                  <span>Join</span>
+                </a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div class="mt-3 text-xs text-base-content/60 flex items-center gap-1">
+            <i class="bi bi-info-circle" aria-hidden="true"></i>
+            <span>Join live sessions to collaborate with others</span>
+          </div>
+        </div>
+      </section>
+      {% endif %}
+
     </div>
 
     <!-- MIDDLE COLUMN: Friends Feed (xl:col-span-5) -->
@@ -416,10 +500,10 @@
                     {% endif %}
                   </div>
                 </div>
-                <a href="{% url 'log_create' %}?task={{ task.id }}"
+                <a href="{% url 'task_timer' task.id %}"
                    class="btn btn-primary btn-sm gap-1"
-                   aria-label="Log time for {{ task.title }}">
-                  <i class="bi bi-play-fill" aria-hidden="true"></i>
+                   aria-label="Start timer for {{ task.title }}">
+                  <i class="bi bi-alarm-fill" aria-hidden="true"></i>
                   <span>Start</span>
                 </a>
               </div>

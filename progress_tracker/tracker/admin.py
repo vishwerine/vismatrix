@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification
+from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -144,3 +144,17 @@ class UserNotificationAdmin(admin.ModelAdmin):
     def message_preview(self, obj):
         return obj.message[:50] + '...' if len(obj.message) > 50 else obj.message
     message_preview.short_description = 'Message'
+
+
+@admin.register(TimerSession)
+class TimerSessionAdmin(admin.ModelAdmin):
+    list_display = ['share_code', 'task', 'host', 'mode', 'duration', 'is_active', 'participant_count', 'created_at']
+    list_filter = ['mode', 'is_active', 'is_public', 'created_at']
+    search_fields = ['share_code', 'task__title', 'host__username']
+    readonly_fields = ['share_code', 'created_at', 'updated_at']
+    filter_horizontal = ['participants']
+    ordering = ['-created_at']
+    
+    def participant_count(self, obj):
+        return obj.participants.count()
+    participant_count.short_description = 'Participants'

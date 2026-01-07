@@ -373,6 +373,10 @@
 
                   <!-- Desktop actions -->
                   <div class="hidden md:flex gap-2 flex-shrink-0" onclick="event.stopPropagation()">
+                    <a href="{% url 'task_timer' task.id %}" class="btn btn-success btn-sm gap-2" aria-label="Start Pomodoro timer for {{ task.title }}">
+                      <i class="bi bi-alarm" aria-hidden="true"></i>
+                      <span class="hidden lg:inline">Timer</span>
+                    </a>
                     <a href="{% url 'log_create' %}?task={{ task.id }}" class="btn btn-primary btn-sm gap-2" aria-label="Log time for {{ task.title }}">
                       <i class="bi bi-stopwatch" aria-hidden="true"></i>
                       <span class="hidden lg:inline">Log</span>
@@ -409,6 +413,12 @@
                       class="dropdown-content menu vm-dropdown-opaque rounded-box shadow-xl border border-base-200 hidden"
                       role="menu"
                     >
+                      <li>
+                        <a href="{% url 'task_timer' task.id %}" class="text-success font-medium">
+                          <i class="bi bi-alarm text-lg" aria-hidden="true"></i>
+                          Pomodoro Timer
+                        </a>
+                      </li>
                       <li>
                         <a href="{% url 'log_create' %}?task={{ task.id %}" class="text-primary font-medium">
                           <i class="bi bi-stopwatch text-lg" aria-hidden="true"></i>
@@ -579,7 +589,11 @@
     
     fetch(`/tasks/${taskId}/complete/`, {
       method: 'POST',
-      headers: { 'X-CSRFToken': csrfToken }
+      headers: { 
+        'X-CSRFToken': csrfToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ completed: isChecked })
     })
     .then(function (r) {
       if (!r.ok) {

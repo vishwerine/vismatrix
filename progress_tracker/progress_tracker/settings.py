@@ -63,6 +63,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'tracker.timezone_middleware.TimezoneMiddleware',  # Add timezone middleware after auth
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'allauth.account.middleware.AccountMiddleware',
@@ -134,6 +135,7 @@ TEMPLATES = [
                 'django.template.context_processors.csrf',
                 # Your new processor
                 'tracker.context_processors.pending_friend_requests_count',
+                'tracker.context_processors.user_timezone',  # Add timezone context
             ],
         },
     },

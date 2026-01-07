@@ -18,6 +18,16 @@ urlpatterns = [
     path("tasks/<int:pk>/edit/", views.task_update, name="task_update"),
     path("tasks/<int:pk>/complete/", views.task_complete, name="task_complete"),
     path("tasks/<int:pk>/delete/", views.task_delete, name="task_delete"),
+    path("tasks/<int:pk>/timer/", views.task_timer, name="task_timer"),
+    
+    # Timer API
+    path("api/timer/save-log/", views.save_timer_log, name="save_timer_log"),
+    path("api/timer/create-session/", views.create_timer_session, name="create_timer_session"),
+    path("api/timer/session/<str:session_code>/participants/", views.get_session_participants, name="get_session_participants"),
+    path("api/timer/session/<str:session_code>/state/", views.get_session_state, name="get_session_state"),
+    path("api/timer/session/<str:session_code>/update/", views.update_session_state, name="update_session_state"),
+    path("api/timer/session/<str:session_code>/end/", views.end_timer_session, name="end_timer_session"),
+    path("api/timer/session/<str:session_code>/leave/", views.leave_timer_session, name="leave_timer_session"),
 
     path("logs/", views.log_list, name="log_list"),
     path("logs/new/", views.log_create, name="log_create"),
@@ -88,6 +98,10 @@ urlpatterns = [
     path("api/mini-chat/friends/", views.mini_chat_friends, name="mini_chat_friends"),
     path("api/mini-chat/<int:conversation_id>/messages/", views.mini_chat_messages, name="mini_chat_messages"),
     path("api/mini-chat/<int:conversation_id>/send/", views.mini_chat_send, name="mini_chat_send"),
+    
+    # User settings
+    path("api/user/set-timezone/", views.set_user_timezone, name="set_user_timezone"),
+    path("profile/settings/", views.profile_settings, name="profile_settings"),
     path("api/mini-chat/start/<int:friend_id>/", views.mini_chat_start, name="mini_chat_start"),
 
     # Google Calendar Integration

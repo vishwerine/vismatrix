@@ -10,7 +10,7 @@ from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta, date
-from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule
+from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule, UserProfile
 from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm, UserProfileForm
 from django.views.decorators.http import require_http_methods
 import logging
@@ -360,6 +360,16 @@ def dashboard(request):
     from .models import MentorProfile
     is_mentor = MentorProfile.objects.filter(user=request.user).exists()
 
+    # --- Active public timer sessions ---
+    from .models import TimerSession
+    
+    # Show both running and paused sessions (but not fully ended ones)
+    active_timer_sessions = TimerSession.objects.filter(
+        is_public=True,
+        is_active=True,
+        task__isnull=False  # Only include sessions with existing tasks
+    ).select_related('host', 'task', 'task__category').prefetch_related('participants')[:10]
+
     # --- Leaderboard (top 10 users by points) ---
     leaderboard = UserPoints.objects.select_related('user').order_by('-total_points')[:10]
     
@@ -390,6 +400,7 @@ def dashboard(request):
         "day_names": day_names,
         "random_quote": random_quote,
         "is_mentor": is_mentor,
+        "active_timer_sessions": active_timer_sessions,
         "leaderboard": leaderboard,
         "user_points": user_points,
         "user_rank": user_rank,
@@ -915,16 +926,24 @@ def task_update(request, pk):
 
 @login_required
 def task_complete(request, pk):
-    """Mark task as completed"""
+    """Toggle task completion status"""
     task = get_object_or_404(Task, pk=pk, user=request.user)
     
-    # Check if task was already completed to avoid duplicate points
+    # Parse JSON body to determine desired state
+    try:
+        data = json.loads(request.body) if request.body else {}
+        should_complete = data.get('completed', True)
+    except json.JSONDecodeError:
+        should_complete = True  # Default to completing if no valid JSON
+    
+    # Check if task was already completed
     was_completed = task.status == 'completed'
     
-    task.mark_completed()
-    
-    # Award points only if this is the first time completing
-    if not was_completed:
+    if should_complete and not was_completed:
+        # Mark as completed
+        task.mark_completed()
+        
+        # Award points for first-time completion
         from .models import UserPoints
         user_points, created = UserPoints.objects.get_or_create(user=request.user)
         user_points.add_points(100, f"Completed task: {task.title}")
@@ -952,6 +971,13 @@ def task_complete(request, pk):
                         user_points.add_points(1000, f"Completed plan: {plan.title}")
                         messages.success(request, f"🎉 Plan '{plan.title}' completed! +1000 points!")
     
+    elif not should_complete and was_completed:
+        # Mark as incomplete
+        task.status = 'pending'
+        task.completed_at = None
+        task.save()
+        messages.info(request, f"Task marked as incomplete")
+    
     return redirect('task_list')
 
 @login_required
@@ -974,6 +1000,388 @@ def task_delete(request, pk):
         messages.success(request, f"Task '{task.title}' has been deleted.")
         return redirect('task_list')
     return render(request, 'tracker/task_confirm_delete.html', {'task': task})
+
+
+@login_required
+def task_timer(request, pk):
+    """Pomodoro timer view for a specific task"""
+    # Check if there's a session code in the URL first
+    session_code = request.GET.get('session')
+    timer_session = None
+    session_participants = []
+    
+    if session_code:
+        try:
+            from .models import TimerSession
+            timer_session = TimerSession.objects.select_related('task', 'task__user').get(
+                share_code=session_code, 
+                is_active=True
+            )
+            
+            # Check if the task still exists
+            if not timer_session.task:
+                messages.error(request, "This timer session's task has been deleted.")
+                return redirect('task_list')
+            
+            # For public sessions, use the session's task regardless of owner
+            task = timer_session.task
+            
+            # Add current user as participant if not already
+            if request.user not in timer_session.participants.all():
+                timer_session.participants.add(request.user)
+            session_participants = list(timer_session.participants.all())
+            
+        except TimerSession.DoesNotExist:
+            messages.warning(request, "Timer session not found or has ended.")
+            # Fall back to checking if user owns the task
+            task = get_object_or_404(Task, pk=pk, user=request.user)
+    else:
+        # No session code - require user to own the task
+        task = get_object_or_404(Task, pk=pk, user=request.user)
+    
+    # Get user's recent logs for this task to show context
+    recent_logs = DailyLog.objects.filter(
+        user=request.user,
+        task=task
+    ).select_related('category').order_by('-date', '-created_at')[:5]
+    
+    # Get user's friends for invitations
+    friendships = Friendship.objects.filter(user=request.user).select_related('friend')
+    friends = [f.friend for f in friendships]
+    
+    context = {
+        'task': task,
+        'recent_logs': recent_logs,
+        'friends': friends,
+        'timer_session': timer_session,
+        'session_participants': session_participants,
+    }
+    return render(request, 'tracker/task_timer.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def save_timer_log(request):
+    """API endpoint to save activity log from Pomodoro timer"""
+    try:
+        import json
+        data = json.loads(request.body)
+        
+        task_id = data.get('task_id')
+        duration = data.get('duration')  # in minutes
+        activity = data.get('activity', '')
+        description = data.get('description', '')
+        date_str = data.get('date')
+        
+        # Validate required fields
+        if not task_id or not duration:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing required fields: task_id and duration'
+            }, status=400)
+        
+        # Get the task
+        task = get_object_or_404(Task, pk=task_id, user=request.user)
+        
+        # Parse date or use today
+        if date_str:
+            from datetime import datetime
+            log_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        else:
+            log_date = timezone.localdate()
+        
+        # Create the log
+        log = DailyLog.objects.create(
+            user=request.user,
+            date=log_date,
+            activity=activity or f"Pomodoro: {task.title}",
+            description=description,
+            category=task.category,
+            task=task,
+            duration=int(duration)
+        )
+        
+        # Award points for logging activity
+        from .models import UserPoints
+        user_points, created = UserPoints.objects.get_or_create(user=request.user)
+        user_points.add_points(10, f"Logged activity via Pomodoro timer: {log.activity}")
+        
+        return JsonResponse({
+            'success': True,
+            'log_id': log.id,
+            'message': 'Activity logged successfully! +10 points',
+            'redirect_url': '/logs/'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error saving timer log for user {request.user.id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'An error occurred while saving your log'
+        }, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def create_timer_session(request):
+    """API endpoint to create a collaborative timer session"""
+    try:
+        import json
+        from django.utils.safestring import mark_safe
+        from .models import TimerSession
+        
+        data = json.loads(request.body)
+        task_id = data.get('task_id')
+        mode = data.get('mode', 'work')
+        duration = data.get('duration', 25)
+        is_public = data.get('is_public', False)
+        invited_user_ids = data.get('invited_users', [])
+        
+        if not task_id:
+            return JsonResponse({'success': False, 'error': 'Task ID required'}, status=400)
+        
+        task = get_object_or_404(Task, pk=task_id, user=request.user)
+        
+        # Create session
+        session = TimerSession.objects.create(
+            task=task,
+            host=request.user,
+            mode=mode,
+            duration=duration,
+            is_public=is_public,
+            share_code=TimerSession().generate_share_code(),
+            started_at=timezone.now() if is_public else None  # Auto-start public sessions so they appear on dashboard
+        )
+        
+        # Add host as participant
+        session.participants.add(request.user)
+        
+        # Add invited users
+        if invited_user_ids:
+            invited_users = User.objects.filter(id__in=invited_user_ids)
+            session.participants.add(*invited_users)
+            
+            # Send notifications to invited users with join link
+            from .models import UserNotification
+            join_url = f"/tasks/{task_id}/timer/?session={session.share_code}"
+            
+            for user in invited_users:
+                # Create notification with session info (format: message|||task_id:session_code)
+                notification_message = (
+                    f'{request.user.username} invited you to a collaborative timer '
+                    f'session for "{task.title}".|||{task_id}:{session.share_code}'
+                )
+                
+                UserNotification.objects.create(
+                    user=user,
+                    level='info',
+                    message=notification_message
+                )
+        
+        return JsonResponse({
+            'success': True,
+            'session_code': session.share_code,
+            'share_url': f'/tasks/{task_id}/timer/?session={session.share_code}'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error creating timer session: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_session_participants(request, session_code):
+    """API endpoint to get current participants in a timer session"""
+    try:
+        from .models import TimerSession
+        session = get_object_or_404(TimerSession, share_code=session_code, is_active=True)
+        
+        participants = [{
+            'id': p.id,
+            'username': p.username,
+            'is_host': p.id == session.host.id
+        } for p in session.participants.all()]
+        
+        return JsonResponse({
+            'success': True,
+            'participants': participants,
+            'host': session.host.username
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_session_state(request, session_code):
+    """API endpoint to get current state of a timer session for syncing"""
+    try:
+        from .models import TimerSession
+        session = get_object_or_404(TimerSession, share_code=session_code, is_active=True)
+        
+        return JsonResponse({
+            'success': True,
+            'state': {
+                'mode': session.mode,
+                'duration': session.duration,
+                'is_active': session.is_active,
+                'is_running': session.is_active and session.started_at is not None and session.ended_at is None,
+                'started_at': session.started_at.isoformat() if session.started_at else None,
+                'ended_at': session.ended_at.isoformat() if session.ended_at else None,
+                'host_username': session.host.username
+            }
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def update_session_state(request, session_code):
+    """API endpoint to update timer session state (start/pause/reset)"""
+    try:
+        import json
+        from .models import TimerSession
+        
+        session = get_object_or_404(TimerSession, share_code=session_code, is_active=True)
+        
+        # Only host can update session state
+        if session.host != request.user:
+            return JsonResponse({'success': False, 'error': 'Only the host can control the session'}, status=403)
+        
+        data = json.loads(request.body)
+        action = data.get('action')  # 'start', 'pause', 'reset'
+        
+        if action == 'start':
+            session.started_at = timezone.now()
+            session.ended_at = None
+        elif action == 'pause':
+            # Store the remaining time by calculating elapsed time
+            if session.started_at:
+                elapsed = (timezone.now() - session.started_at).total_seconds()
+                remaining = (session.duration * 60) - elapsed
+                # Update duration to remaining time for when it resumes
+                session.duration = max(1, int(remaining / 60))
+            session.ended_at = timezone.now()
+        elif action == 'reset':
+            # Reset to initial duration and mode
+            mode = data.get('mode', session.mode)
+            duration = data.get('duration', session.duration)
+            session.mode = mode
+            session.duration = duration
+            session.started_at = None
+            session.ended_at = None
+        else:
+            return JsonResponse({'success': False, 'error': 'Invalid action'}, status=400)
+        
+        session.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Session {action}ed successfully'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Error updating session state: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def end_timer_session(request, session_code):
+    """API endpoint for host to end a timer session"""
+    try:
+        from .models import TimerSession, UserNotification
+        
+        session = get_object_or_404(TimerSession, share_code=session_code, is_active=True)
+        
+        # Only host can end the session
+        if session.host != request.user:
+            return JsonResponse({'success': False, 'error': 'Only the host can end the session'}, status=403)
+        
+        # Notify all participants (except host) that session ended
+        participants = session.participants.exclude(id=request.user.id)
+        for participant in participants:
+            UserNotification.objects.create(
+                user=participant,
+                level='info',
+                message=f'{request.user.username} ended the collaborative timer session for "{session.task.title}".'
+            )
+        
+        # Mark session as inactive
+        session.is_active = False
+        session.ended_at = timezone.now()
+        session.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Session ended successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error ending timer session: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["POST"])
+def leave_timer_session(request, session_code):
+    """API endpoint for participant to leave a timer session"""
+    try:
+        from .models import TimerSession, UserNotification
+        
+        session = get_object_or_404(TimerSession, share_code=session_code, is_active=True)
+        
+        # Check if user is a participant
+        if not session.participants.filter(id=request.user.id).exists():
+            return JsonResponse({'success': False, 'error': 'You are not a participant in this session'}, status=403)
+        
+        # Remove user from participants
+        session.participants.remove(request.user)
+        
+        # Notify host that user left
+        if session.host != request.user:
+            UserNotification.objects.create(
+                user=session.host,
+                level='info',
+                message=f'{request.user.username} left the collaborative timer session for "{session.task.title}".'
+            )
+        
+        # If host leaves, end the session
+        if session.host == request.user:
+            # Notify all remaining participants
+            participants = session.participants.exclude(id=request.user.id)
+            for participant in participants:
+                UserNotification.objects.create(
+                    user=participant,
+                    level='info',
+                    message=f'The host ended the collaborative timer session for "{session.task.title}".'
+                )
+            
+            session.is_active = False
+            session.ended_at = timezone.now()
+            session.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Left session successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error leaving timer session: {str(e)}")
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
 # Daily log views
@@ -3147,6 +3555,44 @@ def calendar_settings(request):
     return render(request, 'tracker/calendar_settings_minimal.html', context)
 
 
+from .forms import UserProfileForm
+
+@login_required
+def set_user_timezone(request):
+    """API endpoint to save user's detected timezone"""
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            timezone_str = data.get('timezone')
+            
+            if not timezone_str:
+                return JsonResponse({'success': False, 'error': 'Timezone is required'}, status=400)
+            
+            # Validate timezone
+            import pytz
+            try:
+                pytz.timezone(timezone_str)
+            except pytz.exceptions.UnknownTimeZoneError:
+                return JsonResponse({'success': False, 'error': 'Invalid timezone'}, status=400)
+            
+            # Update user profile
+            profile, created = UserProfile.objects.get_or_create(user=request.user)
+            profile.timezone = timezone_str
+            profile.save()
+            
+            return JsonResponse({
+                'success': True,
+                'timezone': timezone_str,
+                'message': 'Timezone updated successfully'
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"Error setting user timezone: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
+
 @login_required
 def profile_settings(request):
     """User profile settings page for editing display name"""
@@ -4220,15 +4666,42 @@ def complete_mentorship(request, request_id):
 @login_required
 def notifications_list(request):
     """List all notifications for the user - combined view with system notifications, stars, and messages."""
-    from .models import Notification
+    from .models import Notification, UserNotification
     from datetime import timedelta
     
-    # Get system notifications (friend requests, mentorship, etc.)
-    system_notifications = Notification.objects.filter(user=request.user).select_related('mentorship_request', 'friend_request', 'friend_request__from_user')
+    # Get both old Notification and new UserNotification models
+    old_notifications = Notification.objects.filter(user=request.user).select_related('mentorship_request', 'friend_request', 'friend_request__from_user')
+    new_notifications = UserNotification.objects.filter(user=request.user).order_by('-created_at')
+    
+    # Combine both notification types
+    system_notifications = list(new_notifications) + list(old_notifications)
+    system_notifications.sort(key=lambda x: x.created_at, reverse=True)
+    
+    # Parse timer notifications and add timer data
+    for notification in system_notifications:
+        if '|||' in notification.message:
+            parts = notification.message.split('|||')
+            if len(parts) == 2:
+                text_part = parts[0].strip()
+                session_data = parts[1].strip()
+                if ':' in session_data:
+                    task_id, session_code = session_data.split(':', 1)
+                    # Add parsed data as attributes
+                    notification.timer_text = text_part
+                    notification.timer_task_id = task_id
+                    notification.timer_session_code = session_code
+                    notification.is_timer_notification = True
+                else:
+                    notification.is_timer_notification = False
+            else:
+                notification.is_timer_notification = False
+        else:
+            notification.is_timer_notification = False
     
     # Mark notifications as read when viewed
-    unread_notifications = system_notifications.filter(is_read=False)
-    for notification in unread_notifications:
+    for notification in new_notifications.filter(is_read=False):
+        notification.mark_as_read()
+    for notification in old_notifications.filter(is_read=False):
         notification.mark_as_read()
     
     # Get stars received (last 30 days)

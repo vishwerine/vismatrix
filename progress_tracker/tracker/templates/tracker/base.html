@@ -72,9 +72,13 @@
       speak: never;
     }
   </style>
+  
+  <!-- Timezone Helper -->
+  {% load static %}
+  <script src="{% static 'js/timezone_helper.js' %}" defer></script>
 </head>
 
-<body class="min-h-screen flex flex-col">
+<body class="min-h-screen flex flex-col" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
 
 <!-- ================= NAVBAR ================= -->
 <nav class="navbar bg-base-100 sticky top-0 z-50 border-b border-base-300">
