@@ -624,7 +624,6 @@
     const menus = Array.from(document.querySelectorAll('.task-menu'));
     if (!menus.length) return;
 
-    let touchMoved = false;
     let activeMenu = null;
 
     const closeAll = () => {
@@ -642,10 +641,17 @@
       activeMenu = null;
     };
 
-    const toggleOne = (menu) => {
+    const toggleOne = (menu, event) => {
       const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
       const dd  = menu.querySelector('ul[id^="taskMenuDd-"]');
       if (!btn || !dd) return;
+
+      // Stop event from bubbling to task card
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation();
+      }
 
       const isHidden = dd.classList.contains('hidden');
       const wasThisMenuOpen = activeMenu === menu;
@@ -667,68 +673,55 @@
       const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
       if (!btn) return;
 
-      // Track touch movement to distinguish tap from scroll
-      btn.addEventListener('touchstart', () => {
-        touchMoved = false;
+      // Single unified handler for both touch and click
+      let touchStartY = 0;
+      let touchStartTime = 0;
+      
+      btn.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+        touchStartTime = Date.now();
       }, { passive: true });
 
-      btn.addEventListener('touchmove', () => {
-        touchMoved = true;
-      }, { passive: true });
-
-      // Handle touch end - only toggle if it was a tap, not a scroll
       btn.addEventListener('touchend', (e) => {
-        if (!touchMoved) {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleOne(menu);
+        const touchEndY = e.changedTouches[0].clientY;
+        const touchDuration = Date.now() - touchStartTime;
+        const touchDistance = Math.abs(touchEndY - touchStartY);
+        
+        // Only toggle if it was a quick tap (not a scroll)
+        if (touchDistance < 10 && touchDuration < 500) {
+          toggleOne(menu, e);
         }
       });
 
-      // Handle mouse click for non-touch devices
+      // Fallback for non-touch devices
       btn.addEventListener('click', (e) => {
-        // Only handle click if not a touch device (prevents double trigger)
+        // Only handle click if not a touch device
         if (!('ontouchstart' in window)) {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleOne(menu);
+          toggleOne(menu, e);
         }
       });
-
-      // Close when clicking a menu action (better UX on mobile)
-      const dd = menu.querySelector('ul[id^="taskMenuDd-"]');
-      if (dd) {
-        // Allow links to work normally
-        dd.addEventListener('click', (e) => {
-          // If clicking a link, let it navigate
-          if (e.target.closest('a')) {
-            return;
-          }
-          closeAll();
-        });
-      }
     });
 
     // Close on outside click/tap
-    const handleOutsideClick = (e) => {
+    let closeTimeout;
+    const handleOutsideInteraction = (e) => {
+      // Clear any pending close
+      clearTimeout(closeTimeout);
+      
+      // Check if click/tap is outside all menus
       const clickedInsideAny = menus.some((menu) => menu.contains(e.target));
-      if (!clickedInsideAny) {
-        closeAll();
+      if (!clickedInsideAny && activeMenu) {
+        // Small delay to allow menu interactions to complete
+        closeTimeout = setTimeout(closeAll, 50);
       }
     };
+
+    document.addEventListener('touchstart', handleOutsideInteraction, { passive: true });
+    document.addEventListener('click', handleOutsideInteraction);
 
     const handleEscapeKey = (e) => {
       if (e.key === 'Escape') closeAll();
     };
-
-    // Use timeout to avoid race condition with button click
-    document.addEventListener('click', (e) => {
-      setTimeout(() => handleOutsideClick(e), 0);
-    });
-    
-    document.addEventListener('touchend', (e) => {
-      setTimeout(() => handleOutsideClick(e), 0);
-    });
 
     document.addEventListener('keydown', handleEscapeKey);
     
@@ -848,8 +841,8 @@
       const card = e.target.closest('.vm-task');
       if (!card) return;
       
-      // Don't navigate if clicking on interactive elements
-      const isInteractive = e.target.closest('input, button, a, .dropdown, .task-menu');
+      // Don't navigate if clicking on interactive elements (including the menu button/dropdown)
+      const isInteractive = e.target.closest('input, button, a, .dropdown, .task-menu, .task-checkbox');
       if (isInteractive) return;
       
       // Get task ID and navigate to edit page
@@ -861,19 +854,44 @@
     
     // Visual feedback on touch/press using event delegation
     let touchedCard = null;
+    let touchStartX = 0;
+    let touchStartY = 0;
     
     document.addEventListener('touchstart', (e) => {
+      // Don't apply touch feedback if touching interactive elements
+      if (e.target.closest('input, button, a, .dropdown, .task-menu, .task-checkbox')) {
+        return;
+      }
+      
       const card = e.target.closest('.vm-task');
       if (card) {
         touchedCard = card;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
         card.style.opacity = '0.7';
       }
     }, { passive: true });
     
-    document.addEventListener('touchend', () => {
+    document.addEventListener('touchend', (e) => {
       if (touchedCard) {
         touchedCard.style.opacity = '';
         touchedCard = null;
+      }
+    }, { passive: true });
+    
+    document.addEventListener('touchmove', (e) => {
+      // Cancel touch feedback if user is scrolling
+      if (touchedCard) {
+        const moveX = e.touches[0].clientX;
+        const moveY = e.touches[0].clientY;
+        const distanceX = Math.abs(moveX - touchStartX);
+        const distanceY = Math.abs(moveY - touchStartY);
+        
+        // If moved more than 10px, cancel the touch feedback
+        if (distanceX > 10 || distanceY > 10) {
+          touchedCard.style.opacity = '';
+          touchedCard = null;
+        }
       }
     }, { passive: true });
     
