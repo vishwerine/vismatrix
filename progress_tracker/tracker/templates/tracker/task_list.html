@@ -396,7 +396,7 @@
                   </div>
 
                   <!-- Mobile actions -->
-                  <div class="dropdown dropdown-end md:hidden flex-shrink-0 task-menu" id="taskMenu-{{ task.id }}" onclick="event.stopPropagation()">
+                  <div class="dropdown dropdown-end md:hidden flex-shrink-0 task-menu" id="taskMenu-{{ task.id }}">
                     <button
                       id="taskMenuBtn-{{ task.id }}"
                       type="button"
@@ -641,43 +641,54 @@
       activeMenu = null;
     };
 
-    const toggleOne = (menu, event) => {
+    const openMenu = (menu) => {
       const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
       const dd  = menu.querySelector('ul[id^="taskMenuDd-"]');
       if (!btn || !dd) return;
 
-      // Stop event from bubbling to task card
-      if (event) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-      }
-
-      const isHidden = dd.classList.contains('hidden');
-      const wasThisMenuOpen = activeMenu === menu;
-      
       closeAll();
+      
+      dd.classList.remove('hidden');
+      btn.setAttribute('aria-expanded', 'true');
 
-      if (isHidden && !wasThisMenuOpen) {
-        dd.classList.remove('hidden');
-        btn.setAttribute('aria-expanded', 'true');
+      const card = menu.closest('.vm-task');
+      if (card) card.classList.add('vm-open');
+      
+      activeMenu = menu;
+    };
 
-        const card = menu.closest('.vm-task');
-        if (card) card.classList.add('vm-open');
-        
-        activeMenu = menu;
+    const toggleMenu = (menu) => {
+      const dd = menu.querySelector('ul[id^="taskMenuDd-"]');
+      if (!dd) return;
+      
+      if (dd.classList.contains('hidden')) {
+        openMenu(menu);
+      } else {
+        closeAll();
       }
     };
 
     menus.forEach((menu) => {
       const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
+      const menuContainer = menu;
       if (!btn) return;
 
-      // Single unified handler for both touch and click
+      // Stop propagation on the entire menu container
+      menuContainer.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+      
+      menuContainer.addEventListener('touchend', (e) => {
+        e.stopPropagation();
+      });
+
+      // iOS Safari needs both touchend and click
+      let touchHandled = false;
       let touchStartY = 0;
       let touchStartTime = 0;
       
       btn.addEventListener('touchstart', (e) => {
+        touchHandled = false;
         touchStartY = e.touches[0].clientY;
         touchStartTime = Date.now();
       }, { passive: true });
@@ -688,36 +699,44 @@
         const touchDistance = Math.abs(touchEndY - touchStartY);
         
         // Only toggle if it was a quick tap (not a scroll)
-        if (touchDistance < 10 && touchDuration < 500) {
-          toggleOne(menu, e);
+        if (touchDistance < 15 && touchDuration < 500) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleMenu(menu);
+          touchHandled = true;
         }
       });
 
-      // Fallback for non-touch devices
+      // Prevent click from firing after touch on iOS
       btn.addEventListener('click', (e) => {
-        // Only handle click if not a touch device
-        if (!('ontouchstart' in window)) {
-          toggleOne(menu, e);
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!touchHandled) {
+          toggleMenu(menu);
         }
+        touchHandled = false;
       });
     });
 
-    // Close on outside click/tap
-    let closeTimeout;
-    const handleOutsideInteraction = (e) => {
-      // Clear any pending close
-      clearTimeout(closeTimeout);
+    // Close on outside interaction
+    const handleOutsideClick = (e) => {
+      if (!activeMenu) return;
       
-      // Check if click/tap is outside all menus
-      const clickedInsideAny = menus.some((menu) => menu.contains(e.target));
-      if (!clickedInsideAny && activeMenu) {
-        // Small delay to allow menu interactions to complete
-        closeTimeout = setTimeout(closeAll, 50);
+      const clickedInsideMenu = activeMenu.contains(e.target);
+      if (!clickedInsideMenu) {
+        closeAll();
       }
     };
 
-    document.addEventListener('touchstart', handleOutsideInteraction, { passive: true });
-    document.addEventListener('click', handleOutsideInteraction);
+    // Use a small delay to avoid race conditions
+    document.addEventListener('click', (e) => {
+      setTimeout(() => handleOutsideClick(e), 10);
+    });
+    
+    document.addEventListener('touchstart', (e) => {
+      setTimeout(() => handleOutsideClick(e), 10);
+    }, { passive: true });
 
     const handleEscapeKey = (e) => {
       if (e.key === 'Escape') closeAll();
@@ -725,7 +744,7 @@
 
     document.addEventListener('keydown', handleEscapeKey);
     
-    // Close on scroll (better UX)
+    // Close on scroll
     let scrollTimeout;
     document.addEventListener('scroll', () => {
       clearTimeout(scrollTimeout);
