@@ -157,6 +157,135 @@
       min-width: 0;
     }
   }
+
+  /* iOS-style bottom sheet for mobile menu */
+  .task-action-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 16px 16px 0 0;
+    padding: 0;
+    transform: translateY(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .task-action-sheet.active {
+    transform: translateY(0);
+  }
+
+  .task-action-sheet-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    z-index: 999;
+  }
+
+  .task-action-sheet-backdrop.active {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .task-action-sheet-handle {
+    width: 36px;
+    height: 4px;
+    background: #d1d5db;
+    border-radius: 2px;
+    margin: 12px auto 8px;
+  }
+
+  .task-action-sheet-title {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: #6b7280;
+    text-align: center;
+    padding: 8px 16px 12px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  .task-action-sheet-actions {
+    padding: 8px;
+  }
+
+  .task-action-sheet-btn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 16px;
+    border: none;
+    background: white;
+    text-align: left;
+    font-size: 1rem;
+    color: #1f2937;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .task-action-sheet-btn:active {
+    background: #f3f4f6;
+  }
+
+  .task-action-sheet-btn i {
+    font-size: 1.25rem;
+    width: 24px;
+    text-align: center;
+  }
+
+  .task-action-sheet-btn.text-success {
+    color: #10b981;
+  }
+
+  .task-action-sheet-btn.text-primary {
+    color: #3b82f6;
+  }
+
+  .task-action-sheet-btn.text-error {
+    color: #ef4444;
+  }
+
+  .task-action-sheet-btn.disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+  }
+
+  .task-action-sheet-cancel {
+    margin: 8px;
+    padding: 16px;
+    background: #f9fafb;
+    border: none;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 1rem;
+    color: #6b7280;
+    cursor: pointer;
+    width: calc(100% - 16px);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .task-action-sheet-cancel:active {
+    background: #f3f4f6;
+  }
+
+  /* Hide default dropdown on mobile, show button */
+  @media (max-width: 768px) {
+    .dropdown.task-menu .dropdown-content {
+      display: none !important;
+    }
+  }
 </style>
 
 <main class="py-8 sm:py-10">
@@ -396,57 +525,21 @@
                   </div>
 
                   <!-- Mobile actions -->
-                  <div class="dropdown dropdown-end md:hidden flex-shrink-0 task-menu" id="taskMenu-{{ task.id }}">
+                  <div class="md:hidden flex-shrink-0">
                     <button
-                      id="taskMenuBtn-{{ task.id }}"
                       type="button"
-                      class="btn btn-ghost btn-sm"
+                      class="btn btn-ghost btn-sm task-menu-trigger"
+                      data-task-id="{{ task.id }}"
+                      data-task-title="{{ task.title }}"
+                      data-timer-url="{% url 'task_timer' task.id %}"
+                      data-log-url="{% url 'log_create' %}?task={{ task.id }}"
+                      data-edit-url="{% url 'task_update' task.id %}"
+                      {% if task.title != 'General Activity' %}data-delete-url="{% url 'task_delete' task.id %}"{% endif %}
                       aria-label="Task actions"
-                      aria-haspopup="true"
-                      aria-expanded="false"
+                      onclick="event.stopPropagation()"
                     >
                       <i class="bi bi-three-dots-vertical text-lg" aria-hidden="true"></i>
                     </button>
-
-                    <ul
-                      id="taskMenuDd-{{ task.id }}"
-                      class="dropdown-content menu vm-dropdown-opaque rounded-box shadow-xl border border-base-200 hidden"
-                      role="menu"
-                    >
-                      <li>
-                        <a href="{% url 'task_timer' task.id %}" class="text-success font-medium">
-                          <i class="bi bi-alarm text-lg" aria-hidden="true"></i>
-                          Pomodoro Timer
-                        </a>
-                      </li>
-                      <li>
-                        <a href="{% url 'log_create' %}?task={{ task.id %}" class="text-primary font-medium">
-                          <i class="bi bi-stopwatch text-lg" aria-hidden="true"></i>
-                          Log Time
-                        </a>
-                      </li>
-                      <li>
-                        <a href="{% url 'task_update' task.id %}">
-                          <i class="bi bi-pencil-square text-lg" aria-hidden="true"></i>
-                          Edit Task
-                        </a>
-                      </li>
-                      {% if task.title != 'General Activity' %}
-                      <li>
-                        <a href="{% url 'task_delete' task.id %}" class="text-error">
-                          <i class="bi bi-trash text-lg" aria-hidden="true"></i>
-                          Delete Task
-                        </a>
-                      </li>
-                      {% else %}
-                      <li>
-                        <span class="opacity-50 cursor-not-allowed flex items-center gap-2 px-4 py-3">
-                          <i class="bi bi-lock text-lg" aria-hidden="true"></i>
-                          Default Task
-                        </span>
-                      </li>
-                      {% endif %}
-                    </ul>
                   </div>
 
                 </div>
@@ -556,6 +649,17 @@
   </div>
 </main>
 
+<!-- iOS-style bottom sheet for mobile task actions -->
+<div class="task-action-sheet-backdrop" id="taskActionBackdrop"></div>
+<div class="task-action-sheet" id="taskActionSheet">
+  <div class="task-action-sheet-handle"></div>
+  <div class="task-action-sheet-title" id="taskActionTitle">Task Actions</div>
+  <div class="task-action-sheet-actions" id="taskActionButtons">
+    <!-- Buttons will be dynamically inserted here -->
+  </div>
+  <button class="task-action-sheet-cancel" id="taskActionCancel">Cancel</button>
+</div>
+
 <script>
   function getCSRFToken() {
     // Try meta tag first (works on production with HTTPS)
@@ -608,136 +712,139 @@
         }
         return r.text().then(text => {
           throw new Error(`HTTP ${r.status}: ${text.substring(0, 200)}`);
-        });
-      }
-      // Reload to get fresh data after a brief delay for visual feedback
-      setTimeout(() => window.location.reload(), 300);
-    })
-    .catch(function (err) {
-      console.error('Task completion error:', err);
-      alert('Error updating task: ' + (err.message || 'Unknown error. Check browser console.'));
-    });
-  }
-
-  // Mobile task menu: toggle, close on outside click / Esc, only one open at a time
+     iOS-style bottom sheet for mobile task actions
   (function () {
-    const menus = Array.from(document.querySelectorAll('.task-menu'));
-    if (!menus.length) return;
+    const backdrop = document.getElementById('taskActionBackdrop');
+    const sheet = document.getElementById('taskActionSheet');
+    const title = document.getElementById('taskActionTitle');
+    const buttonsContainer = document.getElementById('taskActionButtons');
+    const cancelBtn = document.getElementById('taskActionCancel');
 
-    let activeMenu = null;
+    if (!backdrop || !sheet) return;
 
-    const closeAll = () => {
-      menus.forEach((menu) => {
-        const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
-        const dd  = menu.querySelector('ul[id^="taskMenuDd-"]');
-        if (!btn || !dd) return;
-
-        dd.classList.add('hidden');
-        btn.setAttribute('aria-expanded', 'false');
-
-        const card = menu.closest('.vm-task');
-        if (card) card.classList.remove('vm-open');
-      });
-      activeMenu = null;
+    const closeSheet = () => {
+      sheet.classList.remove('active');
+      backdrop.classList.remove('active');
+      document.body.style.overflow = '';
     };
 
-    const openMenu = (menu) => {
-      const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
-      const dd  = menu.querySelector('ul[id^="taskMenuDd-"]');
-      if (!btn || !dd) return;
+    const openSheet = (button) => {
+      const taskTitle = button.dataset.taskTitle;
+      const timerUrl = button.dataset.timerUrl;
+      const logUrl = button.dataset.logUrl;
+      const editUrl = button.dataset.editUrl;
+      const deleteUrl = button.dataset.deleteUrl;
 
-      closeAll();
-      
-      dd.classList.remove('hidden');
-      btn.setAttribute('aria-expanded', 'true');
+      // Set title
+      title.textContent = taskTitle || 'Task Actions';
 
-      const card = menu.closest('.vm-task');
-      if (card) card.classList.add('vm-open');
+      // Build action buttons
+      let buttonsHTML = '';
       
-      activeMenu = menu;
-    };
-
-    const toggleMenu = (menu) => {
-      const dd = menu.querySelector('ul[id^="taskMenuDd-"]');
-      if (!dd) return;
-      
-      if (dd.classList.contains('hidden')) {
-        openMenu(menu);
-      } else {
-        closeAll();
+      if (timerUrl) {
+        buttonsHTML += `
+          <a href="${timerUrl}" class="task-action-sheet-btn text-success">
+            <i class="bi bi-alarm" aria-hidden="true"></i>
+            <span>Pomodoro Timer</span>
+          </a>
+        `;
       }
+      
+      if (logUrl) {
+        buttonsHTML += `
+          <a href="${logUrl}" class="task-action-sheet-btn text-primary">
+            <i class="bi bi-stopwatch" aria-hidden="true"></i>
+            <span>Log Time</span>
+          </a>
+        `;
+      }
+      
+      if (editUrl) {
+        buttonsHTML += `
+          <a href="${editUrl}" class="task-action-sheet-btn">
+            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+            <span>Edit Task</span>
+          </a>
+        `;
+      }
+      
+      if (deleteUrl) {
+        buttonsHTML += `
+          <a href="${deleteUrl}" class="task-action-sheet-btn text-error">
+            <i class="bi bi-trash" aria-hidden="true"></i>
+            <span>Delete Task</span>
+          </a>
+        `;
+      } else {
+        buttonsHTML += `
+          <button class="task-action-sheet-btn disabled" disabled>
+            <i class="bi bi-lock" aria-hidden="true"></i>
+            <span>Default Task (Cannot Delete)</span>
+          </button>
+        `;
+      }
+
+      buttonsContainer.innerHTML = buttonsHTML;
+
+      // Show sheet
+      document.body.style.overflow = 'hidden';
+      backdrop.classList.add('active');
+      sheet.classList.add('active');
     };
 
-    menus.forEach((menu) => {
-      const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
-      const menuContainer = menu;
-      if (!btn) return;
-
-      // Stop propagation on the entire menu container
-      menuContainer.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-      
-      menuContainer.addEventListener('touchend', (e) => {
-        e.stopPropagation();
-      });
-
-      // iOS Safari needs both touchend and click
-      let touchHandled = false;
-      let touchStartY = 0;
-      let touchStartTime = 0;
-      
-      btn.addEventListener('touchstart', (e) => {
-        touchHandled = false;
-        touchStartY = e.touches[0].clientY;
-        touchStartTime = Date.now();
-      }, { passive: true });
-
-      btn.addEventListener('touchend', (e) => {
-        const touchEndY = e.changedTouches[0].clientY;
-        const touchDuration = Date.now() - touchStartTime;
-        const touchDistance = Math.abs(touchEndY - touchStartY);
-        
-        // Only toggle if it was a quick tap (not a scroll)
-        if (touchDistance < 15 && touchDuration < 500) {
-          e.preventDefault();
-          e.stopPropagation();
-          toggleMenu(menu);
-          touchHandled = true;
-        }
-      });
-
-      // Prevent click from firing after touch on iOS
-      btn.addEventListener('click', (e) => {
+    // Open sheet when clicking trigger buttons
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('.task-menu-trigger');
+      if (trigger) {
         e.preventDefault();
         e.stopPropagation();
-        
-        if (!touchHandled) {
-          toggleMenu(menu);
-        }
-        touchHandled = false;
-      });
-    });
-
-    // Close on outside interaction
-    const handleOutsideClick = (e) => {
-      if (!activeMenu) return;
-      
-      const clickedInsideMenu = activeMenu.contains(e.target);
-      if (!clickedInsideMenu) {
-        closeAll();
+        openSheet(trigger);
       }
-    };
-
-    // Use a small delay to avoid race conditions
-    document.addEventListener('click', (e) => {
-      setTimeout(() => handleOutsideClick(e), 10);
     });
-    
-    document.addEventListener('touchstart', (e) => {
-      setTimeout(() => handleOutsideClick(e), 10);
-    }, { passive: true });
 
+    // Close on backdrop click
+    backdrop.addEventListener('click', closeSheet);
+
+    // Close on cancel button
+    cancelBtn.addEventListener('click', closeSheet);
+
+    // Close on escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && sheet.classList.contains('active')) {
+        closeSheet();
+      }
+    });
+
+    // Swipe down to close
+    let touchStartY = 0;
+    let touchCurrentY = 0;
+    
+    sheet.addEventListener('touchstart', (e) => {
+      touchStartY = e.touches[0].clientY;
+    }, { passive: true });
+    
+    sheet.addEventListener('touchmove', (e) => {
+      touchCurrentY = e.touches[0].clientY;
+      const diff = touchCurrentY - touchStartY;
+      
+      // Only allow downward swipes
+      if (diff > 0) {
+        sheet.style.transform = `translateY(${diff}px)`;
+      }
+    }, { passive: true });
+    
+    sheet.addEventListener('touchend', () => {
+      const diff = touchCurrentY - touchStartY;
+      
+      // If swiped down more than 100px, close
+      if (diff > 100) {
+        closeSheet();
+      }
+      
+      // Reset transform
+      sheet.style.transform = '';
+      touchStartY = 0;
+      touchCurrentY = 0
     const handleEscapeKey = (e) => {
       if (e.key === 'Escape') closeAll();
     };
