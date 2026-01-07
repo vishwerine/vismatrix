@@ -624,6 +624,9 @@
     const menus = Array.from(document.querySelectorAll('.task-menu'));
     if (!menus.length) return;
 
+    let touchMoved = false;
+    let activeMenu = null;
+
     const closeAll = () => {
       menus.forEach((menu) => {
         const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
@@ -636,6 +639,7 @@
         const card = menu.closest('.vm-task');
         if (card) card.classList.remove('vm-open');
       });
+      activeMenu = null;
     };
 
     const toggleOne = (menu) => {
@@ -644,14 +648,18 @@
       if (!btn || !dd) return;
 
       const isHidden = dd.classList.contains('hidden');
+      const wasThisMenuOpen = activeMenu === menu;
+      
       closeAll();
 
-      if (isHidden) {
+      if (isHidden && !wasThisMenuOpen) {
         dd.classList.remove('hidden');
         btn.setAttribute('aria-expanded', 'true');
 
         const card = menu.closest('.vm-task');
         if (card) card.classList.add('vm-open');
+        
+        activeMenu = menu;
       }
     };
 
@@ -659,47 +667,77 @@
       const btn = menu.querySelector('button[id^="taskMenuBtn-"]');
       if (!btn) return;
 
-      // Use both click and touchend for better iOS Safari support
-      const handleToggle = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleOne(menu);
-      };
+      // Track touch movement to distinguish tap from scroll
+      btn.addEventListener('touchstart', () => {
+        touchMoved = false;
+      }, { passive: true });
 
-      btn.addEventListener('click', handleToggle);
+      btn.addEventListener('touchmove', () => {
+        touchMoved = true;
+      }, { passive: true });
+
+      // Handle touch end - only toggle if it was a tap, not a scroll
       btn.addEventListener('touchend', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        toggleOne(menu);
-      }, { passive: false });
+        if (!touchMoved) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleOne(menu);
+        }
+      });
+
+      // Handle mouse click for non-touch devices
+      btn.addEventListener('click', (e) => {
+        // Only handle click if not a touch device (prevents double trigger)
+        if (!('ontouchstart' in window)) {
+          e.preventDefault();
+          e.stopPropagation();
+          toggleOne(menu);
+        }
+      });
 
       // Close when clicking a menu action (better UX on mobile)
       const dd = menu.querySelector('ul[id^="taskMenuDd-"]');
       if (dd) {
-        dd.addEventListener('click', () => closeAll());
-        dd.addEventListener('touchend', () => closeAll(), { passive: true });
+        // Allow links to work normally
+        dd.addEventListener('click', (e) => {
+          // If clicking a link, let it navigate
+          if (e.target.closest('a')) {
+            return;
+          }
+          closeAll();
+        });
       }
     });
 
-    const handleDocumentClick = (e) => {
+    // Close on outside click/tap
+    const handleOutsideClick = (e) => {
       const clickedInsideAny = menus.some((menu) => menu.contains(e.target));
-      if (!clickedInsideAny) closeAll();
+      if (!clickedInsideAny) {
+        closeAll();
+      }
     };
 
     const handleEscapeKey = (e) => {
       if (e.key === 'Escape') closeAll();
     };
 
-    document.addEventListener('click', handleDocumentClick);
-    document.addEventListener('keydown', handleEscapeKey);
-    document.addEventListener('scroll', closeAll, { passive: true });
-
-    // Clean up event listeners on page unload
-    window.addEventListener('beforeunload', function() {
-      document.removeEventListener('click', handleDocumentClick);
-      document.removeEventListener('keydown', handleEscapeKey);
-      document.removeEventListener('scroll', closeAll);
+    // Use timeout to avoid race condition with button click
+    document.addEventListener('click', (e) => {
+      setTimeout(() => handleOutsideClick(e), 0);
     });
+    
+    document.addEventListener('touchend', (e) => {
+      setTimeout(() => handleOutsideClick(e), 0);
+    });
+
+    document.addEventListener('keydown', handleEscapeKey);
+    
+    // Close on scroll (better UX)
+    let scrollTimeout;
+    document.addEventListener('scroll', () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(closeAll, 100);
+    }, { passive: true });
   })();
 
   // Instant search functionality
