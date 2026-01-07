@@ -711,7 +711,18 @@
         }
         return r.text().then(text => {
           throw new Error(`HTTP ${r.status}: ${text.substring(0, 200)}`);
-     iOS-style bottom sheet for mobile task actions
+        });
+      }
+      // Reload to get fresh data after a brief delay for visual feedback
+      setTimeout(() => window.location.reload(), 300);
+    })
+    .catch(function (err) {
+      console.error('Task completion error:', err);
+      alert('Error updating task: ' + (err.message || 'Unknown error. Check browser console.'));
+    });
+  }
+
+  // iOS-style bottom sheet for mobile task actions
   (function () {
     const backdrop = document.getElementById('taskActionBackdrop');
     const sheet = document.getElementById('taskActionSheet');
@@ -719,7 +730,10 @@
     const buttonsContainer = document.getElementById('taskActionButtons');
     const cancelBtn = document.getElementById('taskActionCancel');
 
-    if (!backdrop || !sheet) return;
+    if (!backdrop || !sheet) {
+      console.error('Bottom sheet elements not found');
+      return;
+    }
 
     const closeSheet = () => {
       sheet.classList.remove('active');
@@ -733,6 +747,8 @@
       const logUrl = button.dataset.logUrl;
       const editUrl = button.dataset.editUrl;
       const deleteUrl = button.dataset.deleteUrl;
+
+      console.log('Opening sheet for task:', taskTitle);
 
       // Set title
       title.textContent = taskTitle || 'Task Actions';
@@ -791,21 +807,28 @@
       sheet.classList.add('active');
     };
 
-    // Open sheet when clicking trigger buttons
-    document.addEventListener('click', (e) => {
+    // Open sheet when clicking trigger buttons - handle both touch and click
+    const handleTrigger = (e) => {
       const trigger = e.target.closest('.task-menu-trigger');
       if (trigger) {
+        console.log('Trigger clicked:', trigger);
         e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
         openSheet(trigger);
       }
-    });
+    };
 
-    // Close on backdrop click
+    document.addEventListener('click', handleTrigger, true);
+    document.addEventListener('touchend', handleTrigger, true);
+
+    // Close on backdrop click/touch
     backdrop.addEventListener('click', closeSheet);
+    backdrop.addEventListener('touchend', closeSheet);
 
     // Close on cancel button
     cancelBtn.addEventListener('click', closeSheet);
+    cancelBtn.addEventListener('touchend', closeSheet);
 
     // Close on escape key
     document.addEventListener('keydown', (e) => {
@@ -847,16 +870,6 @@
     }, { passive: true });
 
     console.log('Bottom sheet initialized');
-  })();
-
-    document.addEventListener('keydown', handleEscapeKey);
-    
-    // Close on scroll
-    let scrollTimeout;
-    document.addEventListener('scroll', () => {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(closeAll, 100);
-    }, { passive: true });
   })();
 
   // Instant search functionality
@@ -960,15 +973,15 @@
     }
   })();
 
-  // Click to edit task - FIXED: Use event delegation instead of forEach
+  // Click to edit task - Use event delegation
   (function () {
     // Single delegated click handler instead of N listeners
     document.addEventListener('click', (e) => {
       const card = e.target.closest('.vm-task');
       if (!card) return;
       
-      // Don't navigate if clicking on interactive elements (including the menu button/dropdown)
-      const isInteractive = e.target.closest('input, button, a, .dropdown, .task-menu-trigger, .task-checkbox');
+      // Don't navigate if clicking on interactive elements
+      const isInteractive = e.target.closest('input, button, a, .task-menu-trigger, .task-checkbox');
       if (isInteractive) return;
       
       // Get task ID and navigate to edit page
@@ -985,7 +998,7 @@
     
     document.addEventListener('touchstart', (e) => {
       // Don't apply touch feedback if touching interactive elements
-      if (e.target.closest('input, button, a, .dropdown, .task-menu-trigger, .task-checkbox')) {
+      if (e.target.closest('input, button, a, .task-menu-trigger, .task-checkbox')) {
         return;
       }
       
