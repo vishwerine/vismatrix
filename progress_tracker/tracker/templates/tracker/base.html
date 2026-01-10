@@ -1,274 +1,229 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="light" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="description" content="VisMatrix - Track your progress with friends">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="theme-color" content="#1d4ed8">
   <meta name="csrf-token" content="{{ csrf_token }}">
   <title>{% block title %}VisMatrix.Space{% endblock %}</title>
 
-  <!-- Icons -->
   <link rel="icon" type="image/png" href="{% static 'branding/vismatrixicon.png' %}">
 
-  <!-- Preconnect for faster CDN loading -->
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-
-  <!-- Tailwind + DaisyUI (CDN OK for now) -->
+  <link rel="preconnect" href="https://cdn.jsdelivr.net">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-  <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/fonts/bootstrap-icons.woff2" as="font" type="font/woff2" crossorigin>
 
-  <!-- THEME BOOTSTRAP (before paint) -->
   <script>
     (function () {
-      const key = 'vm_theme';
-      const saved = localStorage.getItem(key);
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const theme = saved || (prefersDark ? 'dark' : 'light');
+      const saved = localStorage.getItem('vm_theme');
+      const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
       document.documentElement.setAttribute('data-theme', theme);
     })();
   </script>
 
-  <!-- DESIGN TOKENS ONLY -->
   <style>
     :root {
-      --radius: 14px;
-      --font: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      --focus: 0 0 0 3px rgb(29 78 216 / .3);
+      --radius-app: 1rem;
     }
-
+    
     body {
-      font-family: var(--font);
-      -webkit-font-smoothing: antialiased;
-      background-color: hsl(var(--b1));
-      color: hsl(var(--bc));
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      /* Smooth transitions for theme switching */
+      transition: background-color 0.3s ease, color 0.3s ease;
+      background-color: hsl(var(--b2)); /* Slightly darker background for better card contrast */
     }
 
-    :focus-visible {
-      outline: none;
-      box-shadow: var(--focus);
-      border-radius: 10px;
+    /* Modern Glass Effect */
+    .glass-nav {
+      background: hsla(var(--b1) / 0.8) !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
     }
 
-    /* iOS icon font fix - ensure Bootstrap Icons display properly */
-    [class^="bi-"]::before,
-    [class*=" bi-"]::before {
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      font-style: normal;
-      font-variant: normal;
-      text-rendering: auto;
-      line-height: 1;
-      display: inline-block;
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { 
+      background: hsl(var(--bc) / 0.2); 
+      border-radius: 10px; 
     }
 
-    /* Ensure icon fonts load with fallback */
-    .bi {
-      font-family: "bootstrap-icons" !important;
-      speak: never;
+    /* App-like feel for mobile */
+    @media (max-width: 1024px) {
+      .btm-nav {
+        padding-bottom: env(safe-area-inset-bottom);
+        height: calc(4rem + env(safe-area-inset-bottom));
+      }
+      main { padding-bottom: 6rem; }
+    }
+
+    /* Loading Bar Animation */
+    #page-loader {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      z-index: 9999;
+      background: linear-gradient(to right, #1d4ed8, #60a5fa);
+      transform: translateX(-100%);
+      transition: transform 0.4s ease;
     }
   </style>
   
-  <!-- Timezone Helper -->
-  {% load static %}
-  <script src="{% static 'js/timezone_helper.js' %}" defer></script>
+  {% block extra_head %}{% endblock %}
 </head>
 
-<body class="min-h-screen flex flex-col" data-user-authenticated="{% if user.is_authenticated %}true{% else %}false{% endif %}">
+<body class="min-h-screen flex flex-col transition-colors duration-300">
+  <div id="page-loader"></div>
 
-<!-- ================= NAVBAR ================= -->
-<nav class="navbar bg-base-100 sticky top-0 z-50 border-b border-base-300">
-  <div class="flex-1">
-    <a href="{% url 'dashboard' %}" class="flex items-center gap-2 md:gap-3 font-black text-sm md:text-base">
-      <img src="{% static 'branding/vismatrixicon.png' %}" class="w-8 h-8 md:w-9 md:h-9 rounded-xl">
-      <span class="hidden sm:inline">VisMatrix<span class="text-primary">.space</span></span>
-      <span class="sm:hidden">VisMatrix<span class="text-primary">.space</span></span>
-    </a>
-  </div>
+  <header class="navbar glass-nav sticky top-0 z-[60] border-b border-base-content/5 px-4 md:px-8">
+    <div class="navbar-start">
+      <a href="{% url 'dashboard' %}" class="flex items-center gap-3 hover:opacity-80 transition-all active:scale-95">
+        <div class="avatar">
+          <div class="w-10 h-10 rounded-xl shadow-lg shadow-primary/20">
+            <img src="{% static 'branding/vismatrixicon.png' %}" alt="Logo">
+          </div>
+        </div>
+        <span class="font-black text-xl tracking-tight hidden sm:block">
+          VisMatrix<span class="text-primary">.space</span>
+        </span>
+      </a>
+    </div>
 
-  <!-- Desktop Navigation -->
-  <div class="hidden lg:flex gap-1">
-    <a href="{% url 'dashboard' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'dashboard' %}btn-active{% endif %}">
-      <i class="bi bi-bar-chart"></i> Dashboard
-    </a>
-    <a href="{% url 'day_planner' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'day_planner' %}btn-active{% endif %}">
-      <i class="bi bi-calendar-check"></i> Day Planner
-    </a>
-    <a href="{% url 'task_list' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'task_list' %}btn-active{% endif %}">
-      <i class="bi bi-list-check"></i> Tasks
-    </a>
-    <a href="{% url 'analytics' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'analytics' %}btn-active{% endif %}">
-      <i class="bi bi-graph-up"></i> Analytics
-    </a>
-    <a href="{% url 'friends_list' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'friends_list' %}btn-active{% endif %}">
-      <i class="bi bi-people"></i> Friends
-    </a>
-    <a href="{% url 'plan_list' %}" class="btn btn-ghost btn-sm {% if request.resolver_match.url_name == 'plan_list' or request.resolver_match.url_name == 'plan_detail' %}btn-active{% endif %}">
-      <i class="bi bi-diagram-3"></i> Plans
-    </a>
-  </div>
+    <div class="navbar-center hidden lg:flex">
+      <ul class="menu menu-horizontal px-1 gap-1">
+        <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %} rounded-lg"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
+        <li><a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active{% endif %} rounded-lg"><i class="bi bi-bar-chart"></i> Analytics</a></li>
+        <li><a href="{% url 'plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' %}active{% endif %} rounded-lg"><i class="bi bi-diagram-3"></i> Plans</a></li>
+        <li><a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active{% endif %} rounded-lg"><i class="bi bi-calendar-event"></i> Planner</a></li>
+        <li><a href="{% url 'task_list' %}" class="{% if request.resolver_match.url_name == 'task_list' %}active{% endif %} rounded-lg">Tasks</a></li>
+        <li><a href="{% url 'friends_list' %}" class="{% if request.resolver_match.url_name == 'friends_list' %}active{% endif %} rounded-lg">Friends</a></li>
+      </ul>
+    </div>
+
+    <div class="navbar-end gap-2">
+      {% if user.is_authenticated %}
+        <a href="{% url 'recent_notifications' %}" class="btn btn-ghost btn-circle">
+          <div class="indicator">
+            <i class="bi bi-bell text-lg"></i>
+            {% if unread_app_notifications_count > 0 %}
+              <span class="badge badge-xs badge-primary indicator-item"></span>
+            {% endif %}
+          </div>
+        </a>
+
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar border border-primary/20">
+            <div class="w-10 rounded-full bg-primary text-primary-content flex items-center justify-center">
+              <span class="text-lg">{{ user.username|first|upper }}</span>
+            </div>
+          </div>
+          <ul tabindex="0" class="mt-3 z-[1] p-2 shadow-2xl menu menu-sm dropdown-content bg-base-100 rounded-2xl w-56 border border-base-content/5">
+            <li class="menu-title px-4 py-2 opacity-60">Account</li>
+            <li><a href="{% url 'profile_settings' %}" class="py-3"><i class="bi bi-person text-lg"></i> Profile</a></li>
+            <li>
+                <button id="themeToggleBtn" class="py-3 justify-between">
+                    <span class="flex items-center gap-2"><i class="bi bi-moon-stars"></i> Appearance</span>
+                    <span class="badge badge-sm" id="themeToggleText">Light</span>
+                </button>
+            </li>
+            <div class="divider my-0"></div>
+            <li class="menu-title px-4 py-2 opacity-60">Legal</li>
+            <li><a href="{% url 'privacy_policy' %}" class="py-3"><i class="bi bi-shield-check"></i> Privacy Policy</a></li>
+            <li><a href="{% url 'terms_of_service' %}" class="py-3"><i class="bi bi-file-text"></i> Terms & Conditions</a></li>
+            <div class="divider my-0"></div>
+            <li><a href="/accounts/logout/" class="text-error py-3"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+          </ul>
+        </div>
+      {% else %}
+        <a href="/accounts/login/" class="btn btn-primary btn-sm md:btn-md rounded-xl">Login</a>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 transition-all duration-500">
+    {% if messages %}
+    <div class="fixed top-20 right-4 left-4 md:left-auto md:w-96 z-[100] space-y-2">
+      {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }} shadow-xl border-none animate-in fade-in slide-in-from-top duration-300">
+        <i class="bi bi-info-circle"></i>
+        <span>{{ message }}</span>
+        <button onclick="this.parentElement.remove()" class="btn btn-ghost btn-xs btn-circle">✕</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+  </main>
 
   {% if user.is_authenticated %}
-  <!-- User Profile Dropdown -->
-  <div class="dropdown dropdown-end" id="profileDropdown">
-    <label tabindex="0" class="btn btn-ghost btn-circle avatar" id="profileDropdownToggle">
-      <div class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-primary text-primary-content flex items-center justify-center font-bold text-sm md:text-base">
-        {{ user.username|first|upper }}
-      </div>
-    </label>
-
-    <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-64 mt-3" id="profileDropdownMenu">
-      <li class="menu-title">Hi, {{ user.username }}</li>
-
-      <li>
-        <button id="themeToggleBtn">
-          <i class="bi bi-moon-stars"></i>
-          <span id="themeToggleText">Dark mode</span>
-        </button>
-      </li>
-
-      <div class="divider"></div>
-
-      <li><a href="{% url 'task_list' %}"><i class="bi bi-list-check"></i> Tasks</a></li>
-      <li><a href="{% url 'log_list' %}"><i class="bi bi-clock-history"></i> Logs</a></li>
-
-      <div class="divider"></div>
-
-      <li>
-        <a href="{% url 'recent_notifications' %}">
-          <i class="bi bi-bell"></i>
-          <span>Notifications</span>
-          {% if unread_app_notifications_count > 0 %}
-          <span class="badge badge-primary badge-sm">{{ unread_app_notifications_count }}</span>
-          {% endif %}
-        </a>
-      </li>
-      <li><a href="{% url 'profile_settings' %}"><i class="bi bi-person"></i> Profile</a></li>
-      <li><a href="{% url 'about' %}"><i class="bi bi-info-circle"></i> About</a></li>
-      <li><a href="/accounts/logout/" class="text-error"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
-    </ul>
-  </div>
-  {% else %}
-  <a href="/accounts/login/" class="btn btn-primary btn-sm">
-    <i class="bi bi-box-arrow-in-right"></i> <span class="hidden sm:inline">Login</span>
-  </a>
+  <nav class="btm-nav lg:hidden glass-nav border-t border-base-content/5 shadow-[0_-5px_20px_rgba(0,0,0,0.05)]">
+    <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active text-primary{% endif %}">
+      <i class="bi bi-grid-1x2 text-xl"></i>
+      <span class="btm-nav-label text-[10px] font-bold">Dashboard</span>
+    </a>
+    <a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active text-primary{% endif %}">
+      <i class="bi bi-bar-chart text-xl"></i>
+      <span class="btm-nav-label text-[10px] font-bold">Analytics</span>
+    </a>
+    <a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active text-primary{% endif %}">
+      <i class="bi bi-calendar3 text-xl"></i>
+      <span class="btm-nav-label text-[10px] font-bold">Planner</span>
+    </a>
+    <a href="{% url 'plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' %}active text-primary{% endif %}">
+      <i class="bi bi-diagram-3 text-xl"></i>
+      <span class="btm-nav-label text-[10px] font-bold">Plans</span>
+    </a>
+    <a href="{% url 'friends_list' %}" class="{% if request.resolver_match.url_name == 'friends_list' %}active text-primary{% endif %}">
+      <i class="bi bi-people text-xl"></i>
+      <span class="btm-nav-label text-[10px] font-bold">Friends</span>
+    </a>
+  </nav>
   {% endif %}
-</nav>
 
-<!-- ================= MAIN ================= -->
-<main class="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6 pb-20 lg:pb-6">
-  {% comment %}
-  {% if messages %}
-  <div class="toast toast-top toast-center z-50">
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags|default:'info' }} shadow-lg">
-      {{ message }}
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-  {% endcomment %}
+  <script>
+    // Theme Switcher Logic
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const themeToggleText = document.getElementById('themeToggleText');
+    const htmlEl = document.documentElement;
 
-  {% block content %}{% endblock %}
-</main>
-
-<!-- ================= BOTTOM NAV (Mobile Only) ================= -->
-{% if user.is_authenticated %}
-<nav class="btm-nav lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-base-100 border-t border-base-300 h-16 shadow-lg">
-  <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active text-primary{% endif %}">
-    <i class="bi bi-bar-chart text-xl"></i>
-    <span class="btm-nav-label text-xs">Dashboard</span>
-  </a>
-  <a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active text-primary{% endif %}">
-    <i class="bi bi-calendar-check text-xl"></i>
-    <span class="btm-nav-label text-xs">Planner</span>
-  </a>
-  <a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active text-primary{% endif %}">
-    <i class="bi bi-graph-up text-xl"></i>
-    <span class="btm-nav-label text-xs">Analytics</span>
-  </a>
-  <a href="{% url 'friends_list' %}" class="{% if request.resolver_match.url_name == 'friends_list' %}active text-primary{% endif %}">
-    <i class="bi bi-people text-xl"></i>
-    <span class="btm-nav-label text-xs">Friends</span>
-  </a>
-  <a href="{% url 'plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' or request.resolver_match.url_name == 'plan_detail' %}active text-primary{% endif %}">
-    <i class="bi bi-diagram-3 text-xl"></i>
-    <span class="btm-nav-label text-xs">Plans</span>
-  </a>
-</nav>
-{% endif %}
-
-<!-- ================= THEME TOGGLE ================= -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    const btn = document.getElementById('themeToggleBtn');
-    if (!btn) return;
-
-    const html = document.documentElement;
-    const label = document.getElementById('themeToggleText');
-
-    const apply = (t) => {
-      html.setAttribute('data-theme', t);
-      localStorage.setItem('vm_theme', t);
-      if (label) label.textContent = t === 'dark' ? 'Light mode' : 'Dark mode';
+    const updateThemeUI = (theme) => {
+        themeToggleText.textContent = theme.charAt(0).toUpperCase() + theme.slice(1);
+        themeToggleText.className = theme === 'dark' ? 'badge badge-primary badge-sm' : 'badge badge-outline badge-sm';
     };
 
-    apply(html.getAttribute('data-theme'));
-
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-      apply(next);
-    });
-  });
-</script>
-
-<!-- ================= DROPDOWN TOGGLE ================= -->
-<script>
-  document.addEventListener('DOMContentLoaded', () => {
-    // Profile dropdown handler
-    const profileToggle = document.getElementById('profileDropdownToggle');
-    const profileMenu = document.getElementById('profileDropdownMenu');
-    
-    if (profileToggle && profileMenu) {
-      let isOpen = false;
-      
-      profileToggle.addEventListener('click', (e) => {
-        // Use setTimeout to check state after DaisyUI processes the click
-        setTimeout(() => {
-          if (isOpen) {
-            // Was already open, close it
-            profileMenu.blur();
-            profileToggle.blur();
-            isOpen = false;
-          } else {
-            // Just opened
-            isOpen = true;
-          }
-        }, 0);
-      });
-      
-      // Track when dropdown closes naturally
-      profileMenu.addEventListener('blur', () => {
-        isOpen = false;
-      });
-
-      // Close dropdown when clicking outside
-      document.addEventListener('click', (e) => {
-        const dropdown = document.getElementById('profileDropdown');
-        if (dropdown && !dropdown.contains(e.target)) {
-          profileMenu.blur();
-          profileToggle.blur();
-          isOpen = false;
-        }
-      });
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            const currentTheme = htmlEl.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            htmlEl.setAttribute('data-theme', newTheme);
+            localStorage.setItem('vm_theme', newTheme);
+            updateThemeUI(newTheme);
+        });
+        // Initial UI state
+        updateThemeUI(htmlEl.getAttribute('data-theme'));
     }
-  });
-</script>
 
+    // Page Loader Simulation (on link clicks)
+    window.addEventListener('beforeunload', () => {
+        document.getElementById('page-loader').style.transform = 'translateX(-20%)';
+    });
+    
+    // Auto-hide messages after 5 seconds
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert');
+        alerts.forEach(a => {
+            a.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+            setTimeout(() => a.remove(), 500);
+        });
+    }, 5000);
+  </script>
+  
+  {% block extra_js %}{% endblock %}
 </body>
 </html>

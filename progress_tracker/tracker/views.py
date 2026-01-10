@@ -326,8 +326,7 @@ def dashboard(request):
         plan.completed_tasks = completed_tasks
         plans_with_stats.append(plan)
 
-    # --- Load a random quote from quotes.jsonl ---
-    import random
+    # --- Load a quote from quotes.jsonl (same quote per day) ---
     import os
     
     random_quote = None
@@ -338,7 +337,11 @@ def dashboard(request):
             with open(quotes_file, 'r', encoding='utf-8') as f:
                 quotes = f.readlines()
                 if quotes:
-                    selected_quote = random.choice(quotes)
+                    # Use day of year to select the same quote for the entire day
+                    day_of_year = today.timetuple().tm_yday
+                    # Use modulo to cycle through quotes if there are fewer quotes than days
+                    quote_index = day_of_year % len(quotes)
+                    selected_quote = quotes[quote_index]
                     random_quote = json.loads(selected_quote)
     except Exception as e:
         logger.error(f"Error loading quotes: {str(e)}")
@@ -2122,8 +2125,9 @@ def friend_requests(request):
 def friends_list(request):
     """View all friends with their recent progress"""
     from .models import UserPoints
+    from django.core.paginator import Paginator
     
-    friends = Friendship.objects.filter(user=request.user).select_related('friend')
+    friends = Friendship.objects.filter(user=request.user).select_related('friend').order_by('friend__username')
     
     today = timezone.now().date()
     week_ago = today - timedelta(days=7)
@@ -2171,7 +2175,16 @@ def friends_list(request):
             'rank': friend_rank,
         })
     
-    context = {'friends_data': friends_data}
+    # Pagination
+    paginator = Paginator(friends_data, 12)  # 12 friends per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'friends_data': page_obj,
+        'page_obj': page_obj,
+        'total_friends_count': len(friends_data),
+    }
     return render(request, 'tracker/friends_list.html', context)
 
 
@@ -2387,9 +2400,11 @@ def view_friend_progress(request, friend_id):
 @login_required
 def user_list(request):
     """List all users with friendship/request status"""
+    from django.core.paginator import Paginator
+    
     search_query = request.GET.get('search', '')
     
-    users = User.objects.exclude(id=request.user.id)
+    users = User.objects.exclude(id=request.user.id).order_by('username')
     
     if search_query:
         users = users.filter(
@@ -2397,6 +2412,11 @@ def user_list(request):
             Q(first_name__icontains=search_query) | 
             Q(last_name__icontains=search_query)
         )
+    
+    # Pagination
+    paginator = Paginator(users, 12)  # 12 users per page (fits 3x4 grid nicely)
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
     
     # Get current user's friends
     current_friends = request.user.friendships.values_list('friend_id', flat=True)
@@ -2412,7 +2432,8 @@ def user_list(request):
     ).values_list('from_user_id', flat=True)
     
     context = {
-        'users': users,
+        'users': page_obj,
+        'page_obj': page_obj,
         'current_friends': current_friends,
         'sent_requests': sent_requests,
         'received_requests': received_requests,
@@ -4839,6 +4860,6 @@ def clear_all_notifications(request):
     if request.method == 'POST':
         deleted_count = UserNotification.objects.filter(user=request.user, is_read=True).delete()[0]
         # Don't use messages.success here to avoid recursion
-        return JsonResponse({'success': True, 'deleted': deleted_count})
+        return redirect('recent_notifications')
     
     return redirect('recent_notifications')

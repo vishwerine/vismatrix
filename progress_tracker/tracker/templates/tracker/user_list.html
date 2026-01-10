@@ -131,6 +131,64 @@
     {% endif %}
   </div>
 
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="max-w-6xl mx-auto mt-8 md:mt-12">
+    <div class="flex justify-center items-center gap-2">
+      <!-- Previous Button -->
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+         class="btn btn-sm btn-outline gap-1"
+         style="border-color: var(--border); color: var(--text); background: transparent;">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Previous</span>
+      </a>
+      {% else %}
+      <button class="btn btn-sm btn-disabled gap-1">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Previous</span>
+      </button>
+      {% endif %}
+
+      <!-- Page Numbers -->
+      <div class="flex gap-1">
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <button class="btn btn-sm btn-primary" disabled>{{ num }}</button>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}"
+               class="btn btn-sm btn-outline"
+               style="border-color: var(--border); color: var(--text); background: transparent;">
+              {{ num }}
+            </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Next Button -->
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}"
+         class="btn btn-sm btn-outline gap-1"
+         style="border-color: var(--border); color: var(--text); background: transparent;">
+        <span class="hidden sm:inline">Next</span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </a>
+      {% else %}
+      <button class="btn btn-sm btn-disabled gap-1">
+        <span class="hidden sm:inline">Next</span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </button>
+      {% endif %}
+    </div>
+
+    <!-- Page Info -->
+    <p class="text-center mt-3 text-xs md:text-sm" style="color: var(--muted);">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      ({{ page_obj.paginator.count }} user{{ page_obj.paginator.count|pluralize }})
+    </p>
+  </div>
+  {% endif %}
+
   <!-- NOTE: Removed page-level mobile bottom navigation because base.html already provides one.
        Keeping both causes duplicate nav bars on mobile. -->
 

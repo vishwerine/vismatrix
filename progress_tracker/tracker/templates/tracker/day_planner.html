@@ -1,14 +1,30 @@
 {% extends 'tracker/base.html' %}
-{% block title %}Day Planner - VisMatrix{% endblock %}
+{% block title %}Day Planner Tool - VisMatrix{% endblock %}
 {% block content %}
 <style>
 /* ===== ENHANCED DAY PLANNER - Uses base.html theme system ===== */
-* { box-sizing: border-box; }
+.planner-wrapper * { box-sizing: border-box; }
 
 .planner-wrapper {
   max-width: 1400px;
   margin: 0 auto;
   padding: 24px;
+  /* Theme-aware color variables */
+  --text: hsl(var(--bc));
+  --text-secondary: hsl(var(--bc) / 0.7);
+  --muted: hsl(var(--bc) / 0.5);
+  --surface: hsl(var(--b1));
+  --surface-2: hsl(var(--b2));
+  --border: hsl(var(--bc) / 0.1);
+  --primary: hsl(var(--p));
+  --primary-hover: hsl(var(--p) / 0.9);
+  --primary-ink: hsl(var(--pc));
+  --success: hsl(var(--su));
+  --warning: hsl(var(--wa));
+  --error: hsl(var(--er));
+  --radius: 1rem;
+  --rounded-btn: 0.5rem;
+  --focus: 0 0 0 3px hsl(var(--p) / 0.2);
 }
 
 /* ===== HEADER SECTION ===== */
@@ -20,10 +36,10 @@
   gap: 24px;
   margin-bottom: 32px;
   padding: 24px;
-  background: var(--surface);
+  background: linear-gradient(135deg, hsl(var(--p) / 0.05) 0%, hsl(var(--s) / 0.05) 100%);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.05);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
 }
 
 .header-left {
@@ -34,9 +50,11 @@
 
 .planner-title {
   font-size: 28px;
-  font-weight: 700;
-  color: var(--text);
+  font-weight: 800;
+  color: hsl(var(--bc));
   margin: 0;
+  /* Add gradient text shadow for depth */
+  text-shadow: 0 2px 8px hsl(var(--p) / 0.3);
 }
 
 .date-badge {
@@ -44,11 +62,13 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  background: var(--primary);
-  color: var(--primary-ink);
+  background: linear-gradient(135deg, hsl(var(--p)) 0%, hsl(var(--s)) 100%);
+  color: hsl(var(--pc));
   border-radius: var(--radius);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: 0 4px 12px hsl(var(--p) / 0.3);
+  letter-spacing: 0.3px;
 }
 
 .header-right {
@@ -58,7 +78,7 @@
 }
 
 /* ===== BUTTON STYLES ===== */
-.btn {
+.planner-wrapper .btn {
   padding: 10px 16px;
   border: none;
   border-radius: var(--rounded-btn);
@@ -70,47 +90,88 @@
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-primary {
-  background: var(--primary);
-  color: var(--primary-ink);
+.planner-wrapper .btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.5);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s ease, height 0.6s ease;
 }
 
-.btn-primary:hover {
-  background: var(--primary-hover);
+.planner-wrapper .btn:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+.planner-wrapper .btn:active {
+  transform: scale(0.95);
+}
+
+.planner-wrapper .btn-primary {
+  background: hsl(var(--p));
+  color: hsl(var(--pc));
+}
+
+.planner-wrapper .btn-primary:hover {
+  background: hsl(var(--p) / 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px hsl(var(--p) / 0.3);
+}
+
+.planner-wrapper .btn-primary:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 2px 8px hsl(var(--p) / 0.2);
+}
+
+.planner-wrapper .btn-secondary {
+  background: hsl(var(--b2));
+  color: hsl(var(--bc));
+  border: 1px solid hsl(var(--bc) / 0.1);
+}
+
+.planner-wrapper .btn-secondary:hover {
+  background: hsl(var(--b1));
+  border-color: hsl(var(--p));
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+  box-shadow: 0 4px 12px hsl(var(--bc) / 0.1);
 }
 
-.btn-secondary {
-  background: var(--surface-2);
-  color: var(--text);
-  border: 1px solid var(--border);
+.planner-wrapper .btn-secondary:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 2px 6px hsl(var(--bc) / 0.08);
 }
 
-.btn-secondary:hover {
-  background: var(--surface);
-  border-color: var(--primary);
+.planner-wrapper .btn-success {
+  background: hsl(var(--su));
+  color: hsl(var(--suc));
 }
 
-.btn-success {
-  background: var(--success);
-  color: white;
+.planner-wrapper .btn-success:hover {
+  background: hsl(var(--su) / 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px hsl(var(--su) / 0.3);
 }
 
-.btn-success:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
+.planner-wrapper .btn-success:active {
+  transform: translateY(0) scale(0.95);
+  box-shadow: 0 2px 8px hsl(var(--su) / 0.2);
 }
 
-.btn-sm {
+.planner-wrapper .btn-sm {
   padding: 8px 12px;
   font-size: 13px;
 }
 
-.btn:disabled {
+.planner-wrapper .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -129,18 +190,18 @@
 
 .date-picker-wrapper input {
   padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--rounded-btn);
+  border: 1px solid hsl(var(--bc) / 0.1);
+  border-radius: 0.5rem;
   font-size: 14px;
-  background: var(--surface);
-  color: var(--text);
+  background: hsl(var(--b1));
+  color: hsl(var(--bc));
   cursor: pointer;
 }
 
 .date-picker-wrapper input:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: var(--focus);
+  border-color: hsl(var(--p));
+  box-shadow: 0 0 0 3px hsl(var(--p) / 0.2);
 }
 
 .stats-display {
@@ -160,12 +221,12 @@
 .stat-value {
   font-size: 18px;
   font-weight: 700;
-  color: var(--text);
+  color: hsl(var(--bc));
 }
 
 .stat-label {
   font-size: 12px;
-  color: var(--muted);
+  color: hsl(var(--bc) / 0.5);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -174,11 +235,11 @@
 .planner-container {
   display: grid;
   grid-template-columns: 80px 1fr;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border: 1px solid hsl(var(--bc) / 0.1);
+  border-radius: 1rem;
   overflow-y: auto;
   overflow-x: hidden;
-  background: var(--surface);
+  background: hsl(var(--b1));
   box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
   height: 80vh;
   max-height: 1500px;
@@ -189,8 +250,8 @@
 }
 
 .time-labels {
-  background: var(--surface-2);
-  border-right: 1px solid var(--border);
+  background: hsl(var(--b2));
+  border-right: 1px solid hsl(var(--bc) / 0.1);
 }
 
 .hour-slot {
@@ -200,8 +261,8 @@
   justify-content: center;
   font-size: 12px;
   font-weight: 600;
-  color: var(--muted);
-  border-bottom: 1px solid var(--border);
+  color: hsl(var(--bc) / 0.5);
+  border-bottom: 1px solid hsl(var(--bc) / 0.1);
 }
 
 .hour-slot:last-child {
@@ -210,7 +271,7 @@
 
 .timeline {
   position: relative;
-  background: var(--surface);
+  background: hsl(var(--b1));
 }
 
 .timeline-grid {
@@ -225,7 +286,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: var(--border);
+  background: hsl(var(--bc) / 0.1);
   opacity: 0.5;
   pointer-events: none;
 }
@@ -234,12 +295,12 @@
   position: absolute;
   left: 0;
   right: 0;
-  background: var(--primary);
+  background: hsl(var(--p));
   opacity: 0.08;
   pointer-events: none;
   z-index: 1;
-  border-top: 2px solid var(--primary);
-  border-bottom: 2px solid var(--primary);
+  border-top: 2px solid hsl(var(--p));
+  border-bottom: 2px solid hsl(var(--p));
   border-opacity: 0.2;
 }
 
@@ -247,12 +308,12 @@
   position: absolute;
   left: 5px;
   right: 5px;
-  background: var(--primary);
+  background: hsl(var(--p));
   border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: var(--radius);
+  border-radius: 1rem;
   padding: 12px 14px;
   cursor: move;
-  color: var(--primary-ink);
+  color: hsl(var(--pc));
   overflow: visible;
   min-width: 200px;
   min-height: 50px;
@@ -280,7 +341,7 @@
 }
 
 .event-card.conflict {
-  background: var(--warning);
+  background: hsl(var(--wa));
   border-color: rgba(0, 0, 0, 0.1);
 }
 
@@ -292,6 +353,7 @@
 
 .event-card.calendar-event {
   background: #8b5cf6;
+  color: white;
   border-color: rgba(0, 0, 0, 0.1);
 }
 
@@ -381,6 +443,37 @@
   transform: translateY(-1px);
 }
 
+/* Empty State */
+.empty-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  padding: 40px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.empty-state-icon {
+  font-size: 64px;
+  opacity: 0.3;
+  margin-bottom: 16px;
+}
+
+.empty-state-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: hsl(var(--bc) / 0.5);
+  margin-bottom: 8px;
+}
+
+.empty-state-hint {
+  font-size: 14px;
+  color: hsl(var(--bc) / 0.5);
+  opacity: 0.8;
+}
+
 .event-btn {
   background: rgba(0, 0, 0, 0.15);
   border: 1px solid rgba(0, 0, 0, 0.2);
@@ -413,10 +506,10 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: var(--error);
+  background: hsl(var(--er));
   z-index: 25;
   pointer-events: none;
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+  box-shadow: 0 0 0 4px hsl(var(--er) / 0.15);
 }
 
 .now-line::before {
@@ -427,8 +520,8 @@
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--error);
-  border: 3px solid var(--surface);
+  background: hsl(var(--er));
+  border: 3px solid hsl(var(--b1));
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
 }
 
@@ -455,13 +548,13 @@
 }
 
 .modal-content {
-  background: var(--surface);
+  background: hsl(var(--b1));
   padding: 32px;
-  border-radius: var(--radius);
+  border-radius: 1rem;
   width: 90%;
   max-width: 520px;
   box-shadow: 0 20px 50px rgb(0 0 0 / 0.3);
-  border: 1px solid var(--border);
+  border: 1px solid hsl(var(--bc) / 0.1);
   animation: slideUp 0.3s ease;
 }
 
@@ -486,27 +579,27 @@
 .modal-title {
   font-size: 20px;
   font-weight: 700;
-  color: var(--text);
+  color: hsl(var(--bc));
   margin: 0;
 }
 
 .modal-close {
-  background: var(--surface-2);
+  background: hsl(var(--b2));
   border: none;
-  border-radius: var(--rounded-btn);
+  border-radius: 0.5rem;
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--muted);
+  color: hsl(var(--bc) / 0.5);
   transition: all 0.2s ease;
 }
 
 .modal-close:hover {
-  background: var(--border);
-  color: var(--text);
+  background: hsl(var(--bc) / 0.1);
+  color: hsl(var(--bc));
 }
 
 /* ===== FORM STYLES ===== */
@@ -519,17 +612,17 @@
   margin-bottom: 8px;
   font-weight: 600;
   font-size: 14px;
-  color: var(--text);
+  color: hsl(var(--bc));
 }
 
 .form-group input,
 .form-group textarea {
   width: 100%;
   padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--rounded-btn);
-  background: var(--surface);
-  color: var(--text);
+  border: 1px solid hsl(var(--bc) / 0.1);
+  border-radius: 0.5rem;
+  background: hsl(var(--b1));
+  color: hsl(var(--bc));
   font-size: 14px;
   font-family: inherit;
   transition: all 0.2s ease;
@@ -538,8 +631,8 @@
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: var(--primary);
-  box-shadow: var(--focus);
+  border-color: hsl(var(--p));
+  box-shadow: 0 0 0 3px hsl(var(--p) / 0.2);
 }
 
 .form-grid {
@@ -560,15 +653,90 @@
   justify-content: flex-end;
 }
 
-.btn-delete {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--error);
+.planner-wrapper .btn-delete {
+  background: hsl(var(--er) / 0.1);
+  color: hsl(var(--er));
   margin-right: auto;
 }
 
-.btn-delete:hover {
-  background: var(--error);
-  color: white;
+.planner-wrapper .btn-delete:hover {
+  background: hsl(var(--er));
+  color: hsl(var(--erc));
+}
+
+/* Help Badge */
+.help-badge {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, hsl(var(--p)) 0%, hsl(var(--s)) 100%);
+  color: hsl(var(--pc));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  box-shadow: 0 8px 24px hsl(var(--p) / 0.4);
+  transition: all 0.3s ease;
+  z-index: 50;
+  border: 3px solid hsl(var(--b1));
+}
+
+.help-badge:hover {
+  transform: scale(1.1);
+  box-shadow: 0 12px 32px hsl(var(--p) / 0.5);
+}
+
+.help-content {
+  padding: 20px 0;
+  color: hsl(var(--bc));
+}
+
+.help-section {
+  margin-bottom: 20px;
+}
+
+.help-section h4 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: hsl(var(--bc));
+}
+
+.help-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.help-list li {
+  padding: 8px 0;
+  font-size: 14px;
+  color: hsl(var(--bc) / 0.7);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.help-list li::before {
+  content: '→';
+  color: hsl(var(--p));
+  font-weight: bold;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  background: hsl(var(--b2));
+  border: 1px solid hsl(var(--bc) / 0.1);
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: hsl(var(--bc));
 }
 
 /* ===== RESPONSIVE ===== */
@@ -659,7 +827,7 @@
 
   .hour-slot {
     font-size: 10px;
-    color: var(--muted);
+    color: hsl(var(--bc) / 0.5);
   }
 
   .event-card {
@@ -819,9 +987,9 @@
     
     <div class="header-right">
       <div class="planner-controls">
-        <button class="btn btn-secondary btn-sm" onclick="prevDay()" title="Previous day">← Prev</button>
-        <button class="btn btn-secondary btn-sm" onclick="today()" title="Jump to today">Today</button>
-        <button class="btn btn-secondary btn-sm" onclick="nextDay()" title="Next day">Next →</button>
+        <button class="btn btn-secondary btn-sm" onclick="prevDay()" title="Previous day (Alt+←)">⬅️ Prev</button>
+        <button class="btn btn-secondary btn-sm" onclick="today()" title="Jump to today (Alt+T)">📍 Today</button>
+        <button class="btn btn-secondary btn-sm" onclick="nextDay()" title="Next day (Alt+→)">Next ➡️</button>
         
         <div class="date-picker-wrapper">
           <input type="date" id="datePicker" title="Pick a specific date">
@@ -838,8 +1006,8 @@
           </div>
         </div>
         
-        <button class="btn btn-success btn-sm" onclick="newEvent()" title="Create new event">+ New Event</button>
-        <button class="btn btn-primary btn-sm" onclick="autoSchedule()" title="Automatically schedule unscheduled tasks">🤖 Auto Schedule</button>
+        <button class="btn btn-success btn-sm" onclick="newEvent()" title="Create new event (Alt+N)">➕ New Event</button>
+        <button class="btn btn-primary btn-sm" onclick="autoSchedule()" title="Automatically schedule unscheduled tasks (Alt+A)">🤖 Auto Schedule</button>
       </div>
     </div>
   </div>
@@ -848,8 +1016,19 @@
   <div class="planner-container">
     <div class="time-labels" id="timeLabels"></div>
     <div class="timeline" id="timeline">
-      <div class="timeline-grid" id="grid"></div>
+      <div class="timeline-grid" id="grid">
+        <div class="empty-state" id="emptyState" style="display: none;">
+          <div class="empty-state-icon">📅</div>
+          <div class="empty-state-text">Your day is clear!</div>
+          <div class="empty-state-hint">Click anywhere or press Alt+N to add an event</div>
+        </div>
+      </div>
     </div>
+  </div>
+
+  <!-- Help Badge -->
+  <div class="help-badge" onclick="showHelp()" title="Keyboard shortcuts (?)">
+    ❓
   </div>
 </div>
 
@@ -898,7 +1077,7 @@
       <button class="modal-close" onclick="closeAutoScheduleModal()">✕</button>
     </div>
 
-    <p style="color: var(--text-secondary); margin-bottom: 20px; font-size: 14px;">
+    <p style="color: hsl(var(--bc) / 0.7); margin-bottom: 20px; font-size: 14px;">
       Automatically schedule unscheduled tasks within your preferred time window.
     </p>
 
@@ -928,10 +1107,55 @@
       <button class="modal-close" onclick="closeResultModal()">✕</button>
     </div>
 
-    <div id="resultMessage" style="padding: 20px 0; color: var(--text-secondary); line-height: 1.6;"></div>
+    <div id="resultMessage" style="padding: 20px 0; color: hsl(var(--bc) / 0.7); line-height: 1.6;"></div>
 
     <div class="modal-actions">
       <button class="btn btn-primary btn-sm" onclick="closeResultModal()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">⌨️ Keyboard Shortcuts & Help</h3>
+      <button class="modal-close" onclick="closeHelpModal()">✕</button>
+    </div>
+
+    <div class="help-content">
+      <div class="help-section">
+        <h4>🗓️ Navigation</h4>
+        <ul class="help-list">
+          <li><kbd>Alt</kbd> + <kbd>←</kbd> Previous day</li>
+          <li><kbd>Alt</kbd> + <kbd>→</kbd> Next day</li>
+          <li><kbd>Alt</kbd> + <kbd>T</kbd> Jump to today</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h4>✏️ Actions</h4>
+        <ul class="help-list">
+          <li><kbd>Alt</kbd> + <kbd>N</kbd> Create new event</li>
+          <li><kbd>Alt</kbd> + <kbd>A</kbd> Auto-schedule tasks</li>
+          <li><kbd>Esc</kbd> Close any modal</li>
+        </ul>
+      </div>
+
+      <div class="help-section">
+        <h4>🖱️ Tips</h4>
+        <ul class="help-list">
+          <li>Click anywhere on the timeline to create an event</li>
+          <li>Drag events to reschedule them</li>
+          <li>The red line shows current time</li>
+          <li>Blue events are from your calendar</li>
+          <li>Auto-schedule fills gaps with pending tasks</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary btn-sm" onclick="closeHelpModal()">Got it!</button>
     </div>
   </div>
 </div>
@@ -972,12 +1196,47 @@ function init() {
     }
   });
 
-  // Close modal on escape
+  // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
+    // Close modals on escape
     if (e.key === 'Escape') {
       closeModal();
       closeAutoScheduleModal();
       closeResultModal();
+      closeHelpModal();
+      return;
+    }
+    
+    // Navigation shortcuts (Alt key)
+    if (e.altKey) {
+      switch(e.key.toLowerCase()) {
+        case 'arrowleft':
+          e.preventDefault();
+          prevDay();
+          break;
+        case 'arrowright':
+          e.preventDefault();
+          nextDay();
+          break;
+        case 't':
+          e.preventDefault();
+          today();
+          break;
+        case 'n':
+          e.preventDefault();
+          newEvent();
+          break;
+        case 'a':
+          e.preventDefault();
+          autoSchedule();
+          break;
+      }
+    }
+    
+    // Help modal on ?
+    if (e.key === '?' && !e.target.matches('input, textarea')) {
+      e.preventDefault();
+      showHelp();
     }
   });
 }
@@ -1099,6 +1358,14 @@ function render() {
   document.querySelectorAll('.event-card').forEach(el => el.remove());
   
   const grid = document.getElementById('grid');
+  const emptyState = document.getElementById('emptyState');
+  
+  // Show/hide empty state
+  if (events.length === 0) {
+    emptyState.style.display = 'block';
+  } else {
+    emptyState.style.display = 'none';
+  }
   events.forEach(ev => {
     const card = document.createElement('div');
     card.className = 'event-card';
@@ -1287,6 +1554,10 @@ function newEvent(startMin = null) {
   
   document.getElementById('modal').classList.add('active');
   document.getElementById('eventTitle').focus();
+  
+  // Add pulse animation to button that was clicked
+  event.currentTarget?.classList.add('btn-animate');
+  setTimeout(() => event.currentTarget?.classList.remove('btn-animate'), 600);
 }
 
 function editEvent(id) {
@@ -1366,6 +1637,10 @@ function quickDelete(id) {
 }
 
 async function autoSchedule() {
+  // Add pulse animation to button that was clicked
+  event.currentTarget?.classList.add('btn-animate');
+  setTimeout(() => event.currentTarget?.classList.remove('btn-animate'), 600);
+  
   document.getElementById('autoScheduleModal').classList.add('active');
 }
 
@@ -1449,12 +1724,87 @@ function closeResultModal() {
   document.getElementById('resultModal').classList.remove('active');
 }
 
+function showHelp() {
+  document.getElementById('helpModal').classList.add('active');
+}
+
+function closeHelpModal() {
+  document.getElementById('helpModal').classList.remove('active');
+}
+
 function closeModal() {
   document.getElementById('modal').classList.remove('active');
   editingId = null;
 }
 
+// Show toast notification
+function showToast(message, isSuccess = true) {
+  const toast = document.createElement('div');
+  toast.className = 'toast-notification';
+  toast.style.cssText = `
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    padding: 16px 24px;
+    background: ${isSuccess ? 'hsl(var(--su))' : 'hsl(var(--er))'};
+    color: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    z-index: 9999;
+    font-weight: 600;
+    animation: slideInRight 0.3s ease;
+    max-width: 320px;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideOutRight 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
+
+<style>
+@keyframes slideInRight {
+  from {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(400px);
+    opacity: 0;
+  }
+}
+
+@keyframes buttonPulse {
+  0% {
+    box-shadow: 0 0 0 0 hsl(var(--p) / 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px hsl(var(--p) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 hsl(var(--p) / 0);
+  }
+}
+
+.btn-animate {
+  animation: buttonPulse 0.6s ease-out;
+}
+</style>
 
 {% endblock %}

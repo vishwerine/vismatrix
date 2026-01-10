@@ -483,6 +483,7 @@
   let isJoinedSession = false;
   let sessionSyncInterval = null;
   let isHost = false;
+  let hasShownCompletion = false;  // Track if completion dialog shown for current cycle
   
   const MODES = {
     work: { duration: 25 * 60, label: 'Work Session', color: 'primary' },
@@ -554,6 +555,7 @@
     const modeConfig = MODES[mode];
     totalSeconds = modeConfig.duration;
     remainingSeconds = totalSeconds;
+    hasShownCompletion = false;  // Reset completion flag for new cycle
     
     // Update UI
     updateDisplay();
@@ -662,6 +664,19 @@
 
   // Complete session
   function completeSession() {
+    // Prevent repeated completion dialogs
+    if (hasShownCompletion) {
+      return;
+    }
+    
+    // For joined sessions (non-host), don't show completion dialogs
+    if (isJoinedSession && !isHost) {
+      pauseTimer();
+      hasShownCompletion = true;
+      return;
+    }
+    
+    hasShownCompletion = true;
     pauseTimer();
     
     // Play notification sound (optional, browser may require user interaction)
@@ -691,7 +706,7 @@
         }
       }, 1000);
     } else {
-      completionMessage.textContent = 'Break complete! Ready to focus again? 💪';
+      completionMessage.textContent = 'Break complete! Ready to focus again! 💪';
       completionAlert.classList.remove('hidden');
       
       // Suggest work session
@@ -1094,6 +1109,7 @@
           const modeConfig = MODES[sessionState.mode];
           totalSeconds = modeConfig.duration;
           timerLabel.textContent = modeConfig.label;
+          hasShownCompletion = false;  // Reset completion flag when mode changes
           
           // Update button states
           document.getElementById('workModeBtn').classList.toggle('btn-primary', sessionState.mode === 'work');
@@ -1156,6 +1172,7 @@
             const sessionDuration = sessionState.duration * 60;
             remainingSeconds = sessionDuration;
             totalSeconds = sessionDuration;
+            hasShownCompletion = false;  // Reset completion flag on timer reset
             completionAlert.classList.add('hidden');
             logForm.classList.add('hidden');
           } else if (sessionState.ended_at && sessionState.started_at) {

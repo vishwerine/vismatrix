@@ -21,11 +21,9 @@
           <i class="bi bi-person-badge" aria-hidden="true"></i>
           <span>
             <span id="friend-count-display">
-              <span id="friend-count-visible">{{ friends_data|length|default:0 }}</span>
-              <span id="friend-count-separator"> of </span>
-              <span id="friend-count-total" data-count="{{ friends_data|length|default:0 }}">{{ friends_data|length|default:0 }}</span>
+              <span id="friend-count-visible">{{ total_friends_count|default:0 }}</span>
             </span>
-            friend<span id="friend-plural">{% if friends_data|length != 1 %}s{% endif %}</span>
+            friend<span id="friend-plural">{% if total_friends_count != 1 %}s{% endif %}</span>
           </span>
         </p>
       </div>
@@ -201,6 +199,64 @@
     {% endif %}
   </main>
 
+  <!-- Pagination -->
+  {% if page_obj.has_other_pages %}
+  <div class="max-w-6xl mx-auto mt-8 md:mt-12">
+    <div class="flex justify-center items-center gap-2">
+      <!-- Previous Button -->
+      {% if page_obj.has_previous %}
+      <a href="?page={{ page_obj.previous_page_number }}"
+         class="btn btn-sm btn-outline gap-1"
+         style="border-color: var(--border); color: var(--text); background: transparent;">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Previous</span>
+      </a>
+      {% else %}
+      <button class="btn btn-sm btn-disabled gap-1">
+        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+        <span class="hidden sm:inline">Previous</span>
+      </button>
+      {% endif %}
+
+      <!-- Page Numbers -->
+      <div class="flex gap-1">
+        {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+            <button class="btn btn-sm btn-primary" disabled>{{ num }}</button>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <a href="?page={{ num }}"
+               class="btn btn-sm btn-outline"
+               style="border-color: var(--border); color: var(--text); background: transparent;">
+              {{ num }}
+            </a>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Next Button -->
+      {% if page_obj.has_next %}
+      <a href="?page={{ page_obj.next_page_number }}"
+         class="btn btn-sm btn-outline gap-1"
+         style="border-color: var(--border); color: var(--text); background: transparent;">
+        <span class="hidden sm:inline">Next</span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </a>
+      {% else %}
+      <button class="btn btn-sm btn-disabled gap-1">
+        <span class="hidden sm:inline">Next</span>
+        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+      </button>
+      {% endif %}
+    </div>
+
+    <!-- Page Info -->
+    <p class="text-center mt-3 text-xs md:text-sm" style="color: var(--muted);">
+      Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+      ({{ page_obj.paginator.count }} friend{{ page_obj.paginator.count|pluralize }})
+    </p>
+  </div>
+  {% endif %}
+
   <!-- NOTE: Remove the page-level bottom nav here, because base.html already provides the mobile nav.
        Keeping both results in two stacked nav bars on mobile. -->
 
@@ -223,17 +279,6 @@
 
     function updateVisibleCount() {
       const visible = Array.from(friendCards).filter(card => !card.classList.contains('hidden')).length;
-      const total = friendCards.length;
-
-      if (visibleCount) visibleCount.textContent = visible;
-      
-      if (visible === total) {
-        if (countSeparator) countSeparator.classList.add('hidden');
-        if (totalCount) totalCount.classList.add('hidden');
-      } else {
-        if (countSeparator) countSeparator.classList.remove('hidden');
-        if (totalCount) totalCount.classList.remove('hidden');
-      }
 
       if (pluralSpan) {
         pluralSpan.textContent = visible === 1 ? '' : 's';
@@ -349,26 +394,13 @@
 
   function updateFriendCount() {
     const visibleCount = document.getElementById('friend-count-visible');
-    const totalCount = document.getElementById('friend-count-total');
-    const countSeparator = document.getElementById('friend-count-separator');
     
-    if (!totalCount) return;
+    if (!visibleCount) return;
 
-    const current = parseInt(totalCount.dataset.count || '0', 10);
+    const current = parseInt(visibleCount.textContent || '0', 10);
     const next = Math.max(current - 1, 0);
-
-    totalCount.dataset.count = next.toString();
-    totalCount.textContent = next.toString();
     
-    if (visibleCount) {
-      visibleCount.textContent = next.toString();
-    }
-
-    // Hide separator if all friends are visible
-    if (countSeparator && next === parseInt(visibleCount?.textContent || '0', 10)) {
-      countSeparator.classList.add('hidden');
-      totalCount.classList.add('hidden');
-    }
+    visibleCount.textContent = next.toString();
 
     const pluralSpan = document.getElementById('friend-plural');
     if (pluralSpan) {
