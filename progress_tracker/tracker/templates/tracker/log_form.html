@@ -42,18 +42,6 @@
       </div>
     </header>
 
-    <!-- Messages -->
-    {% if messages %}
-    <div class="mt-4 space-y-3" aria-live="polite">
-      {% for message in messages %}
-      <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}">
-        <i class="bi {% if message.tags == 'success' %}bi-check-circle-fill{% elif message.tags == 'error' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %} text-lg" aria-hidden="true"></i>
-        <span class="text-sm">{{ message }}</span>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-
     <!-- Form card -->
     <section class="card border border-base-200 bg-base-100 mt-6" aria-label="Log activity form">
       <div class="card-body p-5 sm:p-6">

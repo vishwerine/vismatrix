@@ -17,18 +17,6 @@
     </div>
   </header>
 
-  <!-- Messages Display -->
-  {% if messages %}
-  <div class="space-y-2" role="alert">
-    {% for message in messages %}
-    <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %} shadow-sm">
-      <i class="bi {% if message.tags == 'success' %}bi-check-circle{% elif message.tags == 'error' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>
-      <span>{{ message }}</span>
-    </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
   <!-- Profile Form Card -->
   <section class="card border border-base-200 bg-base-100" aria-labelledby="profile-form-title">
     <div class="card-body p-6">

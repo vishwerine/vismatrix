@@ -8,16 +8,27 @@
   
   <!-- Header -->
   <header class="flex flex-col gap-1" aria-label="Notifications header">
-    <h1 class="text-2xl md:text-3xl font-black text-base-content flex items-center gap-2">
-      <i class="bi bi-bell" aria-hidden="true"></i>
-      <span>Notifications</span>
-    </h1>
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl md:text-3xl font-black text-base-content flex items-center gap-2">
+        <i class="bi bi-bell" aria-hidden="true"></i>
+        <span>Notifications</span>
+      </h1>
+      {% if notifications %}
+      <form method="post" action="{% url 'clear_all_notifications' %}" onsubmit="return confirm('Clear all read notifications?')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline btn-sm gap-2">
+          <i class="bi bi-trash"></i>
+          Clear Read
+        </button>
+      </form>
+      {% endif %}
+    </div>
     <div class="flex flex-wrap items-center gap-3 text-sm md:text-base text-base-content/70">
       <p>All your updates in one place</p>
       {% if notifications.count > 0 %}
       <span class="inline-flex items-center gap-1 text-xs md:text-sm px-2 py-1 rounded-full bg-primary/10 text-primary">
         <i class="bi bi-bell-fill" aria-hidden="true"></i>
-        <span>{{ notifications.count }} system</span>
+        <span>{{ notifications.count }} notification{{ notifications.count|pluralize }}</span>
       </span>
       {% endif %}
       {% if total_stars > 0 %}
@@ -82,7 +93,7 @@
     <div class="card-body p-4 md:p-6">
       <h2 class="card-title text-lg flex items-center gap-2">
         <i class="bi bi-bell-fill text-primary" aria-hidden="true"></i>
-        <span>System Notifications</span>
+        <span>All Notifications</span>
       </h2>
 
       <div class="space-y-3 mt-4">
@@ -203,6 +214,13 @@
     </div>
     {% endfor %}
       </div>
+      
+      <!-- Load More (if needed) -->
+      {% if notifications|length >= 50 %}
+      <div class="text-center mt-6">
+        <p class="text-sm text-base-content/70">Showing 50 most recent notifications</p>
+      </div>
+      {% endif %}
     </div>
   </section>
   {% endif %}

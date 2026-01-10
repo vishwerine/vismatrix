@@ -30,17 +30,6 @@
       <form method="post" class="space-y-5" novalidate>
         {% csrf_token %}
 
-        {% if messages %}
-        <div class="space-y-2" role="alert">
-          {% for message in messages %}
-          <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %} shadow-sm">
-            <i class="bi {% if message.tags == 'success' %}bi-check-circle{% elif message.tags == 'error' %}bi-exclamation-triangle{% else %}bi-info-circle{% endif %}" aria-hidden="true"></i>
-            <span>{{ message }}</span>
-          </div>
-          {% endfor %}
-        </div>
-        {% endif %}
-
         <!-- Apple ID Field -->
         <div class="form-control w-full">
           <label for="apple_id" class="label">

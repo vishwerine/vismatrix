@@ -4686,7 +4686,7 @@ def complete_mentorship(request, request_id):
 
 @login_required
 def notifications_list(request):
-    """List all notifications for the user - combined view with system notifications, stars, and messages."""
+    """List all notifications for the user - unified view with system notifications, app notifications, stars, and messages."""
     from .models import Notification, UserNotification
     from datetime import timedelta
     
@@ -4694,7 +4694,10 @@ def notifications_list(request):
     old_notifications = Notification.objects.filter(user=request.user).select_related('mentorship_request', 'friend_request', 'friend_request__from_user')
     new_notifications = UserNotification.objects.filter(user=request.user).order_by('-created_at')
     
-    # Combine both notification types
+    # Count unread app notifications before marking as read
+    unread_app_notifications_count = new_notifications.filter(is_read=False).count()
+    
+    # Combine both notification types for system notifications section
     system_notifications = list(new_notifications) + list(old_notifications)
     system_notifications.sort(key=lambda x: x.created_at, reverse=True)
     
@@ -4803,6 +4806,7 @@ def notifications_list(request):
         'total_stars': len(all_stars),
         'unread_messages': unread_messages,
         'total_unread_messages': len(unread_messages),
+        'unread_app_notifications': unread_app_notifications_count,
     }
     
     return render(request, 'tracker/notifications_list.html', context)
@@ -4830,26 +4834,8 @@ def get_unread_notification_count(request):
 
 @login_required
 def recent_notifications(request):
-    """List all recent app notifications (Django messages stored in DB)."""
-    from .models import UserNotification
-    
-    # Get all notifications for the user
-    notifications = UserNotification.objects.filter(user=request.user)
-    
-    # Count unread
-    unread_count = notifications.filter(is_read=False).count()
-    
-    # Mark all as read when viewed
-    unread_notifications = notifications.filter(is_read=False)
-    for notification in unread_notifications:
-        notification.mark_as_read()
-    
-    context = {
-        'notifications': notifications[:100],  # Limit to 100 most recent
-        'unread_count': unread_count,
-    }
-    
-    return render(request, 'tracker/recent_notifications.html', context)
+    """Redirect to unified notifications page."""
+    return redirect('notifications_list')
 
 
 @login_required
@@ -4860,6 +4846,6 @@ def clear_all_notifications(request):
     if request.method == 'POST':
         deleted_count = UserNotification.objects.filter(user=request.user, is_read=True).delete()[0]
         # Don't use messages.success here to avoid recursion
-        return redirect('recent_notifications')
+        return redirect('notifications_list')
     
-    return redirect('recent_notifications')
+    return redirect('notifications_list')
