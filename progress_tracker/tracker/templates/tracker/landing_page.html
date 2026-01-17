@@ -3,6 +3,30 @@
 <html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
+
+
+
+  <!-- ===================== SEO CORE ===================== -->
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://vismatrix.space/">
+
+<!-- Open Graph -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="VisMatrix.Space — Life OS for Focus, Accountability & AI Coaching">
+<meta property="og:description" content="VisMatrix is a calm productivity Life OS. Plan with a matrix, stay accountable with friends, and get gentle AI coaching.">
+<meta property="og:url" content="https://vismatrix.space/">
+<meta property="og:image" content="{% static 'branding/og-cover.png' %}">
+
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="VisMatrix.Space — Your Life OS">
+<meta name="twitter:description" content="Matrix planning, friends for accountability, and calm AI coaching.">
+<meta name="twitter:image" content="{% static 'branding/og-cover.png' %}">
+
+<!-- Performance -->
+<link rel="preconnect" href="https://cdn.tailwindcss.com">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="VisMatrix - Track your progress with friends">
   <meta name="theme-color" content="#1d4ed8">
@@ -27,24 +51,33 @@
   </script>
 
   <style>
-    [data-theme="light"] { --bg:#fff; --surface:#fff; --border:#e2e8f0; --text:#0f172a; --primary:#1d4ed8; }
-    [data-theme="dark"]  { --bg:#0b1220; --surface:#0f172a; --border:rgb(148 163 184 / 0.22); --text:#e5e7eb; --primary:#60a5fa; }
+    [data-theme="light"] { --bg:#fff; --surface:#fff; --border:#e2e8f0; --text:#0f172a; --primary:#14b8a6; --primary-dark:#0d9488; }
+    [data-theme="dark"]  { --bg:#020617; --surface:#0f172a; --border:rgb(148 163 184 / 0.15); --text:#e2e8f0; --primary:#14b8a6; --primary-dark:#0d9488; }
 
-    body { font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); }
+    body { font-family: system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--text); transition: background-color .3s ease; }
     .animate-slideUp { animation: slideUp .6s ease-out; }
     @keyframes slideUp { from{opacity:0; transform:translateY(20px);} to{opacity:1; transform:translateY(0);} }
     .hover-lift { transition: transform .2s ease, box-shadow .2s ease; }
-    .hover-lift:hover { transform: translateY(-2px); }
+    .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
   </style>
 
   <style>
     #vmLanding{
       --hero-grad:
-        radial-gradient(900px 520px at 18% 15%, rgb(29 78 216 / 0.14), transparent 55%),
-        radial-gradient(900px 520px at 82% 20%, rgb(96 165 250 / 0.12), transparent 52%),
-        radial-gradient(900px 520px at 55% 95%, rgb(34 197 94 / 0.10), transparent 55%);
+        radial-gradient(900px 520px at 50% 0%, rgb(20 184 166 / 0.2), transparent 55%);
     }
-    #vmLanding .vm-hero { background: var(--hero-grad); }
+    #vmLanding .vm-hero { 
+      background: var(--hero-grad); 
+      position: relative;
+    }
+    [data-theme="dark"] #vmLanding .vm-hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, #14b8a6 0, transparent 55%);
+      opacity: 0.15;
+      pointer-events: none;
+    }
     #vmLanding .vm-gridline{
       background-image:
         linear-gradient(to right, rgb(15 23 42 / 0.05) 1px, transparent 1px),
@@ -53,7 +86,7 @@
       mask-image: radial-gradient(closest-side at 50% 38%, rgba(0,0,0,.95), rgba(0,0,0,0));
     }
     #vmLanding .vm-grad-text{
-      background: linear-gradient(135deg, var(--primary) 0%, #60a5fa 60%, #22c55e 100%);
+      background: linear-gradient(135deg, #14b8a6 0%, #06b6d4 50%, #8b5cf6 100%);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
       background-clip:text; color:transparent;
     }
@@ -87,33 +120,46 @@
 
 <body class="bg-base-100">
 
-  <!-- Simple Navigation -->
-  <nav class="navbar bg-base-100 border-b border-base-200 sticky top-0 z-50">
-    <div class="container mx-auto px-4">
-      <div class="flex-1">
-        <a href="/" class="btn btn-ghost text-xl font-bold">
-          <i class="bi bi-graph-up-arrow text-primary"></i>
-          <span class="gradient-text">VisMatrix<span class="text-primary">.space</span></span>
-        </a>
-      </div>
-      <div class="flex-none gap-2">
-        <a href="{% url 'privacy_policy' %}" class="btn btn-ghost btn-sm hidden sm:inline-flex">Privacy</a>
-        <a href="{% url 'terms_of_service' %}" class="btn btn-ghost btn-sm hidden sm:inline-flex">Terms</a>
-        <button id="themeToggle" class="btn btn-ghost btn-sm btn-circle" aria-label="Toggle theme" style="display: inline-flex; align-items: center; justify-content: center;">
+  <!-- Modern Navigation -->
+  <header class="sticky top-0 z-50 border-b backdrop-blur-lg" style="background: rgba(var(--bg), 0.8); border-color: var(--border);">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-2 font-semibold hover:opacity-80 transition-opacity">
+                <img
+          src="{% static 'branding/vismatrixicon.png' %}"
+          alt="VisMatrix icon"
+          class="w-9 h-9 rounded-xl ring-1 theme-bg-logo p-1 object-contain transition-colors duration-300"
+          loading="eager"
+        />
+        <span>VisMatrix<span style="color: var(--primary)">.Space</span></span>
+      </a>
+
+      <nav class="hidden md:flex items-center gap-6 text-sm" style="color: var(--text); opacity: 0.7;">
+        <a href="#features" class="hover:opacity-100 transition-opacity">Features</a>
+        <a href="#how" class="hover:opacity-100 transition-opacity">How it works</a>
+        <a href="#privacy" class="hover:opacity-100 transition-opacity">Privacy</a>
+        {% if user.is_authenticated %}
+          <a href="{% url 'dashboard' %}" class="hover:opacity-100 transition-opacity">Dashboard</a>
+        {% else %}
+          <a href="/accounts/login/" class="hover:opacity-100 transition-opacity">Login</a>
+        {% endif %}
+      </nav>
+
+      <div class="flex items-center gap-3">
+        <button id="themeToggle" class="p-2 rounded-lg hover:bg-slate-800/50 transition-colors" aria-label="Toggle theme">
           <i class="bi bi-moon-stars text-lg" id="themeIcon" aria-hidden="true"></i>
         </button>
         {% if user.is_authenticated %}
-          <a href="{% url 'dashboard' %}" class="btn btn-primary btn-sm gap-2">
-            <i class="bi bi-speedometer2"></i> Dashboard
+          <a href="{% url 'dashboard' %}" class="rounded-lg px-4 py-2 text-sm font-semibold transition-colors" style="background: var(--primary); color: #0f172a;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+            Dashboard
           </a>
         {% else %}
-
-          <a href="/accounts/login/" class="btn btn-ghost btn-sm">Sign In</a>
-          <a href="/accounts/signup/" class="btn btn-primary btn-sm">Start Free</a>
+          <a href="/accounts/signup/" class="rounded-lg px-4 py-2 text-sm font-semibold transition-colors" style="background: var(--primary); color: #0f172a;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+            Get started
+          </a>
         {% endif %}
       </div>
     </div>
-  </nav>
+  </header>
 
   <div class="container mx-auto px-4 py-8 max-w-7xl">
     <div id="vmLanding" class="w-full">
@@ -126,93 +172,46 @@
           <div class="grid lg:grid-cols-2 gap-10 items-center">
 
             <!-- Left -->
-            <div class="animate-slideUp">
-              <div class="flex flex-wrap items-center gap-2 mb-6">
-                <div class="inline-flex items-center gap-2 px-3 py-2 rounded-full vm-pill text-sm">
-                  <span class="badge badge-outline">Calm productivity</span>
-                  <span class="text-base-content/70 hidden sm:inline">Matrix planning • Friends • AI coaching</span>
-                </div>
+            <div class="animate-slideUp space-y-6">
+              <span class="inline-block rounded-full border px-3 py-1 text-xs" style="border-color: var(--border); background: rgba(var(--surface), 0.7); color: var(--primary);">
+                AI-powered personal development OS
+              </span>
 
-                <!-- NEW: Coming soon badge -->
-                <div class="inline-flex items-center gap-2 px-3 py-2 rounded-full vm-pill text-sm vm-soon">
-                  <i class="bi bi-sparkles" aria-hidden="true"></i>
-                  <span class="font-semibold">Agentic AI</span>
-                  <span class="opacity-80">arriving March 2026</span>
-                </div>
-              </div>
-
-              <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-tight">
-                Organise life with <span class="vm-grad-text">clarity</span>,<br class="hidden sm:block" />
-                keep moving with <span class="vm-grad-text">accountability</span>.
+              <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight">
+                Turn long-term goals into<br />
+                <span class="vm-grad-text">daily, AI-guided execution.</span>
               </h1>
 
-              <p class="mt-5 text-lg sm:text-xl text-base-content/70 max-w-xl">
-                VisMatrix<span class="text-primary">.space</span> is your Life OS that turns a messy to-do list into a simple matrix, creates a safe space for friends to keep each other on track,
-                and provides gentle AI feedback that adapts to your schedule.
+              <p class="text-lg sm:text-xl max-w-xl" style="color: var(--text); opacity: 0.8;">
+                VisMatrix<span style="color: var(--primary)">.Space</span> helps you break goals into projects, track progress over time,
+                and adapt plans using AI — so execution stays clear, focused, and sustainable.
               </p>
 
-              <div class="mt-8 flex flex-wrap gap-3">
+              <div class="flex flex-wrap gap-3">
                 {% if user.is_authenticated %}
-                  <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg gap-2">
-                    <i class="bi bi-speedometer2" aria-hidden="true"></i> Open Dashboard
+                  <a href="{% url 'dashboard' %}" class="rounded-xl px-5 py-3 font-semibold transition-all" style="background: var(--primary); color: #0f172a;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    Open Dashboard
                   </a>
-                  <a href="#features" class="btn btn-ghost btn-lg gap-2">
-                    <i class="bi bi-arrow-down" aria-hidden="true"></i> Explore Features
+                  <a href="#features" class="rounded-xl border px-5 py-3 transition-all" style="border-color: var(--border); color: var(--text);" onmouseover="this.style.background='rgba(148, 163, 184, 0.1)'" onmouseout="this.style.background='transparent'">
+                    Explore Features
                   </a>
                 {% else %}
-                  <a href="/accounts/signup/" class="btn btn-primary btn-lg gap-2">
-                    <i class="bi bi-rocket-takeoff" aria-hidden="true"></i> Start Free
+                  <a href="/accounts/signup/" class="rounded-xl px-5 py-3 font-semibold transition-all" style="background: var(--primary); color: #0f172a;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                    Start free
                   </a>
-                  <a href="/accounts/login/" class="btn btn-outline btn-lg gap-2">
-                    <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Sign In
+                  <a href="#features" class="rounded-xl border px-5 py-3 transition-all" style="border-color: var(--border); color: var(--text);" onmouseover="this.style.background='rgba(148, 163, 184, 0.1)'" onmouseout="this.style.background='transparent'">
+                    View example workspace
                   </a>
                 {% endif %}
               </div>
 
-              <!-- Updated: Calendar sync includes Google + iCloud -->
-              <div class="mt-7 flex flex-wrap gap-4 text-sm text-base-content/70">
-                <span class="inline-flex items-center gap-2">
-                  <i class="bi bi-shield-check text-primary" aria-hidden="true"></i> Privacy-first controls
-                </span>
-                <span class="inline-flex items-center gap-2">
-                  <i class="bi bi-calendar-event text-primary" aria-hidden="true"></i> Optional calendar sync (Google & iCloud)
-                </span>
-                <span class="inline-flex items-center gap-2">
-                  <i class="bi bi-people text-info" aria-hidden="true"></i> Accountability with friends
-                </span>
+              <div class="flex flex-wrap gap-4 text-sm" style="color: var(--text); opacity: 0.6;">
+                <span>Built for students and professionals</span>
+                <span>Designed for deep work</span>
+                <span>Outcome-focused system</span>
               </div>
 
-              <!-- KPIs -->
-              <div class="mt-8 grid grid-cols-2 sm:grid-cols-3 gap-3 max-w-xl">
-                <div class="vm-kpi rounded-2xl p-4">
-                  <div class="text-xs text-base-content/60">Focus</div>
-                  <div class="font-extrabold text-lg">Matrix</div>
-                  <div class="text-xs text-base-content/60 mt-1">Important vs urgent</div>
-                </div>
-                <div class="vm-kpi rounded-2xl p-4">
-                  <div class="text-xs text-base-content/60">Support</div>
-                  <div class="font-extrabold text-lg">Friends</div>
-                  <div class="text-xs text-base-content/60 mt-1">Light check-ins</div>
-                </div>
-                <div class="vm-kpi rounded-2xl p-4 col-span-2 sm:col-span-1">
-                  <div class="text-xs text-base-content/60">Guidance</div>
-                  <div class="font-extrabold text-lg">AI coach</div>
-                  <div class="text-xs text-base-content/60 mt-1">Calm feedback</div>
-                </div>
-              </div>
 
-              <!-- Integration chips -->
-              <div class="mt-6 flex flex-wrap gap-2">
-                <span class="badge badge-outline gap-2">
-                  <i class="bi bi-google" aria-hidden="true"></i> Google Calendar
-                </span>
-                <span class="badge badge-outline gap-2">
-                  <i class="bi bi-apple" aria-hidden="true"></i> iCloud Calendar
-                </span>
-                <span class="badge vm-soon gap-2">
-                  <i class="bi bi-robot" aria-hidden="true"></i> Agentic AI (March 2026)
-                </span>
-              </div>
             </div>
 
             <!-- Right preview -->
@@ -299,201 +298,114 @@
       </section>
 
       <!-- FEATURES -->
-      <section id="features" class="mt-14">
+      <section id="features" class="mt-20 space-y-10">
         <div class="text-center max-w-3xl mx-auto">
-          <h2 class="text-3xl sm:text-4xl font-black">
-            Built for <span class="gradient-text">sustainable momentum</span>
+          <h2 class="text-3xl sm:text-4xl font-semibold tracking-tight">
+            Everything you need to <span class="vm-grad-text">execute with clarity</span>
           </h2>
-          <p class="mt-3 text-lg text-base-content/70">
-            Everything you need to plan, track, reflect — and keep going without burnout.
-          </p>
         </div>
 
-        <div class="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div class="card hover-lift">
-            <div class="card-body">
-              <div class="flex items-start gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <i class="bi bi-grid-3x3-gap text-primary text-2xl" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <h3 class="font-black text-lg">Task Matrix</h3>
-                  <p class="text-base-content/70 mt-1">Prioritise with clarity (important vs urgent), then act on the next step.</p>
-                </div>
-              </div>
-            </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
+          <div>
+            <h3 class="font-semibold mb-2">Agentic AI</h3>
+            <p class="text-sm mb-3" style="color: var(--text); opacity: 0.7;">AI that plans, adapts, and course-corrects.</p>
+            <ul class="text-sm space-y-1" style="color: var(--text); opacity: 0.6;">
+              <li>• Breaks goals into steps</li>
+              <li>• Adjusts plans automatically</li>
+              <li>• Weekly focus guidance</li>
+            </ul>
           </div>
 
-          <div class="card hover-lift">
-            <div class="card-body">
-              <div class="flex items-start gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center">
-                  <i class="bi bi-journal-text text-success text-2xl" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <h3 class="font-black text-lg">Daily Logs</h3>
-                  <p class="text-base-content/70 mt-1">Track what you did (not just planned) with notes, categories, and time.</p>
-                </div>
-              </div>
-            </div>
+          <div>
+            <h3 class="font-semibold mb-2">Guided execution</h3>
+            <p class="text-sm mb-3" style="color: var(--text); opacity: 0.7;">Structure without rigidity.</p>
+            <ul class="text-sm space-y-1" style="color: var(--text); opacity: 0.6;">
+              <li>• Clear roadmaps</li>
+              <li>• Milestones & streaks</li>
+              <li>• Momentum over guilt</li>
+            </ul>
           </div>
 
-          <div class="card hover-lift">
-            <div class="card-body">
-              <div class="flex items-start gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-error/10 flex items-center justify-center">
-                  <i class="bi bi-calendar-event text-error text-2xl" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <h3 class="font-black text-lg">Calendar Sync (Google & iCloud)</h3>
-                  <p class="text-base-content/70 mt-1">
-                    Optional sync to reflect on how your time is spent and turn events into activity logs.
-                  </p>
-                  <div class="mt-3 flex flex-wrap gap-2">
-                    <span class="badge badge-outline gap-2"><i class="bi bi-google" aria-hidden="true"></i> Google</span>
-                    <span class="badge badge-outline gap-2"><i class="bi bi-apple" aria-hidden="true"></i> iCloud</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div>
+            <h3 class="font-semibold mb-2">Visual progress</h3>
+            <p class="text-sm mb-3" style="color: var(--text); opacity: 0.7;">See effort turn into results.</p>
+            <ul class="text-sm space-y-1" style="color: var(--text); opacity: 0.6;">
+              <li>• Timelines & trends</li>
+              <li>• Burnout prevention</li>
+              <li>• Long-term clarity</li>
+            </ul>
           </div>
 
-          <div class="card hover-lift">
-            <div class="card-body">
-              <div class="flex items-start gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-info/10 flex items-center justify-center">
-                  <i class="bi bi-people text-info text-2xl" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <h3 class="font-black text-lg">Friends & Reactions</h3>
-                  <p class="text-base-content/70 mt-1">Encouragement that feels human — share selectively and stay motivated.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="card hover-lift">
-            <div class="card-body">
-              <div class="flex items-start gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-secondary/10 flex items-center justify-center">
-                  <i class="bi bi-magic text-secondary text-2xl" aria-hidden="true"></i>
-                </div>
-                <div>
-                  <h3 class="font-black text-lg">AI Coach</h3>
-                  <p class="text-base-content/70 mt-1">Personalised feedback that helps you adjust plans without guilt.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- NEW: Agentic AI feature tile -->
-          <div class="card hover-lift border border-success/25 bg-success/5">
-            <div class="card-body">
-              <div class="flex items-start gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-success/10 flex items-center justify-center">
-                  <i class="bi bi-robot text-success text-2xl" aria-hidden="true"></i>
-                </div>
-                <div class="min-w-0">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <h3 class="font-black text-lg">Agentic AI (Coming March 2026)</h3>
-                    <span class="badge vm-soon badge-sm">Roadmap</span>
-                  </div>
-                  <p class="text-base-content/70 mt-1">
-                    Your AI will help organise your week end-to-end: propose plans, schedule focus blocks, and keep you on track
-                    using your tasks + calendar context (with your approval).
-                  </p>
-                  <ul class="mt-3 text-sm text-base-content/70 space-y-1">
-                    <li class="flex gap-2"><i class="bi bi-check2-circle text-success" aria-hidden="true"></i><span>Auto-build weekly plan from goals</span></li>
-                    <li class="flex gap-2"><i class="bi bi-check2-circle text-success" aria-hidden="true"></i><span>Suggest time blocks based on calendar</span></li>
-                    <li class="flex gap-2"><i class="bi bi-check2-circle text-success" aria-hidden="true"></i><span>Smart nudges + accountability prompts</span></li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+          <div>
+            <h3 class="font-semibold mb-2">Built for outcomes</h3>
+            <p class="text-sm mb-3" style="color: var(--text); opacity: 0.7;">Not another checklist app.</p>
+            <ul class="text-sm space-y-1" style="color: var(--text); opacity: 0.6;">
+              <li>• Goals first</li>
+              <li>• Flexible systems</li>
+              <li>• Designed for years</li>
+            </ul>
           </div>
 
         </div>
       </section>
 
-      <!-- PRIVACY (updated) -->
-      <section id="privacy" class="mt-16">
-        <div class="card bg-base-100 border border-base-200 hover-lift">
-          <div class="card-body p-6 sm:p-8">
-            <div class="flex items-start gap-4">
-              <div class="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <i class="bi bi-shield-check text-primary text-2xl" aria-hidden="true"></i>
-              </div>
-              <div class="min-w-0">
-                <h2 class="text-2xl sm:text-3xl font-black">Privacy, by design</h2>
-                <p class="mt-2 text-base-content/70">
-                  You decide what to track and what to share. Calendar sync is optional (Google or iCloud), and you can disconnect at any time.
-                  Agentic AI (March 2026) will always require your approval before taking actions.
-                </p>
-
-                <div class="mt-6 flex flex-wrap gap-3">
-                  <a href="{% url 'privacy_policy' %}" class="btn btn-primary gap-2">
-                    <i class="bi bi-shield-check" aria-hidden="true"></i> Privacy Policy
-                  </a>
-                  <a href="{% url 'terms_of_service' %}" class="btn btn-outline gap-2">
-                    <i class="bi bi-file-text" aria-hidden="true"></i> Terms
-                  </a>
-                </div>
-
-                <div class="alert alert-info mt-6">
-                  <i class="bi bi-info-circle" aria-hidden="true"></i>
-                  <div class="text-sm">
-                    If you connect a calendar (Google or iCloud), VisMatrix uses your events to help create activity logs and reflections.
-                    You can revoke access any time.
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
+      <!-- HOW IT WORKS -->
+      <section id="how" class="border-t py-20" style="border-color: var(--border); background: rgba(var(--surface), 0.4);">
+        <div class="max-w-7xl mx-auto px-4 grid md:grid-cols-4 gap-10 text-sm">
+          <div><strong>1.</strong> Define goals & life areas</div>
+          <div><strong>2.</strong> AI builds a roadmap</div>
+          <div><strong>3.</strong> Track progress naturally</div>
+          <div><strong>4.</strong> AI reviews & adapts</div>
         </div>
       </section>
+
+      <!-- PRIVACY -->
 
       <!-- FINAL CTA -->
-      <section class="mt-16">
-        <div class="vm-soft-card rounded-3xl p-7 sm:p-10 text-center">
-          <h2 class="text-3xl sm:text-4xl font-black">
-            Start small. Stay consistent. <span class="vm-grad-text">Feel supported.</span>
+      <section class="border-t py-20" style="border-color: var(--border);">
+        <div class="max-w-4xl mx-auto px-4 text-center space-y-4">
+          <h2 class="text-3xl font-semibold">
+            Your goals deserve a system — not hope.
           </h2>
-          <p class="mt-3 text-lg text-base-content/70 max-w-2xl mx-auto">
-            Build momentum with matrix planning, friends who keep you accountable, and calm AI coaching that adapts to you.
+          <p style="color: var(--text); opacity: 0.7;">
+            Start in minutes. No credit card required.
           </p>
-
-          <div class="mt-7 flex flex-wrap justify-center gap-3">
-            {% if user.is_authenticated %}
-              <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg gap-2">
-                <i class="bi bi-speedometer2" aria-hidden="true"></i> Open Dashboard
-              </a>
-            {% else %}
-              <a href="/accounts/signup/" class="btn btn-primary btn-lg gap-2">
-                <i class="bi bi-rocket-takeoff" aria-hidden="true"></i> Start Free
-              </a>
-              <a href="/accounts/login/" class="btn btn-ghost btn-lg gap-2">
-                <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i> Sign In
-              </a>
-            {% endif %}
-          </div>
-
-          <div class="mt-4 text-sm text-base-content/60">
-            No pressure. No judgement. Just progress.
-          </div>
+          {% if user.is_authenticated %}
+            <a href="{% url 'dashboard' %}" class="inline-block rounded-xl px-6 py-3 font-semibold transition-all" style="background: var(--primary); color: #0f172a;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              Open Dashboard
+            </a>
+          {% else %}
+            <a href="/accounts/signup/" class="inline-block rounded-xl px-6 py-3 font-semibold transition-all" style="background: var(--primary); color: #0f172a;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+              Start free
+            </a>
+            <p class="text-sm" style="color: var(--text); opacity: 0.6;">
+              Already have an account? <a href="/accounts/login/" class="underline">Login</a>
+            </p>
+          {% endif %}
         </div>
       </section>
 
     </div>
   </div>
 
-  <footer class="mt-16 py-8 text-center text-sm text-base-content/60 border-t border-base-200">
-    <div class="container mx-auto px-4">
-      <p>
-        © 2025 VisMatrix.space •
-        <a href="{% url 'privacy_policy' %}" class="link">Privacy</a> •
-        <a href="{% url 'terms_of_service' %}" class="link">Terms</a>
-      </p>
+  <footer class="border-t py-10" style="border-color: var(--border);">
+    <div class="max-w-7xl mx-auto px-4 space-y-6">
+      <div class="flex flex-col md:flex-row justify-between items-center gap-6 text-sm" style="color: var(--text); opacity: 0.6;">
+        <p>© 2026 VisMatrix.Space — AI-powered personal development</p>
+        <div class="flex gap-4">
+          <a href="#features" class="hover:opacity-100 transition-opacity">Features</a>
+          <a href="{% url 'privacy_policy' %}" class="hover:opacity-100 transition-opacity">Privacy</a>
+          <a href="{% url 'terms_of_service' %}" class="hover:opacity-100 transition-opacity">Terms</a>
+        </div>
+      </div>
+      <div class="flex justify-center">
+        <a href="https://buymeacoffee.com/vishwerine" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 px-4 py-2 rounded-lg transition-all hover:opacity-90" style="background: #FFDD00; color: #000000; font-weight: 600; font-size: 0.875rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20.216 6.415l-.132-.666c-.119-.598-.388-1.163-1.001-1.379-.197-.069-.42-.098-.57-.241-.152-.143-.196-.366-.231-.572-.065-.378-.125-.756-.192-1.133-.057-.325-.102-.69-.25-.987-.195-.4-.597-.634-.996-.788a5.723 5.723 0 00-.626-.194c-1-.263-2.05-.36-3.077-.416a25.834 25.834 0 00-3.7.062c-.915.083-1.88.184-2.75.5-.318.116-.646.256-.888.501-.297.302-.393.77-.177 1.146.154.267.415.456.692.58.36.162.737.284 1.123.366 1.075.238 2.189.331 3.287.37 1.218.05 2.437.01 3.65-.118.299-.033.598-.073.896-.119.352-.054.578-.513.474-.834-.124-.383-.457-.531-.834-.473-.466.074-.96.108-1.382.146-1.177.08-2.358.082-3.536.006a22.228 22.228 0 01-1.157-.107c-.086-.01-.18-.025-.258-.036-.243-.036-.484-.08-.724-.13-.111-.027-.111-.185 0-.212h.005c.277-.06.557-.108.838-.147h.002c.131-.009.263-.032.394-.048a25.076 25.076 0 013.426-.12c.674.019 1.347.067 2.017.144l.228.031c.267.04.533.088.798.145.392.085.895.113 1.07.542.055.137.08.288.111.431l.319 1.484a.237.237 0 01-.199.284h-.003c-.037.006-.075.01-.112.015a36.704 36.704 0 01-4.743.295 37.059 37.059 0 01-4.699-.304c-.14-.017-.293-.042-.417-.06-.326-.048-.649-.108-.973-.161-.393-.065-.768-.032-1.123.161-.29.16-.527.404-.675.701-.154.316-.199.66-.267 1-.069.34-.176.707-.135 1.056.087.753.613 1.365 1.37 1.502a39.69 39.69 0 0011.343.376.483.483 0 01.535.53l-.071.697-1.018 9.907c-.041.41-.047.832-.125 1.237-.122.637-.553 1.028-1.182 1.171-.577.131-1.165.2-1.756.205-.656.004-1.31-.025-1.964-.06-.356-.02-.717-.03-1.076-.044-1.793-.082-3.6-.169-5.394-.13-1.208.027-2.416.105-3.62.192-.315.022-.632.04-.946.07-.131.012-.263.024-.393.039-.27.031-.535.06-.848.024-.497-.057-1.007-.157-1.462-.354-.48-.208-.862-.577-.982-1.075-.091-.365-.122-.738-.179-1.107-.162-1.036-.346-2.068-.519-3.102-.069-.415-.158-.826-.191-1.247-.028-.355-.057-.716-.016-1.07.044-.38.15-.75.315-1.097.33-.695.846-1.303 1.53-1.74a4.804 4.804 0 011.657-.653c.636-.134 1.287-.196 1.938-.24a27.807 27.807 0 013.875-.069c.36.012.72.03 1.08.05 1.186.065 2.366.18 3.55.21.78.02 1.56.01 2.34-.025a36.9 36.9 0 003.847-.305c.018-.002.037-.005.055-.008a.644.644 0 00.535-.623v-.03c0-.041.015-.08.015-.12v-.001l.114-1.118z"/>
+          </svg>
+          Buy me a coffee
+        </a>
+      </div>
     </div>
   </footer>
 
