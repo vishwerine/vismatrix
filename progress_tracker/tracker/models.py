@@ -834,3 +834,57 @@ class UserProfile(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.timezone}"
+
+
+class LandingPageVisitor(models.Model):
+    """Track visitors to the landing page for analytics"""
+    # Visit information
+    ip_address = models.GenericIPAddressField(help_text="Visitor's IP address")
+    session_key = models.CharField(max_length=40, blank=True, help_text="Django session key")
+    
+    # Browser and device information
+    user_agent = models.TextField(help_text="Full user agent string")
+    browser = models.CharField(max_length=100, blank=True, help_text="Browser name")
+    browser_version = models.CharField(max_length=50, blank=True, help_text="Browser version")
+    os = models.CharField(max_length=100, blank=True, help_text="Operating system")
+    device = models.CharField(max_length=50, blank=True, help_text="Device type (mobile, tablet, desktop)")
+    
+    # Traffic source
+    referrer = models.URLField(max_length=500, blank=True, help_text="Referring URL")
+    utm_source = models.CharField(max_length=100, blank=True, help_text="UTM source parameter")
+    utm_medium = models.CharField(max_length=100, blank=True, help_text="UTM medium parameter")
+    utm_campaign = models.CharField(max_length=100, blank=True, help_text="UTM campaign parameter")
+    utm_term = models.CharField(max_length=100, blank=True, help_text="UTM term parameter")
+    utm_content = models.CharField(max_length=100, blank=True, help_text="UTM content parameter")
+    
+    # Geographic information (can be enriched later with IP geolocation)
+    country = models.CharField(max_length=100, blank=True)
+    city = models.CharField(max_length=100, blank=True)
+    
+    # Visit details
+    landing_page_url = models.URLField(max_length=500, help_text="Full landing page URL visited")
+    language = models.CharField(max_length=10, blank=True, help_text="Browser language")
+    
+    # Timestamps
+    first_visit = models.DateTimeField(auto_now_add=True, help_text="First visit timestamp")
+    last_visit = models.DateTimeField(auto_now=True, help_text="Last visit timestamp")
+    visit_count = models.IntegerField(default=1, help_text="Number of times visited")
+    
+    # Conversion tracking
+    converted_to_user = models.BooleanField(default=False, help_text="Whether visitor signed up")
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, 
+                            related_name='landing_visits', help_text="User if converted")
+    
+    class Meta:
+        verbose_name = "Landing Page Visitor"
+        verbose_name_plural = "Landing Page Visitors"
+        ordering = ['-last_visit']
+        indexes = [
+            models.Index(fields=['ip_address', '-last_visit']),
+            models.Index(fields=['session_key']),
+            models.Index(fields=['-first_visit']),
+            models.Index(fields=['converted_to_user']),
+        ]
+    
+    def __str__(self):
+        return f"{self.ip_address} - {self.first_visit.strftime('%Y-%m-%d %H:%M')}"

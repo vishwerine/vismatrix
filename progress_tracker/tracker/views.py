@@ -25,6 +25,19 @@ logger = logging.getLogger(__name__)
 
 def landing_page(request):
     """Public landing page - accessible without authentication."""
+    from .visitor_tracking import track_landing_page_visitor
+    
+    # Track the visitor for analytics
+    try:
+        visitor = track_landing_page_visitor(request)
+        # Store visitor ID in session for future reference
+        request.session['visitor_id'] = visitor.id
+    except Exception as e:
+        # Log the error but don't break the page
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Error tracking landing page visitor: {e}")
+    
     return render(request, 'tracker/landing_page.html')
 
 
@@ -4836,6 +4849,112 @@ def get_unread_notification_count(request):
 def recent_notifications(request):
     """Redirect to unified notifications page."""
     return redirect('notifications_list')
+
+
+@login_required
+def clear_all_notifications(request):
+    """Clear all notifications for the current user."""
+    from .models import UserNotification
+    
+    if request.method == 'POST':
+        UserNotification.objects.filter(user=request.user).update(is_read=True)
+        return JsonResponse({'success': True})
+    
+    return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
+
+
+# ============================================================================
+# LANDING PAGE ANALYTICS (Admin Only)
+# ============================================================================
+
+from django.contrib.admin.views.decorators import staff_member_required
+from django.db.models import Count, Q
+from datetime import timedelta
+
+@staff_member_required
+def landing_analytics(request):
+    """Analytics dashboard for landing page visitors (admin only)."""
+    from .models import LandingPageVisitor
+    
+    # Date range filter
+    days = int(request.GET.get('days', 30))
+    start_date = timezone.now() - timedelta(days=days)
+    
+    # Total visitors
+    total_visitors = LandingPageVisitor.objects.filter(first_visit__gte=start_date).count()
+    unique_visitors = LandingPageVisitor.objects.filter(first_visit__gte=start_date).values('ip_address').distinct().count()
+    returning_visitors = LandingPageVisitor.objects.filter(first_visit__gte=start_date, visit_count__gt=1).count()
+    
+    # Conversion metrics
+    converted_visitors = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date,
+        converted_to_user=True
+    ).count()
+    conversion_rate = (converted_visitors / total_visitors * 100) if total_visitors > 0 else 0
+    
+    # Device breakdown
+    device_stats = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).values('device').annotate(count=Count('id')).order_by('-count')
+    
+    # Browser breakdown
+    browser_stats = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).values('browser').annotate(count=Count('id')).order_by('-count')
+    
+    # OS breakdown
+    os_stats = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).values('os').annotate(count=Count('id')).order_by('-count')
+    
+    # Top referrers (excluding empty)
+    referrer_stats = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).exclude(referrer='').values('referrer').annotate(count=Count('id')).order_by('-count')[:10]
+    
+    # UTM source breakdown
+    utm_source_stats = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).exclude(utm_source='').values('utm_source').annotate(count=Count('id')).order_by('-count')
+    
+    # UTM campaign breakdown
+    utm_campaign_stats = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).exclude(utm_campaign='').values('utm_campaign').annotate(count=Count('id')).order_by('-count')
+    
+    # Daily visitor trend (last 30 days)
+    daily_visitors = []
+    for i in range(days - 1, -1, -1):
+        date = timezone.now().date() - timedelta(days=i)
+        count = LandingPageVisitor.objects.filter(first_visit__date=date).count()
+        daily_visitors.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'count': count
+        })
+    
+    # Recent visitors (last 50)
+    recent_visitors = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).order_by('-last_visit')[:50]
+    
+    context = {
+        'days': days,
+        'total_visitors': total_visitors,
+        'unique_visitors': unique_visitors,
+        'returning_visitors': returning_visitors,
+        'converted_visitors': converted_visitors,
+        'conversion_rate': round(conversion_rate, 2),
+        'device_stats': device_stats,
+        'browser_stats': browser_stats,
+        'os_stats': os_stats,
+        'referrer_stats': referrer_stats,
+        'utm_source_stats': utm_source_stats,
+        'utm_campaign_stats': utm_campaign_stats,
+        'daily_visitors': daily_visitors,
+        'recent_visitors': recent_visitors,
+    }
+    
+    return render(request, 'tracker/landing_analytics.html', context)
 
 
 @login_required

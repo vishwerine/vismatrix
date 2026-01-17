@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession
+from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession, Friendship, LandingPageVisitor
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -61,6 +61,15 @@ class MessageAdmin(admin.ModelAdmin):
 @admin.register(ConversationMember)
 class ConversationMemberAdmin(admin.ModelAdmin):
     list_display = ("conversation", "user", "last_read_at", "last_read_message")
+
+
+@admin.register(Friendship)
+class FriendshipAdmin(admin.ModelAdmin):
+    list_display = ['user', 'friend', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['user__username', 'friend__username']
+    readonly_fields = ['created_at']
+    ordering = ['-created_at']
 
 
 @admin.register(GoogleCalendarIntegration)
@@ -158,3 +167,19 @@ class TimerSessionAdmin(admin.ModelAdmin):
     def participant_count(self, obj):
         return obj.participants.count()
     participant_count.short_description = 'Participants'
+
+
+@admin.register(LandingPageVisitor)
+class LandingPageVisitorAdmin(admin.ModelAdmin):
+    list_display = ['ip_address', 'device', 'browser', 'os', 'referrer_preview', 'utm_source', 'converted_to_user', 'visit_count', 'first_visit', 'last_visit']
+    list_filter = ['converted_to_user', 'device', 'browser', 'os', 'utm_source', 'utm_medium', 'utm_campaign', 'first_visit']
+    search_fields = ['ip_address', 'session_key', 'referrer', 'user_agent', 'country', 'city']
+    readonly_fields = ['first_visit', 'last_visit']
+    ordering = ['-last_visit']
+    date_hierarchy = 'first_visit'
+    
+    def referrer_preview(self, obj):
+        if obj.referrer:
+            return obj.referrer[:50] + '...' if len(obj.referrer) > 50 else obj.referrer
+        return '-'
+    referrer_preview.short_description = 'Referrer'

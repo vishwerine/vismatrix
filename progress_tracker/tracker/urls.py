@@ -142,5 +142,8 @@ urlpatterns = [
     # Recent Notifications (Django messages)
     path("recent-notifications/", views.recent_notifications, name="recent_notifications"),
     path("notifications/clear-all/", views.clear_all_notifications, name="clear_all_notifications"),
+    
+    # Landing Page Analytics (Admin only)
+    path("admin-analytics/landing/", views.landing_analytics, name="landing_analytics"),
 
 ]

@@ -1,0 +1,206 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+
+{% block title %}Landing Page Analytics - VisMatrix{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6 flex justify-between items-center">
+        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Landing Page Analytics</h1>
+        
+        <!-- Date filter -->
+        <div class="flex gap-2">
+            <a href="?days=7" class="px-4 py-2 rounded-lg {% if days == 7 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+                Last 7 Days
+            </a>
+            <a href="?days=30" class="px-4 py-2 rounded-lg {% if days == 30 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+                Last 30 Days
+            </a>
+            <a href="?days=90" class="px-4 py-2 rounded-lg {% if days == 90 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700{% endif %}">
+                Last 90 Days
+            </a>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Visitors</div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ total_visitors }}</div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Unique Visitors</div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ unique_visitors }}</div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Returning</div>
+            <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ returning_visitors }}</div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Conversions</div>
+            <div class="text-3xl font-bold text-green-600">{{ converted_visitors }}</div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Conversion Rate</div>
+            <div class="text-3xl font-bold text-green-600">{{ conversion_rate }}%</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Device Stats -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Device Breakdown</h3>
+            <div class="space-y-3">
+                {% for stat in device_stats %}
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ stat.device|default:"Unknown" }}</span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ stat.count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-blue-600 h-2 rounded-full" style="width: {% widthratio stat.count total_visitors 100 %}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Browser Stats -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Browser Breakdown</h3>
+            <div class="space-y-3">
+                {% for stat in browser_stats %}
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ stat.browser|default:"Unknown" }}</span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ stat.count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-purple-600 h-2 rounded-full" style="width: {% widthratio stat.count total_visitors 100 %}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- OS Stats -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Operating System</h3>
+            <div class="space-y-3">
+                {% for stat in os_stats %}
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ stat.os|default:"Unknown" }}</span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ stat.count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-green-600 h-2 rounded-full" style="width: {% widthratio stat.count total_visitors 100 %}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- UTM Source -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Traffic Sources (UTM)</h3>
+            {% if utm_source_stats %}
+            <div class="space-y-3">
+                {% for stat in utm_source_stats %}
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ stat.utm_source }}</span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ stat.count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-orange-600 h-2 rounded-full" style="width: {% widthratio stat.count total_visitors 100 %}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 dark:text-gray-400">No UTM source data available</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Top Referrers -->
+    {% if referrer_stats %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Top Referrers</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead>
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Referrer URL</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Visits</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for stat in referrer_stats %}
+                    <tr>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-gray-300">
+                            <a href="{{ stat.referrer }}" target="_blank" class="text-blue-600 hover:underline">
+                                {{ stat.referrer|truncatechars:80 }}
+                            </a>
+                        </td>
+                        <td class="px-6 py-4 text-sm font-semibold text-gray-900 dark:text-white">{{ stat.count }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Visitors -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Recent Visitors (Last 50)</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead>
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">IP Address</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Device</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Browser</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">OS</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Visits</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Converted</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Last Visit</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for visitor in recent_visitors %}
+                    <tr class="{% if visitor.converted_to_user %}bg-green-50 dark:bg-green-900/10{% endif %}">
+                        <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">{{ visitor.ip_address }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-400">{{ visitor.device|default:"Unknown" }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-400">{{ visitor.browser|default:"Unknown" }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-400">{{ visitor.os|default:"Unknown" }}</td>
+                        <td class="px-4 py-3 text-sm font-semibold text-gray-900 dark:text-white">{{ visitor.visit_count }}</td>
+                        <td class="px-4 py-3 text-sm">
+                            {% if visitor.converted_to_user %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                ✓ Yes
+                            </span>
+                            {% else %}
+                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
+                                No
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-400">
+                            {{ visitor.last_visit|date:"M d, Y H:i" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
