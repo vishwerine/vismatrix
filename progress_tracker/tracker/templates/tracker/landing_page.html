@@ -135,8 +135,7 @@
 
       <nav class="hidden md:flex items-center gap-6 text-sm" style="color: var(--text); opacity: 0.7;">
         <a href="#features" class="hover:opacity-100 transition-opacity">Features</a>
-        <a href="#how" class="hover:opacity-100 transition-opacity">How it works</a>
-        <a href="#privacy" class="hover:opacity-100 transition-opacity">Privacy</a>
+       
         {% if user.is_authenticated %}
           <a href="{% url 'dashboard' %}" class="hover:opacity-100 transition-opacity">Dashboard</a>
         {% else %}
@@ -174,16 +173,16 @@
             <!-- Left -->
             <div class="animate-slideUp space-y-6">
               <span class="inline-block rounded-full border px-3 py-1 text-xs" style="border-color: var(--border); background: rgba(var(--surface), 0.7); color: var(--primary);">
-                AI-powered personal development OS
+                AI-powered personal development
               </span>
 
               <h1 class="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tight leading-tight">
-                Turn long-term goals into<br />
-                <span class="vm-grad-text">daily, AI-guided execution.</span>
+                Your goals don't need motivation.<br />
+                <span class="vm-grad-text">They need a system.</span>
               </h1>
 
               <p class="text-lg sm:text-xl max-w-xl" style="color: var(--text); opacity: 0.8;">
-                VisMatrix<span style="color: var(--primary)">.Space</span> helps you break goals into projects, track progress over time,
+                VisMatrix<span style="color: var(--primary)">.Space</span> helps you break goals into plans, track progress over time,
                 and adapt plans using AI — so execution stays clear, focused, and sustainable.
               </p>
 
@@ -307,7 +306,7 @@
 
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-10">
           <div>
-            <h3 class="font-semibold mb-2">Agentic AI</h3>
+            <h3 class="font-semibold mb-2">Agentic AI (Arrving March 2026)</h3>
             <p class="text-sm mb-3" style="color: var(--text); opacity: 0.7;">AI that plans, adapts, and course-corrects.</p>
             <ul class="text-sm space-y-1" style="color: var(--text); opacity: 0.6;">
               <li>• Breaks goals into steps</li>
