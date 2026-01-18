@@ -1,0 +1,5 @@
+# Exclude the large GeoIP database files from git
+*.mmdb
+*.mmdb.backup.*
+*.tar.gz
+GeoLite2-City_*/

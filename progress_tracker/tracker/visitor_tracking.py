@@ -3,6 +3,62 @@ Visitor tracking utilities for landing page analytics.
 """
 from django.utils import timezone
 from .models import LandingPageVisitor
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def get_geolocation_from_ip(ip_address):
+    """
+    Get geolocation information from IP address using GeoIP2.
+    Returns dict with country, city, region, latitude, longitude.
+    
+    Note: Requires GeoLite2 database to be set up:
+    1. Download GeoLite2-City.mmdb from MaxMind
+    2. Place in a secure location (e.g., /var/lib/GeoIP/)
+    3. Set GEOIP_PATH in Django settings
+    
+    For development without database, returns None values gracefully.
+    """
+    geo_data = {
+        'country': '',
+        'country_code': '',
+        'city': '',
+        'region': '',
+        'latitude': None,
+        'longitude': None,
+    }
+    
+    # Skip private/local IPs
+    if not ip_address or ip_address.startswith(('127.', '192.168.', '10.', '172.')):
+        return geo_data
+    
+    try:
+        import geoip2.database
+        from django.conf import settings
+        
+        # Get GeoIP database path from settings
+        geoip_path = getattr(settings, 'GEOIP_PATH', '/usr/share/GeoIP/GeoLite2-City.mmdb')
+        
+        # Try to open the database and query
+        with geoip2.database.Reader(geoip_path) as reader:
+            response = reader.city(ip_address)
+            
+            geo_data['country'] = response.country.name or ''
+            geo_data['country_code'] = response.country.iso_code or ''
+            geo_data['city'] = response.city.name or ''
+            geo_data['region'] = response.subdivisions.most_specific.name if response.subdivisions else ''
+            geo_data['latitude'] = response.location.latitude
+            geo_data['longitude'] = response.location.longitude
+            
+    except ImportError:
+        logger.warning("geoip2 library not installed. Install with: pip install geoip2")
+    except FileNotFoundError:
+        logger.warning(f"GeoIP database not found. Download from MaxMind and configure GEOIP_PATH in settings.")
+    except Exception as e:
+        logger.debug(f"Could not get geolocation for IP {ip_address}: {e}")
+    
+    return geo_data
 
 
 def get_client_ip(request):
@@ -108,6 +164,9 @@ def track_landing_page_visitor(request):
     # Parse user agent
     ua_info = parse_user_agent(user_agent)
     
+    # Get geolocation data
+    geo_data = get_geolocation_from_ip(ip_address)
+    
     # Extract UTM parameters
     utm_source = request.GET.get('utm_source', '')
     utm_medium = request.GET.get('utm_medium', '')
@@ -157,6 +216,12 @@ def track_landing_page_visitor(request):
         if utm_content:
             visitor.utm_content = utm_content
         
+        # Update geolocation if not already set
+        if not visitor.country and geo_data['country']:
+            visitor.country = geo_data['country']
+        if not visitor.city and geo_data['city']:
+            visitor.city = geo_data['city']
+        
         visitor.save()
     else:
         # Create new visitor
@@ -176,6 +241,8 @@ def track_landing_page_visitor(request):
             utm_content=utm_content,
             landing_page_url=landing_page_url,
             language=language,
+            country=geo_data['country'],
+            city=geo_data['city'],
         )
     
     return visitor

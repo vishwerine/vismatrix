@@ -129,6 +129,55 @@
         </div>
     </div>
 
+    <!-- Geographic Information -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Country Stats -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">🌍 Visitors by Country</h3>
+            {% if country_stats %}
+            <div class="space-y-3">
+                {% for stat in country_stats %}
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">{{ stat.country }}</span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ stat.count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-indigo-600 h-2 rounded-full" style="width: {% widthratio stat.count total_visitors 100 %}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 dark:text-gray-400">No country data available. Configure GeoIP database to track locations.</p>
+            {% endif %}
+        </div>
+
+        <!-- City Stats -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">🏙️ Visitors by City</h3>
+            {% if city_stats %}
+            <div class="space-y-3">
+                {% for stat in city_stats %}
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm text-gray-700 dark:text-gray-300">
+                            {{ stat.city }}{% if stat.country %}, {{ stat.country }}{% endif %}
+                        </span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ stat.count }}</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-pink-600 h-2 rounded-full" style="width: {% widthratio stat.count total_visitors 100 %}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500 dark:text-gray-400">No city data available. Configure GeoIP database to track locations.</p>
+            {% endif %}
+        </div>
+    </div>
+
     <!-- Top Referrers -->
     {% if referrer_stats %}
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
@@ -166,6 +215,7 @@
                 <thead>
                     <tr>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">IP Address</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Location</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Device</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Browser</th>
                         <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">OS</th>
@@ -178,6 +228,15 @@
                     {% for visitor in recent_visitors %}
                     <tr class="{% if visitor.converted_to_user %}bg-green-50 dark:bg-green-900/10{% endif %}">
                         <td class="px-4 py-3 text-sm text-gray-900 dark:text-gray-300">{{ visitor.ip_address }}</td>
+                        <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-400">
+                            {% if visitor.city and visitor.country %}
+                                {{ visitor.city }}, {{ visitor.country }}
+                            {% elif visitor.country %}
+                                {{ visitor.country }}
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-400">{{ visitor.device|default:"Unknown" }}</td>
                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-400">{{ visitor.browser|default:"Unknown" }}</td>
                         <td class="px-4 py-3 text-sm text-gray-700 dark:text-gray-400">{{ visitor.os|default:"Unknown" }}</td>

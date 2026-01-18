@@ -211,6 +211,11 @@ GOOGLE_CLIENT_SECRET = env('GOOGLE_CLIENT_SECRET', default='')
 GOOGLE_REDIRECT_URI = env('GOOGLE_REDIRECT_URI', default='http://127.0.0.1:8000/calendar/oauth2callback/')
 
 
+# --- GeoIP Configuration ---
+# Path to MaxMind GeoLite2 database for IP geolocation
+GEOIP_PATH = os.path.join(BASE_DIR, 'geoip', 'GeoLite2-City.mmdb')
+
+
 # --- Same-domain Next.js + Django (reverse proxy) ---
 if ENVIRONMENT == "prod":
     CSRF_TRUSTED_ORIGINS = ["https://vismatrix.space", "https://www.vismatrix.space"]

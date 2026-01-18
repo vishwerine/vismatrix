@@ -4922,6 +4922,16 @@ def landing_analytics(request):
         first_visit__gte=start_date
     ).exclude(utm_campaign='').values('utm_campaign').annotate(count=Count('id')).order_by('-count')
     
+    # Country breakdown
+    country_stats = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).exclude(country='').values('country').annotate(count=Count('id')).order_by('-count')[:15]
+    
+    # City breakdown
+    city_stats = LandingPageVisitor.objects.filter(
+        first_visit__gte=start_date
+    ).exclude(city='').values('city', 'country').annotate(count=Count('id')).order_by('-count')[:15]
+    
     # Daily visitor trend (last 30 days)
     daily_visitors = []
     for i in range(days - 1, -1, -1):
@@ -4950,6 +4960,8 @@ def landing_analytics(request):
         'referrer_stats': referrer_stats,
         'utm_source_stats': utm_source_stats,
         'utm_campaign_stats': utm_campaign_stats,
+        'country_stats': country_stats,
+        'city_stats': city_stats,
         'daily_visitors': daily_visitors,
         'recent_visitors': recent_visitors,
     }

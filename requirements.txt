@@ -43,6 +43,9 @@ google-auth==2.27.0
 google-auth-oauthlib==1.2.0
 google-auth-httplib2==0.2.0
 google-api-python-client==2.114.0
+
+# IP Geolocation
+geoip2==4.8.1
 astropy-iers-data @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_fag9s9no07/croot/astropy-iers-data_1726000544957/work
 asttokens @ file:///opt/conda/conda-bld/asttokens_1646925590279/work
 async-lru @ file:///Users/builder/cbouss/perseverance-python-buildout/croot/async-lru_1701806219228/work
