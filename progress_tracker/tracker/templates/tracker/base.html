@@ -197,6 +197,41 @@
         updateThemeUI(htmlEl.getAttribute('data-theme'));
     }
 
+    // Profile Dropdown Toggle - Click avatar again to close
+    const profileDropdownBtn = document.querySelector('.dropdown-end [tabindex="0"]');
+    const profileDropdownMenu = document.querySelector('.dropdown-end .dropdown-content');
+    
+    if (profileDropdownBtn && profileDropdownMenu) {
+        let isOpen = false;
+        
+        profileDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (isOpen) {
+                profileDropdownBtn.blur();
+                isOpen = false;
+            } else {
+                isOpen = true;
+            }
+        });
+        
+        // Close when clicking outside
+        document.addEventListener('click', (e) => {
+            if (isOpen && !profileDropdownBtn.contains(e.target) && !profileDropdownMenu.contains(e.target)) {
+                profileDropdownBtn.blur();
+                isOpen = false;
+            }
+        });
+        
+        // Track when dropdown loses focus
+        profileDropdownBtn.addEventListener('blur', () => {
+            setTimeout(() => {
+                if (!profileDropdownMenu.matches(':hover')) {
+                    isOpen = false;
+                }
+            }, 100);
+        });
+    }
+
     // Page Loader Simulation (on link clicks)
     window.addEventListener('beforeunload', () => {
         document.getElementById('page-loader').style.transform = 'translateX(-20%)';

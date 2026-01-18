@@ -3,6 +3,25 @@
 
 {% block title %}Landing Page Analytics - VisMatrix{% endblock %}
 
+{% block extra_head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+    #visitorMap {
+        height: 500px;
+        width: 100%;
+        border-radius: 0.5rem;
+        z-index: 1;
+    }
+    .leaflet-container {
+        background: hsl(var(--b2));
+    }
+    [data-theme="dark"] .leaflet-tile {
+        filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.7);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mx-auto px-4 py-8">
     <div class="mb-6 flex justify-between items-center">
@@ -126,6 +145,23 @@
             {% else %}
             <p class="text-sm text-gray-500 dark:text-gray-400">No UTM source data available</p>
             {% endif %}
+        </div>
+    </div>
+
+    <!-- Geographic Map Visualization -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">🗺️ Visitor Locations Map</h3>
+        <div id="visitorMap"></div>
+        <div class="mt-4 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
+                <span>Visitor Location</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 bg-green-600 rounded-full"></div>
+                <span>Converted User</span>
+            </div>
+            <span class="ml-auto">Total markers: <strong class="text-gray-900 dark:text-white" id="markerCount">0</strong></span>
         </div>
     </div>
 
@@ -262,4 +298,89 @@
         </div>
     </div>
 </div>
+
+<script>
+// Initialize the map
+const map = L.map('visitorMap').setView([20, 0], 2);
+
+// Add OpenStreetMap tiles
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19,
+}).addTo(map);
+
+// Visitor location data from backend
+const visitorLocations = [
+    {% for visitor in recent_visitors %}
+    {% if visitor.latitude and visitor.longitude %}
+    {
+        lat: {{ visitor.latitude }},
+        lng: {{ visitor.longitude }},
+        city: "{{ visitor.city|default:'Unknown' }}",
+        country: "{{ visitor.country|default:'Unknown' }}",
+        ip: "{{ visitor.ip_address }}",
+        visits: {{ visitor.visit_count }},
+        converted: {{ visitor.converted_to_user|lower }},
+        device: "{{ visitor.device|default:'Unknown' }}",
+        lastVisit: "{{ visitor.last_visit|date:'M d, Y H:i' }}"
+    },
+    {% endif %}
+    {% endfor %}
+];
+
+// Add markers for each visitor
+let markerCount = 0;
+visitorLocations.forEach(location => {
+    const markerColor = location.converted ? '#16a34a' : '#2563eb';
+    const icon = L.divIcon({
+        className: 'custom-marker',
+        html: `<div style="background-color: ${markerColor}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+        iconSize: [12, 12],
+        iconAnchor: [6, 6]
+    });
+    
+    const marker = L.marker([location.lat, location.lng], { icon: icon }).addTo(map);
+    
+    const popupContent = `
+        <div style="font-family: system-ui; min-width: 200px;">
+            <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px; color: #1f2937;">
+                ${location.city}, ${location.country}
+            </div>
+            <div style="font-size: 12px; color: #6b7280; line-height: 1.6;">
+                <div><strong>IP:</strong> ${location.ip}</div>
+                <div><strong>Device:</strong> ${location.device}</div>
+                <div><strong>Visits:</strong> ${location.visits}</div>
+                <div><strong>Status:</strong> ${location.converted ? '✅ Converted' : '👤 Visitor'}</div>
+                <div><strong>Last Visit:</strong> ${location.lastVisit}</div>
+            </div>
+        </div>
+    `;
+    
+    marker.bindPopup(popupContent);
+    markerCount++;
+});
+
+// Update marker count
+document.getElementById('markerCount').textContent = markerCount;
+
+// Fit map to show all markers if there are any
+if (visitorLocations.length > 0) {
+    const bounds = L.latLngBounds(visitorLocations.map(loc => [loc.lat, loc.lng]));
+    map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+}
+
+// Handle theme changes for map tiles
+const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'data-theme') {
+            // Map tiles automatically update via CSS filter
+        }
+    });
+});
+
+observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+});
+</script>
 {% endblock %}

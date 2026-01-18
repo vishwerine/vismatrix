@@ -860,6 +860,8 @@ class LandingPageVisitor(models.Model):
     # Geographic information (can be enriched later with IP geolocation)
     country = models.CharField(max_length=100, blank=True)
     city = models.CharField(max_length=100, blank=True)
+    latitude = models.FloatField(null=True, blank=True, help_text="Geographic latitude coordinate")
+    longitude = models.FloatField(null=True, blank=True, help_text="Geographic longitude coordinate")
     
     # Visit details
     landing_page_url = models.URLField(max_length=500, help_text="Full landing page URL visited")
