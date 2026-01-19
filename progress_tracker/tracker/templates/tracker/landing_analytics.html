@@ -152,7 +152,7 @@
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8">
         <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">🗺️ Visitor Locations Map</h3>
         <div id="visitorMap"></div>
-        <div class="mt-4 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
+        <div class="mt-4 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400 flex-wrap">
             <div class="flex items-center gap-2">
                 <div class="w-3 h-3 bg-blue-600 rounded-full"></div>
                 <span>Visitor Location</span>
@@ -161,7 +161,10 @@
                 <div class="w-3 h-3 bg-green-600 rounded-full"></div>
                 <span>Converted User</span>
             </div>
-            <span class="ml-auto">Total markers: <strong class="text-gray-900 dark:text-white" id="markerCount">0</strong></span>
+            <span class="ml-auto">Mapped locations: <strong class="text-gray-900 dark:text-white" id="markerCount">0</strong> / <strong class="text-gray-900 dark:text-white" id="totalVisitors">{{ recent_visitors|length }}</strong></span>
+        </div>
+        <div id="locationWarning" class="mt-2 text-sm text-amber-600 dark:text-amber-400 hidden">
+            ⚠️ Some visitors don't have geolocation data. Configure GeoIP database for complete location tracking.
         </div>
     </div>
 
@@ -363,10 +366,25 @@ visitorLocations.forEach(location => {
 // Update marker count
 document.getElementById('markerCount').textContent = markerCount;
 
+// Show warning if not all visitors have location data
+const totalVisitors = parseInt(document.getElementById('totalVisitors').textContent);
+if (markerCount < totalVisitors) {
+    document.getElementById('locationWarning').classList.remove('hidden');
+}
+
 // Fit map to show all markers if there are any
 if (visitorLocations.length > 0) {
     const bounds = L.latLngBounds(visitorLocations.map(loc => [loc.lat, loc.lng]));
     map.fitBounds(bounds, { padding: [50, 50], maxZoom: 10 });
+} else {
+    // If no geolocated visitors, show a message on the map
+    const noDataDiv = L.divIcon({
+        className: 'no-data-message',
+        html: '<div style="background: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); font-size: 14px; color: #6b7280; text-align: center;">No visitor location data available.<br>Configure GeoIP database to track locations.</div>',
+        iconSize: [300, 60],
+        iconAnchor: [150, 30]
+    });
+    L.marker([20, 0], { icon: noDataDiv }).addTo(map);
 }
 
 // Handle theme changes for map tiles
