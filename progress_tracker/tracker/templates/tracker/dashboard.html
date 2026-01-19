@@ -66,27 +66,6 @@
     </div>
   </header>
 
-  {% if star_notifications_count > 0 %}
-  <!-- Notifications -->
-  <section class="alert alert-warning shadow-md hover:shadow-lg transition-all" role="alert" aria-live="polite">
-    <div class="flex items-start gap-4 w-full">
-      <div class="flex-shrink-0 w-12 h-12 rounded-full bg-warning/20 flex items-center justify-center">
-        <i class="bi bi-star-fill text-warning text-xl" aria-hidden="true"></i>
-      </div>
-      <div class="flex-1 min-w-0">
-        <h2 class="font-bold text-base sm:text-lg">
-          🎉 You have {{ star_notifications_count }} new star{{ star_notifications_count|pluralize }}!
-        </h2>
-        <p class="text-sm text-base-content/70 mt-1">Friends appreciated your activities.</p>
-      </div>
-      <a href="{% url 'notifications' %}" class="btn btn-warning btn-sm gap-2 shadow-md hover:shadow-lg transition-all">
-        <i class="bi bi-bell" aria-hidden="true"></i>
-        <span>View</span>
-      </a>
-    </div>
-  </section>
-  {% endif %}
-
   {% if unread_message_count > 0 %}
   <!-- New Messages Notification -->
   <section class="alert alert-info shadow-md hover:shadow-lg transition-all" role="alert" aria-live="polite">
@@ -784,6 +763,58 @@
     </aside>
   </div>
 </main>
+
+<!-- Star notifications toast -->
+{% if star_notifications_count > 0 %}
+<div id="star-toast" class="toast toast-top toast-end z-50 hidden" style="top: 5rem;">
+  <div class="alert alert-warning shadow-lg">
+    <div class="flex items-center gap-3">
+      <i class="bi bi-star-fill text-warning text-xl" aria-hidden="true"></i>
+      <div>
+        <h3 class="font-bold">🎉 {{ star_notifications_count }} new star{{ star_notifications_count|pluralize }}!</h3>
+        <div class="text-xs">Friends appreciated your activities.</div>
+      </div>
+      <a href="{% url 'notifications' %}" class="btn btn-warning btn-xs gap-1">
+        <i class="bi bi-bell" aria-hidden="true"></i>
+        <span>View</span>
+      </a>
+      <button class="btn btn-ghost btn-xs btn-circle" onclick="this.closest('#star-toast').remove()" aria-label="Close notification">
+        <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Show star notification toast on page load (only once per session)
+(function() {
+  const toast = document.getElementById('star-toast');
+  if (toast) {
+    // Check if toast has already been shown in this session
+    const toastShown = sessionStorage.getItem('starToastShown');
+    
+    if (!toastShown) {
+      // Show toast after a brief delay
+      setTimeout(() => {
+        toast.classList.remove('hidden');
+      }, 500);
+      
+      // Mark as shown in session storage
+      sessionStorage.setItem('starToastShown', 'true');
+      
+      // Auto-hide after 8 seconds
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+        setTimeout(() => toast.remove(), 500);
+      }, 8000);
+    } else {
+      // Already shown in this session, remove the toast element
+      toast.remove();
+    }
+  }
+})();
+</script>
+{% endif %}
 
 <!-- Star toggle script -->
 <script>

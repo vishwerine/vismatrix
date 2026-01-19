@@ -99,8 +99,7 @@
         <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %} rounded-lg"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
         <li><a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active{% endif %} rounded-lg"><i class="bi bi-bar-chart"></i> Analytics</a></li>
         <li><a href="{% url 'plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' %}active{% endif %} rounded-lg"><i class="bi bi-diagram-3"></i> Plans</a></li>
-        <li><a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active{% endif %} rounded-lg"><i class="bi bi-calendar-event"></i> Planner</a></li>
-        <li><a href="{% url 'task_list' %}" class="{% if request.resolver_match.url_name == 'task_list' %}active{% endif %} rounded-lg">Tasks</a></li>
+        <li><a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active{% endif %} rounded-lg"><i class="bi bi-calendar-event"></i> Day Planner</a></li>
         <li><a href="{% url 'friends_list' %}" class="{% if request.resolver_match.url_name == 'friends_list' %}active{% endif %} rounded-lg">Friends</a></li>
       </ul>
     </div>
