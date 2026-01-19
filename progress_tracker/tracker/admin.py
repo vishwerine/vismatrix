@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession, Friendship, LandingPageVisitor
+from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession, Friendship, LandingPageVisitor, Habit, HabitCompletion
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -183,3 +183,37 @@ class LandingPageVisitorAdmin(admin.ModelAdmin):
             return obj.referrer[:50] + '...' if len(obj.referrer) > 50 else obj.referrer
         return '-'
     referrer_preview.short_description = 'Referrer'
+
+
+@admin.register(Habit)
+class HabitAdmin(admin.ModelAdmin):
+    list_display = ['title', 'user', 'frequency', 'priority', 'is_active', 'start_date', 'created_at']
+    list_filter = ['frequency', 'priority', 'is_active', 'user', 'created_at']
+    search_fields = ['title', 'description', 'user__username']
+    readonly_fields = ['created_at', 'updated_at']
+    ordering = ['-created_at']
+    date_hierarchy = 'created_at'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        # Non-superusers only see their own habits
+        return qs.filter(user=request.user)
+
+
+@admin.register(HabitCompletion)
+class HabitCompletionAdmin(admin.ModelAdmin):
+    list_display = ['habit', 'user', 'completion_date', 'created_at']
+    list_filter = ['completion_date', 'user', 'habit__frequency']
+    search_fields = ['habit__title', 'user__username', 'notes']
+    readonly_fields = ['created_at']
+    ordering = ['-completion_date', '-created_at']
+    date_hierarchy = 'completion_date'
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        # Non-superusers only see their own completions
+        return qs.filter(user=request.user)

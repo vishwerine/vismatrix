@@ -169,19 +169,27 @@ class ActivityReaction(models.Model):
     ]
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activity_reactions')
-    # Can react to either a task completion or a daily log
+    # Can react to either a task completion, a daily log, or a habit completion
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='reactions')
     daily_log = models.ForeignKey(DailyLog, on_delete=models.CASCADE, null=True, blank=True, related_name='reactions')
+    habit_completion = models.ForeignKey('HabitCompletion', on_delete=models.CASCADE, null=True, blank=True, related_name='reactions')
     reaction_type = models.CharField(max_length=10, choices=REACTION_TYPES, default='star')
     created_at = models.DateTimeField(auto_now_add=True)
     
     class Meta:
-        unique_together = ('user', 'task', 'daily_log')  # One reaction per user per activity
+        unique_together = ('user', 'task', 'daily_log', 'habit_completion')  # One reaction per user per activity
         ordering = ['-created_at']
     
     def __str__(self):
-        activity_type = "task" if self.task else "log"
-        activity_id = self.task.id if self.task else self.daily_log.id
+        if self.task:
+            activity_type = "task"
+            activity_id = self.task.id
+        elif self.daily_log:
+            activity_type = "log"
+            activity_id = self.daily_log.id
+        else:
+            activity_type = "habit"
+            activity_id = self.habit_completion.id if self.habit_completion else None
         return f"{self.user.username} starred {activity_type} {activity_id}"
 
 from django.db import models
@@ -890,3 +898,119 @@ class LandingPageVisitor(models.Model):
     
     def __str__(self):
         return f"{self.ip_address} - {self.first_visit.strftime('%Y-%m-%d %H:%M')}"
+
+
+class Habit(models.Model):
+    """Recurring tasks/habits with specific frequencies"""
+    FREQUENCY_CHOICES = [
+        ('daily', 'Daily'),
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='habits', db_index=True)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True, db_index=True)
+    frequency = models.CharField(max_length=20, choices=FREQUENCY_CHOICES, default='daily', db_index=True)
+    priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='medium')
+    is_active = models.BooleanField(default=True, db_index=True, help_text="Whether this habit is currently being tracked")
+    start_date = models.DateField(default=timezone.now, help_text="When this habit starts/started")
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_active', '-created_at']),
+            models.Index(fields=['user', 'frequency', 'is_active']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.title} ({self.get_frequency_display()})"
+    
+    def is_completed_today(self):
+        """Check if habit was completed today"""
+        today = timezone.now().date()
+        return self.completions.filter(completion_date=today).exists()
+    
+    def is_completed_this_week(self):
+        """Check if habit was completed this week"""
+        from datetime import timedelta
+        today = timezone.now().date()
+        week_start = today - timedelta(days=today.weekday())
+        return self.completions.filter(completion_date__gte=week_start, completion_date__lte=today).exists()
+    
+    def is_completed_this_month(self):
+        """Check if habit was completed this month"""
+        today = timezone.now().date()
+        return self.completions.filter(
+            completion_date__year=today.year,
+            completion_date__month=today.month
+        ).exists()
+    
+    def is_due_today(self):
+        """Check if habit is due based on frequency"""
+        if not self.is_active:
+            return False
+        
+        if self.frequency == 'daily':
+            return not self.is_completed_today()
+        elif self.frequency == 'weekly':
+            return not self.is_completed_this_week()
+        elif self.frequency == 'monthly':
+            return not self.is_completed_this_month()
+        return False
+    
+    def get_current_streak(self):
+        """Calculate current streak for daily habits"""
+        if self.frequency != 'daily':
+            return 0
+        
+        from datetime import timedelta
+        today = timezone.now().date()
+        streak = 0
+        check_date = today
+        
+        # Check backwards from today
+        while True:
+            if self.completions.filter(completion_date=check_date).exists():
+                streak += 1
+                check_date -= timedelta(days=1)
+            else:
+                break
+        
+        return streak
+    
+    def get_completion_count(self, days=30):
+        """Get number of completions in last N days"""
+        from datetime import timedelta
+        today = timezone.now().date()
+        start_date = today - timedelta(days=days)
+        return self.completions.filter(completion_date__gte=start_date).count()
+
+
+class HabitCompletion(models.Model):
+    """Track when habits are completed"""
+    habit = models.ForeignKey(Habit, on_delete=models.CASCADE, related_name='completions', db_index=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='habit_completions')
+    completion_date = models.DateField(default=timezone.now, db_index=True)
+    notes = models.TextField(blank=True, help_text="Optional notes about this completion")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-completion_date', '-created_at']
+        unique_together = ('habit', 'completion_date')  # One completion per habit per day
+        indexes = [
+            models.Index(fields=['habit', '-completion_date']),
+            models.Index(fields=['user', '-completion_date']),
+        ]
+    
+    def __str__(self):
+        return f"{self.habit.title} - {self.completion_date}"

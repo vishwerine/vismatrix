@@ -67,6 +67,31 @@
     </div>
   </header>
 
+  {% if random_quote %}
+  <!-- Quote of the Day -->
+  <section class="card border border-info/20 bg-gradient-to-br from-info/10 via-info/5 to-transparent shadow-md hover:shadow-lg transition-all">
+    <div class="card-body p-6">
+      <div class="flex items-center gap-2 mb-4">
+        <i class="bi bi-quote text-info text-xl" aria-hidden="true"></i>
+        <h2 class="text-base font-bold text-base-content">Quote of the Day</h2>
+      </div>
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0 w-12 h-12 rounded-full bg-info/20 flex items-center justify-center">
+          <i class="bi bi-quote text-info text-2xl" aria-hidden="true"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <blockquote class="text-base sm:text-lg text-base-content italic font-medium leading-relaxed">
+            {{ random_quote.quote|safe }}
+          </blockquote>
+          <p class="mt-3 text-sm text-base-content/70 font-semibold text-right">
+            — {{ random_quote.author }}
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
   <!-- Metrics (no gradients) -->
   <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" aria-label="Key metrics">
     <div class="card border border-base-200 bg-base-100">

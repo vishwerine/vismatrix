@@ -1,7 +1,7 @@
 from django import forms
 from django.db import models
 from django.contrib.auth.models import User
-from .models import Task, DailyLog, Category, DailySummary, Plan, PlanNode
+from .models import Task, DailyLog, Category, DailySummary, Plan, PlanNode, Habit
 
 class TaskForm(forms.ModelForm):
     class Meta:
@@ -269,3 +269,61 @@ class UserProfileForm(forms.ModelForm):
         if last_name and len(last_name) > 150:
             raise forms.ValidationError("Last name cannot exceed 150 characters.")
         return last_name
+
+
+class HabitForm(forms.ModelForm):
+    class Meta:
+        model = Habit
+        fields = ['title', 'description', 'category', 'frequency', 'priority', 'start_date']
+        widgets = {
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g., Morning Exercise'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Optional: Add details about this habit...'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'frequency': forms.Select(attrs={'class': 'form-select'}),
+            'priority': forms.Select(attrs={'class': 'form-select'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        
+        # Set defaults for new habits only
+        if 'instance' not in kwargs or not kwargs['instance'].pk:
+            initial = kwargs.get('initial', {})
+            if 'start_date' not in initial:
+                from django.utils import timezone
+                initial['start_date'] = timezone.localdate()  # Today
+                kwargs['initial'] = initial
+        
+        super(HabitForm, self).__init__(*args, **kwargs)
+        
+        if user:
+            from django.db.models import Q
+            self.fields['category'].queryset = Category.objects.filter(
+                Q(is_global=True) | Q(user=user)
+            )
+            self.fields['category'].label_from_instance = self.label_from_instance
+            self.fields['category'].required = False
+            self.fields['category'].empty_label = "🤖 Auto-detect (recommended)"
+    
+    def label_from_instance(self, obj):
+        if obj.is_global:
+            return f"🌐 {obj.name}"
+        return obj.name
+    
+    def clean_title(self):
+        title = self.cleaned_data.get('title', '').strip()
+        if not title:
+            raise forms.ValidationError("Title cannot be empty.")
+        if len(title) < 3:
+            raise forms.ValidationError("Title must be at least 3 characters long.")
+        return title
+    
+    def clean_start_date(self):
+        start_date = self.cleaned_data.get('start_date')
+        if start_date:
+            from django.utils import timezone
+            # Allow past and future dates (habits can be started anytime)
+            pass
+        return start_date
+

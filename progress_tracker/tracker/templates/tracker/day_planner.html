@@ -234,7 +234,7 @@
 /* ===== PLANNER GRID ===== */
 .planner-container {
   display: grid;
-  grid-template-columns: 80px 1fr;
+  grid-template-columns: 80px 1fr 280px;
   border: 1px solid hsl(var(--bc) / 0.1);
   border-radius: 1rem;
   overflow-y: auto;
@@ -272,6 +272,13 @@
 .timeline {
   position: relative;
   background: hsl(var(--b1));
+  border-right: 2px solid hsl(var(--bc) / 0.1);
+}
+
+.habits-timeline {
+  position: relative;
+  background: linear-gradient(135deg, hsl(var(--s) / 0.03) 0%, hsl(var(--p) / 0.03) 100%);
+  border-left: 2px solid hsl(var(--s) / 0.2);
 }
 
 .timeline-grid {
@@ -359,6 +366,39 @@
 
 .event-card.calendar-event .event-badge {
   background: rgba(0, 0, 0, 0.15);
+}
+
+.event-card.habit-event {
+  background: hsl(var(--s));
+  color: hsl(var(--sc));
+  border-color: rgba(0, 0, 0, 0.1);
+  cursor: default;
+}
+
+.event-card.habit-event .event-badge {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.event-card.habit-event.complete {
+  background: hsl(var(--su));
+  color: hsl(var(--suc));
+  opacity: 0.8;
+}
+
+.habits-column-header {
+  position: sticky;
+  top: 0;
+  background: linear-gradient(135deg, hsl(var(--s)) 0%, hsl(var(--p)) 100%);
+  color: hsl(var(--sc));
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+  z-index: 10;
+  border-bottom: 2px solid hsl(var(--s) / 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .event-header {
@@ -759,12 +799,17 @@
   }
 
   .planner-container {
-    grid-template-columns: 60px 1fr;
+    grid-template-columns: 60px 1fr 220px;
     max-height: 600px;
   }
 
   .event-card {
     font-size: 12px;
+  }
+  
+  .habits-column-header {
+    font-size: 12px;
+    padding: 10px 12px;
   }
 }
 
@@ -821,7 +866,7 @@
   }
 
   .planner-container {
-    grid-template-columns: 50px 1fr;
+    grid-template-columns: 50px 1fr 180px;
     max-height: 70vh;
   }
 
@@ -957,7 +1002,7 @@
   }
 
   .planner-container {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 40px 1fr 150px;
     max-height: 60vh;
   }
 
@@ -1024,12 +1069,19 @@
         </div>
       </div>
     </div>
+    <div class="habits-timeline" id="habitsTimeline">
+      <div class="habits-column-header">🔄 Today's Habits</div>
+      <div class="timeline-grid" id="habitsGrid">
+        <div class="empty-state" id="habitsEmptyState" style="display: none;">
+          <div class="empty-state-icon">✨</div>
+          <div class="empty-state-text" style="font-size: 14px;">No habits today</div>
+          <div class="empty-state-hint" style="font-size: 12px;">Add habits to track daily routines</div>
+        </div>
+      </div>
+    </div>
   </div>
 
-  <!-- Help Badge -->
-  <div class="help-badge" onclick="showHelp()" title="Keyboard shortcuts (?)">
-    ❓
-  </div>
+
 </div>
 
 <!-- EVENT MODAL -->
@@ -1149,6 +1201,8 @@
           <li>Drag events to reschedule them</li>
           <li>The red line shows current time</li>
           <li>Blue events are from your calendar</li>
+          <li>Purple events are your daily/weekly habits</li>
+          <li>Click ✅ on habits to mark them complete</li>
           <li>Auto-schedule fills gaps with pending tasks</li>
         </ul>
       </div>
@@ -1347,7 +1401,7 @@ async function saveToServer() {
     await fetch('/api/day-schedule/save/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-      body: JSON.stringify({ date: currentDate, events: events.filter(e => !e.isCalendarEvent) })
+      body: JSON.stringify({ date: currentDate, events: events.filter(e => !e.isCalendarEvent && !e.isHabit) })
     });
   } catch (e) {
     console.error('Save failed:', e);
@@ -1358,18 +1412,32 @@ function render() {
   document.querySelectorAll('.event-card').forEach(el => el.remove());
   
   const grid = document.getElementById('grid');
+  const habitsGrid = document.getElementById('habitsGrid');
   const emptyState = document.getElementById('emptyState');
+  const habitsEmptyState = document.getElementById('habitsEmptyState');
   
-  // Show/hide empty state
-  if (events.length === 0) {
+  // Separate habits from regular events
+  const regularEvents = events.filter(e => !e.isHabit);
+  const habitEvents = events.filter(e => e.isHabit);
+  
+  // Show/hide empty states
+  if (regularEvents.length === 0) {
     emptyState.style.display = 'block';
   } else {
     emptyState.style.display = 'none';
   }
+  
+  if (habitEvents.length === 0) {
+    habitsEmptyState.style.display = 'block';
+  } else {
+    habitsEmptyState.style.display = 'none';
+  }
+  
   events.forEach(ev => {
     const card = document.createElement('div');
     card.className = 'event-card';
     if (ev.isCalendarEvent) card.classList.add('calendar-event');
+    if (ev.isHabit) card.classList.add('habit-event');
     if (ev.complete) card.classList.add('complete');
     card.dataset.id = ev.id;
     card.style.top = ((ev.startMin / 60) * HOUR_HEIGHT) + 'px';
@@ -1384,7 +1452,13 @@ function render() {
     
     const badge = document.createElement('span');
     badge.className = 'event-badge';
-    badge.textContent = ev.isCalendarEvent ? '📆 Cal' : '✏️ Custom';
+    if (ev.isCalendarEvent) {
+      badge.textContent = '📆 Cal';
+    } else if (ev.isHabit) {
+      badge.textContent = ev.complete ? '✅ Done' : '🔄 Habit';
+    } else {
+      badge.textContent = '✏️ Custom';
+    }
     
     header.appendChild(title);
     header.appendChild(badge);
@@ -1402,21 +1476,36 @@ function render() {
     
     const actions = document.createElement('div');
     actions.className = 'event-actions';
-    actions.innerHTML = `
-      <button class="event-btn" onclick="editEvent('${ev.id}'); event.stopPropagation();" title="Edit">✏️</button>
-      <button class="event-btn" onclick="quickDelete('${ev.id}'); event.stopPropagation();" title="Delete">🗑️</button>
-    `;
+    
+    if (ev.isHabit && !ev.complete) {
+      // Show complete button for habits
+      actions.innerHTML = `
+        <button class="event-btn" onclick="completeHabit('${ev.habitId}', '${ev.id}'); event.stopPropagation();" title="Mark as complete">✅</button>
+      `;
+    } else if (!ev.isCalendarEvent && !ev.isHabit) {
+      // Show edit/delete for custom events
+      actions.innerHTML = `
+        <button class="event-btn" onclick="editEvent('${ev.id}'); event.stopPropagation();" title="Edit">✏️</button>
+        <button class="event-btn" onclick="quickDelete('${ev.id}'); event.stopPropagation();" title="Delete">🗑️</button>
+      `;
+    }
     
     card.appendChild(header);
     card.appendChild(time);
-    card.appendChild(actions);
+    if (actions.innerHTML) card.appendChild(actions);
     
-    if (!ev.isCalendarEvent) {
+    // Only allow dragging for custom events
+    if (!ev.isCalendarEvent && !ev.isHabit) {
       card.addEventListener('mousedown', startDrag);
       card.addEventListener('touchstart', startDrag, { passive: false });
     }
     
-    grid.appendChild(card);
+    // Append to appropriate grid
+    if (ev.isHabit) {
+      habitsGrid.appendChild(card);
+    } else {
+      grid.appendChild(card);
+    }
   });
   
   updateStats();
@@ -1635,6 +1724,41 @@ function quickDelete(id) {
     events = events.filter(e => e.id !== id);
     render();
     saveToServer();
+  }
+}
+
+async function completeHabit(habitId, eventId) {
+  try {
+    const response = await fetch('/api/day-schedule/complete-habit/', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json', 
+        'X-CSRFToken': CSRF_TOKEN 
+      },
+      body: JSON.stringify({ 
+        habit_id: habitId, 
+        date: currentDate 
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Mark habit as complete in the events array
+      const event = events.find(e => e.id === eventId);
+      if (event) {
+        event.complete = true;
+      }
+      render();
+      showToast(`✅ ${data.message} (+${data.points_awarded} points)`, true);
+    } else if (data.already_completed) {
+      showToast('This habit is already completed for today', false);
+    } else {
+      showToast(data.error || 'Failed to complete habit', false);
+    }
+  } catch (error) {
+    console.error('Complete habit error:', error);
+    showToast('Failed to complete habit. Please try again.', false);
   }
 }
 

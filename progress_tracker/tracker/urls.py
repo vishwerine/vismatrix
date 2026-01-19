@@ -12,6 +12,7 @@ urlpatterns = [
     # Quickstart
     path("quickstart/", views.quickstart, name="quickstart"),
     path("quickstart/create/<str:plan_type>/", views.quickstart_create_plan, name="quickstart_create_plan"),
+    path("quickstart/habit/<str:habit_type>/", views.quickstart_create_habit, name="quickstart_create_habit"),
 
     path("tasks/", views.task_list, name="task_list"),
     path("tasks/new/", views.task_create, name="task_create"),
@@ -35,9 +36,18 @@ urlpatterns = [
     path("logs/<int:pk>/delete/", views.log_delete, name="log_delete"),
     path("logs/quick/", views.quick_log_activity, name="quick_log_activity"),
     
+    # Habits
+    path("habits/", views.habit_list, name="habit_list"),
+    path("habits/new/", views.habit_create, name="habit_create"),
+    path("habits/<int:pk>/edit/", views.habit_update, name="habit_update"),
+    path("habits/<int:pk>/delete/", views.habit_delete, name="habit_delete"),
+    path("habits/<int:pk>/complete/", views.habit_complete, name="habit_complete"),
+    path("habits/<int:pk>/toggle-active/", views.habit_toggle_active, name="habit_toggle_active"),
+    
     # Day schedule API endpoints
     path("api/day-schedule/save/", views.save_day_schedule, name="save_day_schedule"),
     path("api/day-schedule/smart-schedule/", views.smart_schedule_tasks, name="smart_schedule_tasks"),
+    path("api/day-schedule/complete-habit/", views.complete_habit_from_planner, name="complete_habit_from_planner"),
     path("api/day-schedule/<str:schedule_date>/", views.load_day_schedule, name="load_day_schedule"),
 
     path("progress/", views.progress_view, name="progress"),

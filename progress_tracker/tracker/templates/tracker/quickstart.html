@@ -93,6 +93,113 @@
 
   </div>
 
+  <!-- Quickstart Habits Section -->
+  <div class="divider my-8">OR START WITH DAILY HABITS</div>
+
+  <div class="mb-6">
+    <h2 class="text-2xl font-bold mb-2">
+      <i class="bi bi-repeat text-secondary"></i>
+      Quick Habits
+    </h2>
+    <p class="text-gray-600">
+      Add pre-configured habits to track daily. Click to add any habit to your routine.
+    </p>
+  </div>
+
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+    
+    <!-- Gym -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'gym' %}" class="habit-form" data-habit-type="gym">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-success habit-btn">
+        <i class="bi bi-heart-pulse text-2xl"></i>
+        <span class="text-xs">Gym</span>
+      </button>
+    </form>
+
+    <!-- Homework -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'homework' %}" class="habit-form" data-habit-type="homework">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-primary habit-btn">
+        <i class="bi bi-book text-2xl"></i>
+        <span class="text-xs">Homework</span>
+      </button>
+    </form>
+
+    <!-- Cooking -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'cooking' %}" class="habit-form" data-habit-type="cooking">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-warning habit-btn">
+        <i class="bi bi-egg-fried text-2xl"></i>
+        <span class="text-xs">Cooking</span>
+      </button>
+    </form>
+
+    <!-- Play Games -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'play_games' %}" class="habit-form" data-habit-type="play_games">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-accent habit-btn">
+        <i class="bi bi-controller text-2xl"></i>
+        <span class="text-xs">Play Games</span>
+      </button>
+    </form>
+
+    <!-- Meditation -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'meditation' %}" class="habit-form" data-habit-type="meditation">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-info habit-btn">
+        <i class="bi bi-flower3 text-2xl"></i>
+        <span class="text-xs">Meditation</span>
+      </button>
+    </form>
+
+    <!-- Reading -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'reading' %}" class="habit-form" data-habit-type="reading">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-primary habit-btn">
+        <i class="bi bi-book-half text-2xl"></i>
+        <span class="text-xs">Reading</span>
+      </button>
+    </form>
+
+    <!-- Walk -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'walk' %}" class="habit-form" data-habit-type="walk">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-success habit-btn">
+        <i class="bi bi-person-walking text-2xl"></i>
+        <span class="text-xs">Walk</span>
+      </button>
+    </form>
+
+    <!-- Water -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'water' %}" class="habit-form" data-habit-type="water">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-info habit-btn">
+        <i class="bi bi-droplet-fill text-2xl"></i>
+        <span class="text-xs">Hydration</span>
+      </button>
+    </form>
+
+    <!-- Journal -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'journal' %}" class="habit-form" data-habit-type="journal">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-secondary habit-btn">
+        <i class="bi bi-journal-text text-2xl"></i>
+        <span class="text-xs">Journal</span>
+      </button>
+    </form>
+
+    <!-- Music Practice -->
+    <form method="post" action="{% url 'quickstart_create_habit' 'music_practice' %}" class="habit-form" data-habit-type="music_practice">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline btn-sm w-full h-auto py-3 flex-col gap-1 hover:btn-accent habit-btn">
+        <i class="bi bi-music-note-beamed text-2xl"></i>
+        <span class="text-xs">Music</span>
+      </button>
+    </form>
+
+  </div>
+
   <div class="text-center">
     <a href="{% url 'dashboard' %}" class="btn btn-outline btn-sm">
       <i class="bi bi-arrow-left"></i>
@@ -100,4 +207,76 @@
     </a>
   </div>
 </main>
+
+<script>
+(function() {
+  'use strict';
+
+  // Handle habit form submissions with AJAX
+  document.querySelectorAll('.habit-form').forEach(form => {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const button = this.querySelector('.habit-btn');
+      const habitType = this.dataset.habitType;
+      const formData = new FormData(this);
+      
+      // Disable button during request
+      button.disabled = true;
+      button.classList.add('loading');
+      
+      fetch(this.action, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        button.disabled = false;
+        button.classList.remove('loading');
+        
+        if (data.success) {
+          // Change button to success state
+          button.classList.remove('btn-outline', 'hover:btn-success', 'hover:btn-primary', 'hover:btn-warning', 'hover:btn-accent', 'hover:btn-info', 'hover:btn-secondary');
+          button.classList.add('btn-success');
+          
+          // Add checkmark icon
+          const icon = button.querySelector('i');
+          icon.className = 'bi bi-check-circle-fill text-2xl';
+          
+          // Update text
+          const span = button.querySelector('span');
+          span.textContent = 'Added!';
+          
+          // Keep button disabled
+          button.disabled = true;
+        } else if (data.already_exists) {
+          // Change button to warning state
+          button.classList.remove('btn-outline', 'hover:btn-success', 'hover:btn-primary', 'hover:btn-warning', 'hover:btn-accent', 'hover:btn-info', 'hover:btn-secondary');
+          button.classList.add('btn-warning');
+          
+          // Update text
+          const span = button.querySelector('span');
+          span.textContent = 'Already Added';
+          
+          // Keep button disabled
+          button.disabled = true;
+        } else {
+          // Show error
+          alert(data.message || 'Failed to create habit');
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        button.disabled = false;
+        button.classList.remove('loading');
+        alert('Network error. Please try again.');
+      });
+    });
+  });
+})();
+</script>
+
 {% endblock %}

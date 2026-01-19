@@ -10,7 +10,7 @@ from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta, date
-from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule, UserProfile
+from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule, UserProfile, Habit, HabitCompletion
 from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm, UserProfileForm
 from django.views.decorators.http import require_http_methods
 import logging
@@ -254,6 +254,32 @@ def dashboard(request):
                 "user_starred": user_starred,
             })
 
+        # Get recent habit completions from friends
+        recent_friend_habits = HabitCompletion.objects.filter(
+            user_id__in=friend_ids
+        ).select_related("user", "habit", "habit__category").order_by("-completion_date", "-id")[:10]
+
+        for habit_completion in recent_friend_habits:
+            # Get reaction info for this habit completion
+            star_count = ActivityReaction.objects.filter(habit_completion=habit_completion).count()
+            user_starred = ActivityReaction.objects.filter(habit_completion=habit_completion, user=request.user).exists()
+            
+            # Create a datetime from the date for sorting
+            timestamp = timezone.datetime.combine(habit_completion.completion_date, timezone.datetime.min.time(), tzinfo=timezone.get_current_timezone())
+            friends_timeline.append({
+                "type": "habit",
+                "user": habit_completion.user,
+                "friendship_id": friendship_map.get(habit_completion.user_id),
+                "title": habit_completion.habit.title,
+                "category": habit_completion.habit.category,
+                "timestamp": timestamp,
+                "duration": None,
+                "id": habit_completion.id,
+                "star_count": star_count,
+                "user_starred": user_starred,
+                "notes": habit_completion.notes,
+            })
+
         # Sort combined timeline by timestamp (most recent first)
         friends_timeline.sort(key=lambda x: x["timestamp"], reverse=True)
         # Limit to 5 most recent items for dashboard preview
@@ -339,31 +365,6 @@ def dashboard(request):
         plan.completed_tasks = completed_tasks
         plans_with_stats.append(plan)
 
-    # --- Load a quote from quotes.jsonl (same quote per day) ---
-    import os
-    
-    random_quote = None
-    quotes_file = os.path.join(os.path.dirname(__file__), '..', 'quotes', 'quotes.jsonl')
-    
-    try:
-        if os.path.exists(quotes_file):
-            with open(quotes_file, 'r', encoding='utf-8') as f:
-                quotes = f.readlines()
-                if quotes:
-                    # Use day of year to select the same quote for the entire day
-                    day_of_year = today.timetuple().tm_yday
-                    # Use modulo to cycle through quotes if there are fewer quotes than days
-                    quote_index = day_of_year % len(quotes)
-                    selected_quote = quotes[quote_index]
-                    random_quote = json.loads(selected_quote)
-    except Exception as e:
-        logger.error(f"Error loading quotes: {str(e)}")
-        # Fallback quote if file can't be read
-        random_quote = {
-            "quote": "The only way to do great work is to love what you do.",
-            "author": "Steve Jobs"
-        }
-
     # --- Unread notifications count ---
     from .models import Notification
     unread_notifications_count = Notification.objects.filter(user=request.user, is_read=False).count()
@@ -375,6 +376,24 @@ def dashboard(request):
     # --- Check if user is a mentor ---
     from .models import MentorProfile
     is_mentor = MentorProfile.objects.filter(user=request.user).exists()
+
+    # --- Today's Habits (active habits that are due today) ---
+    from .models import Habit
+    todays_habits = Habit.objects.filter(
+        user=request.user,
+        is_active=True
+    ).select_related('category').order_by('-priority', 'title')
+    
+    # Add completion status for each habit
+    habits_with_status = []
+    for habit in todays_habits:
+        habit.completed_today = habit.is_completed_today()
+        habit.is_due = habit.is_due_today()
+        if habit.frequency == 'daily':
+            habit.current_streak = habit.get_current_streak()
+        else:
+            habit.current_streak = 0
+        habits_with_status.append(habit)
 
     # --- Active public timer sessions ---
     from .models import TimerSession
@@ -414,8 +433,8 @@ def dashboard(request):
         "logs_this_month": logs_this_month,
         "calendar_days": calendar_days,
         "day_names": day_names,
-        "random_quote": random_quote,
         "is_mentor": is_mentor,
+        "todays_habits": habits_with_status,
         "active_timer_sessions": active_timer_sessions,
         "leaderboard": leaderboard,
         "user_points": user_points,
@@ -731,6 +750,31 @@ def analytics(request):
             'minutes': daily_activity['total_minutes']
         }
 
+    # --- Load a quote from quotes.jsonl (same quote per day) ---
+    import os
+    
+    random_quote = None
+    quotes_file = os.path.join(os.path.dirname(__file__), '..', 'quotes', 'quotes.jsonl')
+    
+    try:
+        if os.path.exists(quotes_file):
+            with open(quotes_file, 'r', encoding='utf-8') as f:
+                quotes = f.readlines()
+                if quotes:
+                    # Use day of year to select the same quote for the entire day
+                    day_of_year = today.timetuple().tm_yday
+                    # Use modulo to cycle through quotes if there are fewer quotes than days
+                    quote_index = day_of_year % len(quotes)
+                    selected_quote = quotes[quote_index]
+                    random_quote = json.loads(selected_quote)
+    except Exception as e:
+        logger.error(f"Error loading quotes: {str(e)}")
+        # Fallback quote if file can't be read
+        random_quote = {
+            "quote": "The only way to do great work is to love what you do.",
+            "author": "Steve Jobs"
+        }
+
     # Handle AJAX requests for calendar updates
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return JsonResponse({
@@ -780,6 +824,7 @@ def analytics(request):
         "completion_rate_week": completion_rate_week,
         "week_time": week_time,
         "best_day_info": best_day_info,
+        "random_quote": random_quote,
     }
     return render(request, "tracker/analytics.html", context)
 
@@ -1597,9 +1642,71 @@ def save_day_schedule(request):
     return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
 
 @login_required
+def complete_habit_from_planner(request):
+    """Complete a habit from the day planner."""
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            habit_id = data.get('habit_id')
+            completion_date = data.get('date')
+            notes = data.get('notes', '')
+            
+            if not habit_id or not completion_date:
+                return JsonResponse({'success': False, 'error': 'habit_id and date are required'}, status=400)
+            
+            # Get the habit
+            habit = get_object_or_404(Habit, id=habit_id, user=request.user)
+            
+            # Parse completion date
+            from datetime import datetime
+            completion_date_obj = datetime.strptime(completion_date, '%Y-%m-%d').date()
+            
+            # Check if already completed
+            existing = HabitCompletion.objects.filter(
+                habit=habit,
+                user=request.user,
+                completion_date=completion_date_obj
+            ).first()
+            
+            if existing:
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Habit already completed for this date',
+                    'already_completed': True
+                })
+            
+            # Create completion
+            HabitCompletion.objects.create(
+                habit=habit,
+                user=request.user,
+                completion_date=completion_date_obj,
+                notes=notes
+            )
+            
+            # Award points
+            from .models import UserPoints
+            user_points, _ = UserPoints.objects.get_or_create(user=request.user)
+            user_points.add_points(100, f'Completed habit: {habit.title}')
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Completed habit: {habit.title}',
+                'points_awarded': 100
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"Error in complete_habit_from_planner: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'POST method required'}, status=405)
+
+@login_required
 def load_day_schedule(request, schedule_date):
     """Load day schedule for a specific date via AJAX."""
     try:
+        from datetime import datetime
         # Get manually created schedule events
         try:
             schedule = DaySchedule.objects.get(user=request.user, date=schedule_date)
@@ -1646,8 +1753,73 @@ def load_day_schedule(request, schedule_date):
                 'source': 'calendar'
             })
         
-        # Combine manual events with calendar events
-        all_events = manual_events + calendar_events
+        # Get habits that are due today
+        habit_events = []
+        schedule_date_obj = datetime.strptime(schedule_date, '%Y-%m-%d').date()
+        weekday = schedule_date_obj.weekday()  # 0=Monday, 6=Sunday
+        
+        # Get all active habits for the user, ordered by priority (high to low)
+        active_habits = Habit.objects.filter(
+            user=request.user,
+            is_active=True
+        ).select_related('category').order_by('-priority', 'title')
+        
+        # Stack habits vertically starting from morning to avoid overlaps
+        current_start_time = 480  # Start at 8:00 AM
+        habit_duration = 30  # Default 30 minutes per habit
+        gap_between_habits = 5  # 5 minute gap between habits
+        
+        for habit in active_habits:
+            # Check if habit is due on this day
+            is_due = False
+            if habit.frequency == 'daily':
+                is_due = True
+            elif habit.frequency == 'weekly':
+                # Weekly habits due on Monday (can be customized)
+                is_due = (weekday == 0)
+            elif habit.frequency == 'monthly':
+                # Monthly habits due on 1st of month
+                is_due = (schedule_date_obj.day == 1)
+            
+            if not is_due:
+                continue
+            
+            # Check if already completed today
+            is_completed = HabitCompletion.objects.filter(
+                habit=habit,
+                user=request.user,
+                completion_date=schedule_date_obj
+            ).exists()
+            
+            # Stack habits sequentially with no overlap
+            start_min = current_start_time
+            end_min = start_min + habit_duration
+            
+            # Make sure we don't go past 11:00 PM (1380 minutes)
+            if end_min > 1380:
+                # Wrap around or cap - in this case we'll just cap
+                break
+            
+            habit_events.append({
+                'id': f'habit_{habit.id}',
+                'title': f"🔄 {habit.title}",
+                'startMin': start_min,
+                'endMin': end_min,
+                'logged': False,
+                'complete': is_completed,
+                'isHabit': True,
+                'habitId': habit.id,
+                'frequency': habit.frequency,
+                'priority': habit.priority,
+                'category': habit.category.name if habit.category else None,
+                'source': 'habit'
+            })
+            
+            # Move to next time slot (no overlap)
+            current_start_time = end_min + gap_between_habits
+        
+        # Combine manual events with calendar events and habits
+        all_events = manual_events + calendar_events + habit_events
         
         return JsonResponse({
             'success': True,
@@ -1765,6 +1937,189 @@ def log_delete(request, pk):
         log.delete()
         return redirect("log_list")
     return render(request, "tracker/log_confirm_delete.html", {"log": log})
+
+
+# Habit views
+@login_required
+def habit_list(request):
+    """List all habits with filtering options"""
+    from .models import Habit
+    
+    # Get filter parameters
+    frequency_filter = request.GET.get('frequency', '')
+    status_filter = request.GET.get('status', 'active')
+    
+    # Base queryset
+    habits = Habit.objects.filter(user=request.user)
+    
+    # Apply filters
+    if status_filter == 'active':
+        habits = habits.filter(is_active=True)
+    elif status_filter == 'inactive':
+        habits = habits.filter(is_active=False)
+    
+    if frequency_filter:
+        habits = habits.filter(frequency=frequency_filter)
+    
+    # Order by priority and creation date
+    habits = habits.order_by('-priority', '-created_at')
+    
+    # Add completion status for today
+    for habit in habits:
+        habit.completed_today = habit.is_completed_today()
+        habit.is_due = habit.is_due_today()
+        habit.current_streak = habit.get_current_streak()
+    
+    context = {
+        'habits': habits,
+        'frequency_filter': frequency_filter,
+        'status_filter': status_filter,
+    }
+    return render(request, 'tracker/habit_list.html', context)
+
+
+@login_required
+def habit_create(request):
+    """Create a new habit"""
+    from .forms import HabitForm
+    
+    if request.method == 'POST':
+        form = HabitForm(request.POST, user=request.user)
+        if form.is_valid():
+            habit = form.save(commit=False)
+            habit.user = request.user
+            
+            # Auto-classify habit only if user didn't manually select a category
+            if not habit.category:
+                from .services import semantic_classifier_remote
+                try:
+                    # Combine title and description for better classification
+                    text = f"{habit.title} {habit.description or ''}".strip()
+                    category_name, scores = semantic_classifier_remote.classify_text(text)
+                    
+                    # Try to find or create the category
+                    from django.db.models import Q
+                    category = Category.objects.filter(
+                        Q(name__iexact=category_name) & (Q(is_global=True) | Q(user=request.user))
+                    ).first()
+                    
+                    if not category:
+                        # Fallback to Uncategorized
+                        category = Category.objects.filter(
+                            Q(name__iexact='Uncategorized') & (Q(is_global=True) | Q(user=request.user))
+                        ).first()
+                    
+                    if category:
+                        habit.category = category
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to auto-classify habit: {str(e)}")
+            
+            habit.save()
+            messages.success(request, f"Habit '{habit.title}' has been created! 🎯")
+            return redirect('habit_list')
+    else:
+        form = HabitForm(user=request.user)
+    
+    return render(request, 'tracker/habit_form.html', {'form': form, 'action': 'Create'})
+
+
+@login_required
+def habit_update(request, pk):
+    """Update an existing habit"""
+    from .models import Habit
+    from .forms import HabitForm
+    
+    habit = get_object_or_404(Habit, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        form = HabitForm(request.POST, instance=habit, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Habit '{habit.title}' has been updated! ✏️")
+            return redirect('habit_list')
+    else:
+        form = HabitForm(instance=habit, user=request.user)
+    
+    return render(request, 'tracker/habit_form.html', {'form': form, 'habit': habit, 'action': 'Edit'})
+
+
+@login_required
+def habit_delete(request, pk):
+    """Delete a habit"""
+    from .models import Habit
+    
+    habit = get_object_or_404(Habit, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        habit_title = habit.title
+        habit.delete()
+        messages.success(request, f"Habit '{habit_title}' has been deleted. 🗑️")
+        return redirect('habit_list')
+    
+    return render(request, 'tracker/habit_confirm_delete.html', {'habit': habit})
+
+
+@login_required
+def habit_complete(request, pk):
+    """Mark a habit as completed for today/period"""
+    from .models import Habit, HabitCompletion, UserPoints
+    
+    habit = get_object_or_404(Habit, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        notes = request.POST.get('notes', '').strip()
+        
+        # Check if already completed
+        today = timezone.now().date()
+        existing_completion = HabitCompletion.objects.filter(
+            habit=habit,
+            completion_date=today
+        ).first()
+        
+        if existing_completion:
+            messages.warning(request, f"You've already completed '{habit.title}' today! ✓")
+        else:
+            # Create completion record
+            completion = HabitCompletion.objects.create(
+                habit=habit,
+                user=request.user,
+                completion_date=today,
+                notes=notes
+            )
+            
+            # Award points (same as completing a task)
+            user_points, created = UserPoints.objects.get_or_create(user=request.user)
+            user_points.add_points(100, f"Completed habit: {habit.title}")
+            
+            messages.success(request, f"Great job! Habit '{habit.title}' marked as complete! 🎉 +100 points")
+        
+        # Return to previous page or habit list
+        next_url = request.POST.get('next', 'habit_list')
+        return redirect(next_url)
+    
+    return render(request, 'tracker/habit_complete.html', {'habit': habit})
+
+
+@login_required
+def habit_toggle_active(request, pk):
+    """Toggle habit active/inactive status"""
+    from .models import Habit
+    
+    habit = get_object_or_404(Habit, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        habit.is_active = not habit.is_active
+        habit.save()
+        
+        status = "activated" if habit.is_active else "paused"
+        messages.success(request, f"Habit '{habit.title}' has been {status}.")
+        
+        return redirect('habit_list')
+    
+    return redirect('habit_list')
+
 
 # Progress view
 @login_required
@@ -2262,9 +2617,35 @@ def friends_feed(request):
                 "user_starred": user_starred,
             })
         
+        # Get recent habit completions from friends
+        recent_friend_habits = HabitCompletion.objects.filter(
+            user_id__in=friend_ids
+        ).select_related("user", "habit", "habit__category").order_by("-completion_date", "-id")[:50]
+
+        for habit_completion in recent_friend_habits:
+            # Get reaction info for this habit completion
+            star_count = ActivityReaction.objects.filter(habit_completion=habit_completion).count()
+            user_starred = ActivityReaction.objects.filter(habit_completion=habit_completion, user=request.user).exists()
+            
+            # Create a datetime from the date for sorting
+            timestamp = timezone.datetime.combine(habit_completion.completion_date, timezone.datetime.min.time(), tzinfo=timezone.get_current_timezone())
+            friends_timeline.append({
+                "type": "habit",
+                "user": habit_completion.user,
+                "friendship_id": friendship_map.get(habit_completion.user_id),
+                "title": habit_completion.habit.title,
+                "category": habit_completion.habit.category,
+                "timestamp": timestamp,
+                "duration": None,
+                "id": habit_completion.id,
+                "star_count": star_count,
+                "user_starred": user_starred,
+                "notes": habit_completion.notes,
+            })
+
         # Sort combined timeline by timestamp (most recent first)
         friends_timeline.sort(key=lambda x: x["timestamp"], reverse=True)
-    
+
     context = {
         'friends_timeline': friends_timeline,
         'friends_count': len(friend_ids),
@@ -2277,17 +2658,10 @@ def friend_progress_list(request):
     """View progress summary of all friends"""
     friends = request.user.friendships.select_related('friend')
     friend_users = [f.friend for f in friends]
-
-    # Gather progress summary: completed tasks count and total time spent in last 7 days
-    from django.db.models import Sum, Count
-    from django.utils.timezone import now
-    from datetime import timedelta
-    
-    today = now().date()
+    today = timezone.now().date()
     week_ago = today - timedelta(days=7)
-    
     progress_data = []
-
+    
     for friend in friend_users:
         completed_tasks = friend.tasks.filter(status='completed', completed_at__date__gte=week_ago).count()
         total_time = friend.daily_logs.filter(date__gte=week_ago).aggregate(total=Sum('duration'))['total'] or 0
@@ -2750,7 +3124,7 @@ def view_friend_profile(request, friendship_id):
 @validate_json(required_fields=['activity_type', 'activity_id'])
 @log_errors
 def toggle_star_reaction(request):
-    """Toggle star reaction on a friend's activity (task or log)"""
+    """Toggle star reaction on a friend's activity (task, log, or habit completion)"""
     data = request.json_data  # Already validated by decorator
     activity_type = data.get('activity_type')
     activity_id = data.get('activity_id')
@@ -2759,6 +3133,8 @@ def toggle_star_reaction(request):
         activity = get_object_or_404(Task, id=activity_id)
     elif activity_type == 'log':
         activity = get_object_or_404(DailyLog, id=activity_id)
+    elif activity_type == 'habit':
+        activity = get_object_or_404(HabitCompletion, id=activity_id)
     else:
         return JsonResponse({'error': 'Invalid activity type'}, status=400)
     
@@ -2776,10 +3152,16 @@ def toggle_star_reaction(request):
             task=activity,
             defaults={'reaction_type': 'star'}
         )
-    else:
+    elif activity_type == 'log':
         reaction, created = ActivityReaction.objects.get_or_create(
             user=request.user,
             daily_log=activity,
+            defaults={'reaction_type': 'star'}
+        )
+    else:  # habit
+        reaction, created = ActivityReaction.objects.get_or_create(
+            user=request.user,
+            habit_completion=activity,
             defaults={'reaction_type': 'star'}
         )
     
@@ -2798,8 +3180,10 @@ def toggle_star_reaction(request):
     # Get updated star count
     if activity_type == 'task':
         star_count = ActivityReaction.objects.filter(task=activity).count()
-    else:
+    elif activity_type == 'log':
         star_count = ActivityReaction.objects.filter(daily_log=activity).count()
+    else:  # habit
+        star_count = ActivityReaction.objects.filter(habit_completion=activity).count()
     
     return JsonResponse({
         'starred': starred,
@@ -4166,8 +4550,162 @@ def icloud_calendar_update_settings(request):
 
 @login_required
 def quickstart(request):
-    """Quickstart page showing pre-built plan options."""
+    """Quickstart page showing pre-built plan options and habit templates."""
     return render(request, 'tracker/quickstart.html')
+
+
+@login_required
+@require_http_methods(["POST"])
+def quickstart_create_habit(request, habit_type):
+    """Create a pre-built habit based on the selected type."""
+    
+    # Check if it's an AJAX request
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    # Define habit templates
+    habit_templates = {
+        'gym': {
+            'title': 'Go to Gym',
+            'description': 'Regular gym workout session for fitness and strength',
+            'frequency': 'daily',
+            'priority': 'high',
+            'category': 'Health'
+        },
+        'homework': {
+            'title': 'Complete Homework',
+            'description': 'Daily homework and assignments',
+            'frequency': 'daily',
+            'priority': 'high',
+            'category': 'Study'
+        },
+        'cooking': {
+            'title': 'Cook a Healthy Meal',
+            'description': 'Prepare nutritious home-cooked meals',
+            'frequency': 'daily',
+            'priority': 'medium',
+            'category': 'Health'
+        },
+        'play_games': {
+            'title': 'Play Games',
+            'description': 'Gaming session for relaxation and fun',
+            'frequency': 'daily',
+            'priority': 'low',
+            'category': 'Personal'
+        },
+        'meditation': {
+            'title': 'Meditation',
+            'description': 'Daily meditation practice for mental wellness',
+            'frequency': 'daily',
+            'priority': 'medium',
+            'category': 'Health'
+        },
+        'reading': {
+            'title': 'Read for 30 Minutes',
+            'description': 'Daily reading habit for knowledge and relaxation',
+            'frequency': 'daily',
+            'priority': 'medium',
+            'category': 'Personal'
+        },
+        'walk': {
+            'title': 'Go for a Walk',
+            'description': 'Daily walk for physical activity and fresh air',
+            'frequency': 'daily',
+            'priority': 'medium',
+            'category': 'Health'
+        },
+        'water': {
+            'title': 'Drink 8 Glasses of Water',
+            'description': 'Stay hydrated throughout the day',
+            'frequency': 'daily',
+            'priority': 'high',
+            'category': 'Health'
+        },
+        'journal': {
+            'title': 'Write in Journal',
+            'description': 'Daily journaling for reflection and mental clarity',
+            'frequency': 'daily',
+            'priority': 'low',
+            'category': 'Personal'
+        },
+        'music_practice': {
+            'title': 'Practice Musical Instrument',
+            'description': 'Daily practice session for musical skills',
+            'frequency': 'daily',
+            'priority': 'medium',
+            'category': 'Personal'
+        },
+    }
+    
+    if habit_type not in habit_templates:
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': 'Invalid habit type selected.'}, status=400)
+        messages.error(request, "Invalid habit type selected.")
+        return redirect('quickstart')
+    
+    template = habit_templates[habit_type]
+    
+    try:
+        # Get or create category
+        category, _ = Category.objects.get_or_create(
+            name=template['category'],
+            user=request.user,
+            defaults={'color': '#3B82F6'}
+        )
+        
+        # Check if habit with same title already exists
+        existing_habit = Habit.objects.filter(
+            user=request.user,
+            title=template['title']
+        ).first()
+        
+        if existing_habit:
+            if is_ajax:
+                return JsonResponse({
+                    'success': False,
+                    'already_exists': True,
+                    'message': f'You already have this habit.',
+                    'habit_id': existing_habit.id
+                })
+            messages.warning(
+                request,
+                f'You already have a habit called "{template["title"]}". '
+                f'<a href="/habits/{existing_habit.id}/edit/" class="underline">Edit it here</a>.'
+            )
+            return redirect('habit_list')
+        
+        # Create habit
+        habit = Habit.objects.create(
+            user=request.user,
+            title=template['title'],
+            description=template['description'],
+            frequency=template['frequency'],
+            priority=template['priority'],
+            category=category,
+            start_date=timezone.now().date(),
+            is_active=True
+        )
+        
+        if is_ajax:
+            return JsonResponse({
+                'success': True,
+                'message': f'Successfully created habit "{habit.title}"!',
+                'habit_id': habit.id
+            })
+        
+        messages.success(
+            request,
+            f'Successfully created habit "{habit.title}"! '
+            f'Start tracking it from your <a href="/habits/" class="underline">Habits</a> page.'
+        )
+        
+    except Exception as e:
+        logger.error(f"Error creating quickstart habit for user {request.user.id}: {str(e)}")
+        if is_ajax:
+            return JsonResponse({'success': False, 'message': f'Failed to create habit: {str(e)}'}, status=500)
+        messages.error(request, f"Failed to create habit: {str(e)}")
+        return redirect('quickstart')
+    
+    return redirect('habit_list')
 
 
 @login_required

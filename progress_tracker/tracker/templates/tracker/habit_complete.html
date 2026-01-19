@@ -1,0 +1,68 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Complete Habit - VisMatrix{% endblock %}
+
+{% block content %}
+
+<main class="max-w-2xl mx-auto space-y-6">
+  <div class="card border border-success/30 bg-gradient-to-br from-success/5 to-base-100 shadow-lg">
+    <div class="card-body p-6">
+      <div class="flex items-start gap-4">
+        <div class="flex-shrink-0">
+          <i class="bi bi-check-circle text-success text-5xl"></i>
+        </div>
+        <div class="flex-1">
+          <h1 class="text-2xl font-bold text-base-content mb-2">
+            Complete Habit
+          </h1>
+          <p class="text-base-content/70 mb-4">
+            Mark "<strong>{{ habit.title }}</strong>" as completed?
+          </p>
+          
+          <div class="alert alert-info shadow-md mb-6">
+            <i class="bi bi-info-circle"></i>
+            <div class="text-sm">
+              <p>You'll earn <strong>100 points</strong> for completing this habit!</p>
+              {% if habit.frequency == 'daily' %}
+              <p class="mt-1">Keep it up to build your streak! 🔥</p>
+              {% endif %}
+            </div>
+          </div>
+
+          <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="habit_list">
+            
+            <!-- Optional Notes -->
+            <div class="form-control">
+              <label class="label">
+                <span class="label-text font-semibold">
+                  <i class="bi bi-pencil"></i> Notes (Optional)
+                </span>
+              </label>
+              <textarea name="notes" 
+                        class="textarea textarea-bordered h-24" 
+                        placeholder="How did it go? Any thoughts..."></textarea>
+              <label class="label">
+                <span class="label-text-alt">Add a quick note about this completion</span>
+              </label>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+              <button type="submit" class="btn btn-success gap-2 shadow-md">
+                <i class="bi bi-check-lg"></i>
+                <span>Mark as Complete</span>
+              </button>
+              <a href="{% url 'habit_list' %}" class="btn btn-ghost gap-2">
+                <i class="bi bi-x-lg"></i>
+                <span>Cancel</span>
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+{% endblock %}

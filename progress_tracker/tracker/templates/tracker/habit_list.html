@@ -1,0 +1,238 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Habits - VisMatrix{% endblock %}
+
+{% block content %}
+
+<style>
+  .vm-habit { 
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .vm-habit:hover { 
+    box-shadow: 0 12px 24px rgb(15 23 42 / 0.08), 0 4px 8px rgb(15 23 42 / 0.04); 
+    transform: translateY(-2px); 
+  }
+  .vm-habit:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+  }
+
+  /* Frequency color coding */
+  .frequency-daily { border-left: 4px solid #10b981 !important; }
+  .frequency-weekly { border-left: 4px solid #3b82f6 !important; }
+  .frequency-monthly { border-left: 4px solid #8b5cf6 !important; }
+
+  /* Completion status */
+  .habit-completed { 
+    background-color: #f0fdf4 !important;
+    border-color: #bbf7d0 !important;
+  }
+  .habit-overdue {
+    background-color: #fef2f2 !important;
+    border-color: #fecaca !important;
+  }
+
+  /* Streak styling */
+  .streak-badge {
+    background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgb(245 158 11 / 0.4);
+  }
+</style>
+
+<main class="space-y-6">
+  <!-- Header -->
+  <header class="card border border-base-200 bg-gradient-to-br from-success/5 via-base-100 to-info/5 shadow-lg">
+    <div class="card-body p-6">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="min-w-0">
+          <h1 class="text-3xl sm:text-4xl font-black text-base-content mb-2">
+            <i class="bi bi-repeat text-success"></i> My Habits
+          </h1>
+          <p class="text-sm text-base-content/70">
+            Build consistency with recurring habits
+          </p>
+        </div>
+
+        <a href="{% url 'habit_create' %}" class="btn btn-success gap-2 shadow-md hover:shadow-lg transition-all">
+          <i class="bi bi-plus-lg"></i>
+          <span>New Habit</span>
+        </a>
+      </div>
+
+      <!-- Filters -->
+      <div class="mt-4 flex flex-wrap gap-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm font-semibold text-base-content/70">Frequency:</span>
+          <a href="{% url 'habit_list' %}" 
+             class="btn btn-sm {% if not frequency_filter %}btn-primary{% else %}btn-ghost{% endif %}">
+            All
+          </a>
+          <a href="?frequency=daily&status={{ status_filter }}" 
+             class="btn btn-sm {% if frequency_filter == 'daily' %}btn-primary{% else %}btn-ghost{% endif %}">
+            Daily
+          </a>
+          <a href="?frequency=weekly&status={{ status_filter }}" 
+             class="btn btn-sm {% if frequency_filter == 'weekly' %}btn-primary{% else %}btn-ghost{% endif %}">
+            Weekly
+          </a>
+          <a href="?frequency=monthly&status={{ status_filter }}" 
+             class="btn btn-sm {% if frequency_filter == 'monthly' %}btn-primary{% else %}btn-ghost{% endif %}">
+            Monthly
+          </a>
+        </div>
+
+        <div class="divider divider-horizontal"></div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm font-semibold text-base-content/70">Status:</span>
+          <a href="?frequency={{ frequency_filter }}&status=active" 
+             class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-ghost{% endif %}">
+            Active
+          </a>
+          <a href="?frequency={{ frequency_filter }}&status=inactive" 
+             class="btn btn-sm {% if status_filter == 'inactive' %}btn-primary{% else %}btn-ghost{% endif %}">
+            Paused
+          </a>
+          <a href="?frequency={{ frequency_filter }}" 
+             class="btn btn-sm {% if not status_filter or status_filter not in 'active inactive' %}btn-primary{% else %}btn-ghost{% endif %}">
+            All
+          </a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Habits List -->
+  {% if habits %}
+  <div class="space-y-4">
+    {% for habit in habits %}
+    <article class="vm-habit card border border-base-200 bg-base-100 shadow-md frequency-{{ habit.frequency }} {% if habit.completed_today %}habit-completed{% elif habit.is_due %}habit-overdue{% endif %}">
+      <div class="card-body p-5">
+        <div class="flex items-start gap-4">
+          <!-- Checkbox -->
+          <div class="flex-shrink-0 pt-1">
+            {% if habit.completed_today %}
+              <i class="bi bi-check-circle-fill text-success text-2xl"></i>
+            {% else %}
+              <form method="post" action="{% url 'habit_complete' habit.pk %}" class="inline">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="habit_list">
+                <button type="submit" class="btn btn-circle btn-ghost hover:bg-success/20" 
+                        title="Mark as complete">
+                  <i class="bi bi-circle text-2xl text-base-content/30"></i>
+                </button>
+              </form>
+            {% endif %}
+          </div>
+
+          <!-- Content -->
+          <div class="flex-1 min-w-0">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 flex-1">
+                <h3 class="text-lg font-bold text-base-content">{{ habit.title }}</h3>
+                {% if habit.description %}
+                <p class="text-sm text-base-content/70 mt-1">{{ habit.description }}</p>
+                {% endif %}
+
+                <!-- Metadata -->
+                <div class="flex flex-wrap items-center gap-3 mt-3">
+                  <!-- Frequency Badge -->
+                  <span class="badge badge-outline gap-1">
+                    <i class="bi bi-arrow-repeat"></i>
+                    {{ habit.get_frequency_display }}
+                  </span>
+
+                  <!-- Category -->
+                  {% if habit.category %}
+                  <span class="badge badge-ghost gap-1">
+                    <i class="bi bi-tag"></i>
+                    {{ habit.category.name }}
+                  </span>
+                  {% endif %}
+
+                  <!-- Priority -->
+                  <span class="badge badge-outline gap-1">
+                    <i class="bi bi-flag"></i>
+                    {{ habit.get_priority_display }}
+                  </span>
+
+                  <!-- Streak (for daily habits) -->
+                  {% if habit.frequency == 'daily' and habit.current_streak > 0 %}
+                  <span class="streak-badge badge gap-1">
+                    <i class="bi bi-fire"></i>
+                    {{ habit.current_streak }} day{{ habit.current_streak|pluralize }} streak
+                  </span>
+                  {% endif %}
+
+                  <!-- Start Date -->
+                  <span class="text-xs text-base-content/60">
+                    <i class="bi bi-calendar-check"></i>
+                    Started {{ habit.start_date|date:"M j, Y" }}
+                  </span>
+
+                  <!-- Active/Inactive Status -->
+                  {% if not habit.is_active %}
+                  <span class="badge badge-warning gap-1">
+                    <i class="bi bi-pause-circle"></i>
+                    Paused
+                  </span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex-shrink-0 flex gap-2">
+                <a href="{% url 'habit_update' habit.pk %}" 
+                   class="btn btn-sm btn-ghost gap-1"
+                   title="Edit habit">
+                  <i class="bi bi-pencil"></i>
+                </a>
+
+                <form method="post" action="{% url 'habit_toggle_active' habit.pk %}" class="inline">
+                  {% csrf_token %}
+                  <button type="submit" 
+                          class="btn btn-sm btn-ghost gap-1"
+                          title="{% if habit.is_active %}Pause{% else %}Resume{% endif %} habit">
+                    <i class="bi bi-{% if habit.is_active %}pause{% else %}play{% endif %}-circle"></i>
+                  </button>
+                </form>
+
+                <a href="{% url 'habit_delete' habit.pk %}" 
+                   class="btn btn-sm btn-ghost gap-1 text-error hover:bg-error/20"
+                   title="Delete habit">
+                  <i class="bi bi-trash"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <!-- Empty State -->
+  <div class="card border border-base-200 bg-base-100 shadow-md">
+    <div class="card-body text-center py-12">
+      <i class="bi bi-repeat text-6xl text-base-content/30 mb-4"></i>
+      <h2 class="text-2xl font-bold text-base-content mb-2">No habits yet!</h2>
+      <p class="text-base-content/70 mb-6">
+        Start building better habits by creating your first recurring task.
+      </p>
+      <a href="{% url 'habit_create' %}" class="btn btn-success gap-2 shadow-md hover:shadow-lg">
+        <i class="bi bi-plus-lg"></i>
+        <span>Create Your First Habit</span>
+      </a>
+    </div>
+  </div>
+  {% endif %}
+
+</main>
+
+{% endblock %}
