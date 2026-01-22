@@ -5824,11 +5824,15 @@ def blog_my_posts(request):
     published_count = posts.filter(status='published').count()
     archived_count = posts.filter(status='archived').count()
     
+    # Calculate total views
+    total_views = sum(post.views for post in posts)
+    
     context = {
-        'posts': posts,
+        'blog_posts': posts,  # Changed from 'posts' to 'blog_posts'
         'draft_count': draft_count,
         'published_count': published_count,
         'archived_count': archived_count,
+        'total_views': total_views,
     }
     
     return render(request, 'tracker/blog_my_posts.html', context)

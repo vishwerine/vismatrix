@@ -80,17 +80,28 @@
       View Pro Analytics
     </a>
   </div>
-  {% else %}
-  <div class="alert bg-base-200 border border-base-300">
-    <i class="bi bi-lock text-2xl"></i>
-    <div class="flex-1">
-      <h3 class="font-bold">Want More Insights?</h3>
-      <p class="text-sm text-base-content/70">Upgrade to Pro for advanced analytics, data exports, and AI-powered features</p>
+  {% endif %}
+  
+  <!-- Upgrade to Pro Banner (Always shown for non-Pro users) -->
+  {% if not user_subscription.is_pro %}
+  <div class="card border border-base-300 bg-base-200 shadow-md">
+    <div class="card-body p-5">
+      <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center gap-4">
+          <div class="flex-shrink-0">
+            <i class="bi bi-lock text-3xl text-primary"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg">Want More Insights?</h3>
+            <p class="text-sm text-base-content/70 mt-1">Upgrade to Pro for advanced analytics, data exports, and AI-powered features</p>
+          </div>
+        </div>
+        <a href="{% url 'subscription_plans' %}" class="btn btn-primary gap-2">
+          <i class="bi bi-star"></i>
+          Upgrade to Pro
+        </a>
+      </div>
     </div>
-    <a href="{% url 'subscription_plans' %}" class="btn btn-sm btn-primary gap-2">
-      <i class="bi bi-star"></i>
-      Upgrade to Pro
-    </a>
   </div>
   {% endif %}
 
@@ -392,7 +403,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   // Global: improve contrast using theme values (no fancy animations)
-  Chart.defaults.color = 'rgba(15, 23, 42, 0.75)'; // slate-900-ish
+  // Get current theme color for text (adapts to light/dark mode)
+  const textColor = getComputedStyle(document.documentElement).getPropertyValue('--bc') || 'rgba(15, 23, 42, 0.75)';
+  const gridColor = getComputedStyle(document.documentElement).getPropertyValue('--bc') || 'rgba(15, 23, 42, 0.08)';
+  
+  Chart.defaults.color = `hsl(${textColor} / 0.7)`;
   Chart.defaults.font.family = 'system-ui, -apple-system, Segoe UI, Roboto, sans-serif';
 
   const weeklyData = JSON.parse(document.getElementById('weekly-data').textContent || '[]');
@@ -433,11 +448,17 @@ document.addEventListener('DOMContentLoaded', function() {
         scales: {
           y: {
             beginAtZero: true,
-            ticks: { callback: (v) => `${v}m` },
-            grid: { color: 'rgba(15, 23, 42, 0.08)' }
+            ticks: { 
+              callback: (v) => `${v}m`,
+              color: `hsl(${textColor} / 0.7)`
+            },
+            grid: { color: `hsl(${gridColor} / 0.1)` }
           },
           x: {
-            grid: { color: 'rgba(15, 23, 42, 0.08)' }
+            ticks: {
+              color: `hsl(${textColor} / 0.7)`
+            },
+            grid: { color: `hsl(${gridColor} / 0.1)` }
           }
         },
         animation: false

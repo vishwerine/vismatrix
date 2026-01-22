@@ -46,17 +46,19 @@
           <span>My Mentor Profile</span>
         </a>
         {% endif %}
-        <a href="{% url 'task_create' %}" class="btn btn-primary gap-2 shadow-md hover:shadow-lg transition-all">
-          <i class="bi bi-plus-square" aria-hidden="true"></i>
-          <span>New Task</span>
-        </a>
 
-        <a href="{% url 'task_list' %}" class="btn btn-primary gap-2 shadow-md hover:shadow-lg transition-all">Tasks</a>
+        <a href="{% url 'blog_list' %}" class="btn btn-success gap-2 shadow-md hover:shadow-lg transition-all">
+          <i class="bi bi-journal-text"></i> 
+          <span>Blogs</span>
         </a>
-
+        
+        
         <a href="{% url 'habit_list' %}" class="btn btn-success gap-2 shadow-md hover:shadow-lg transition-all">
           <i class="bi bi-repeat" aria-hidden="true"></i>
           <span>Habits</span>
+        </a>
+
+        <a href="{% url 'task_list' %}" class="btn btn-primary gap-2 shadow-md hover:shadow-lg transition-all">Tasks</a>
         </a>
 
         <a href="{% url 'log_list' %}" class="btn btn-primary gap-2 shadow-md hover:shadow-lg transition-all">Logs</a>

@@ -83,7 +83,7 @@
         <div class="flex-1">
           <h3 class="font-bold text-xl mb-1">{{ blog_post.author.username }}</h3>
           <p class="text-base-content/70 mb-3">
-            Contributor at VisMatrix Blog
+            Contributor at VisMatrix<span style="color: var(--primary)">.Space</span>
           </p>
           {% if user == blog_post.author %}
             <a href="{% url 'blog_edit' blog_post.slug %}" class="btn btn-sm btn-primary gap-2">
@@ -134,7 +134,7 @@
         Start Your Growth Journey
       </h3>
       <p class="mb-6">
-        Join VisMatrix to track your habits, set goals, and achieve personal growth with our powerful progress tracking tools.
+        Join VisMatrix<span style="color: var(--primary)">.Space</span> to track your habits, set goals, and achieve personal growth with our powerful progress tracking tools.
       </p>
       <div class="flex gap-3 justify-center">
         <a href="/accounts/signup/" class="btn btn-accent gap-2">
