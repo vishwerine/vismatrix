@@ -342,7 +342,7 @@ class BlogPostForm(forms.ModelForm):
             'excerpt': forms.Textarea(attrs={
                 'class': 'textarea textarea-bordered w-full',
                 'rows': 3,
-                'placeholder': 'Brief summary of your post (150-300 characters)...',
+                'placeholder': 'Brief summary of your post (optional)...',
                 'maxlength': '300'
             }),
             'content': forms.Textarea(attrs={
@@ -368,7 +368,7 @@ class BlogPostForm(forms.ModelForm):
         }
         help_texts = {
             'title': 'Make it catchy and descriptive',
-            'excerpt': 'This appears on the blog list page',
+            'excerpt': 'Optional: Brief summary for the blog list page',
             'content': 'Use Markdown formatting for rich text',
             'category': 'Choose the most relevant category',
             'status': 'Draft = only you can see it, Published = public',
@@ -382,18 +382,8 @@ class BlogPostForm(forms.ModelForm):
             raise forms.ValidationError("Title should be at least 10 characters long.")
         return title
     
-    def clean_excerpt(self):
-        excerpt = self.cleaned_data.get('excerpt', '').strip()
-        if not excerpt:
-            raise forms.ValidationError("Excerpt is required.")
-        if len(excerpt) < 50:
-            raise forms.ValidationError("Excerpt should be at least 50 characters long.")
-        return excerpt
-    
     def clean_content(self):
         content = self.cleaned_data.get('content', '').strip()
         if not content:
             raise forms.ValidationError("Content is required.")
-        if len(content) < 200:
-            raise forms.ValidationError("Content should be at least 200 characters long.")
         return content

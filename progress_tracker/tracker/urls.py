@@ -166,6 +166,7 @@ urlpatterns = [
     path("blog/new/create/", views.blog_create, name="blog_create"),
     path("blog/<slug:slug>/edit/", views.blog_edit, name="blog_edit"),
     path("blog/<slug:slug>/delete/", views.blog_delete, name="blog_delete"),
+    path("blog/<slug:slug>/publish/", views.blog_publish, name="blog_publish"),
     path("my-blog-posts/", views.blog_my_posts, name="blog_my_posts"),
     
     # Subscription & Payments

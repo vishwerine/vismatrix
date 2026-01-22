@@ -1,0 +1,71 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Publish Post | VisMatrix Blog{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  
+  <!-- Confirmation Card -->
+  <div class="card bg-base-100 shadow-xl border border-success/20">
+    <div class="card-body">
+      
+      <!-- Icon & Title -->
+      <div class="flex items-center gap-4 mb-4">
+        <div class="flex-shrink-0 w-16 h-16 rounded-full bg-success/10 flex items-center justify-center">
+          <i class="bi bi-send-check text-success text-3xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-bold text-base-content">Publish Blog Post?</h1>
+          <p class="text-base-content/70 mt-1">Make your post visible to everyone</p>
+        </div>
+      </div>
+      
+      <!-- Post Info -->
+      <div class="bg-base-200 rounded-lg p-4 mb-6">
+        <h2 class="font-bold text-lg mb-2">{{ blog_post.title }}</h2>
+        {% if blog_post.excerpt %}
+          <p class="text-sm text-base-content/70 mb-3">{{ blog_post.excerpt }}</p>
+        {% endif %}
+        <div class="flex flex-wrap gap-3 text-sm text-base-content/60">
+          <span class="flex items-center gap-1">
+            <i class="bi bi-folder"></i>
+            {{ blog_post.get_category_display }}
+          </span>
+          <span class="flex items-center gap-1">
+            <i class="bi bi-clock"></i>
+            {{ blog_post.read_time }} min read
+          </span>
+        </div>
+      </div>
+      
+      <!-- Warning -->
+      <div class="alert alert-info mb-6">
+        <i class="bi bi-info-circle"></i>
+        <div>
+          <p class="font-semibold">What happens when you publish?</p>
+          <ul class="text-sm mt-2 space-y-1">
+            <li>✓ Your post will appear on the public blog</li>
+            <li>✓ Anyone can read and view your post</li>
+            <li>✓ You can still edit it after publishing</li>
+          </ul>
+        </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <form method="post" class="flex gap-3">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-success flex-1 gap-2">
+          <i class="bi bi-send-check"></i>
+          <span>Yes, Publish Now</span>
+        </button>
+        <a href="{% url 'blog_my_posts' %}" class="btn btn-ghost gap-2">
+          <i class="bi bi-x-circle"></i>
+          <span>Cancel</span>
+        </a>
+      </form>
+      
+    </div>
+  </div>
+  
+</div>
+{% endblock %}

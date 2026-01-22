@@ -5607,12 +5607,14 @@ def blog_list(request):
     ]
     
     # Get user-generated published posts
-    user_posts = BlogPost.objects.filter(status='published').select_related('author')
+    user_posts = BlogPost.objects.filter(status='published').select_related('author').order_by('-published_at', '-created_at')
     
-    # Convert user posts to dict format
-    user_blogs = []
+    # Separate user's own posts and others' posts
+    current_user_posts = []
+    other_user_posts = []
+    
     for post in user_posts:
-        user_blogs.append({
+        blog_dict = {
             'slug': post.slug,
             'title': post.title,
             'excerpt': post.excerpt,
@@ -5623,14 +5625,21 @@ def blog_list(request):
             'author': post.author.username,
             'date': post.published_at.strftime('%B %d, %Y') if post.published_at else post.created_at.strftime('%B %d, %Y'),
             'views': post.views,
-        })
+            'published_at': post.published_at or post.created_at,  # For sorting
+        }
+        
+        # Check if post is by current user
+        if request.user.is_authenticated and post.author == request.user:
+            current_user_posts.append(blog_dict)
+        else:
+            other_user_posts.append(blog_dict)
     
-    # Combine and sort by date
-    all_blogs = static_blogs + user_blogs
+    # Combine: user's posts first, then others' posts, then static blogs
+    all_blogs = current_user_posts + other_user_posts + static_blogs
     
     context = {
         'blogs': all_blogs,
-        'user_blog_count': len(user_blogs),
+        'user_blog_count': len(current_user_posts) + len(other_user_posts),
     }
     
     return render(request, 'tracker/blog_list.html', context)
@@ -5810,6 +5819,34 @@ def blog_delete(request, slug):
     }
     
     return render(request, 'tracker/blog_confirm_delete.html', context)
+
+
+@login_required
+def blog_publish(request, slug):
+    """Publish a draft blog post."""
+    from .models import BlogPost
+    
+    blog_post = get_object_or_404(BlogPost, slug=slug, author=request.user)
+    
+    # Only allow publishing if it's a draft
+    if blog_post.status != 'draft':
+        messages.warning(request, 'This post is already published or archived.')
+        return redirect('blog_my_posts')
+    
+    if request.method == 'POST':
+        blog_post.status = 'published'
+        if not blog_post.published_at:
+            blog_post.published_at = timezone.now()
+        blog_post.save()
+        
+        messages.success(request, f'Your blog post "{blog_post.title}" is now published!')
+        return redirect('blog_my_posts')
+    
+    # If GET request, show confirmation page
+    context = {
+        'blog_post': blog_post,
+    }
+    return render(request, 'tracker/blog_confirm_publish.html', context)
 
 
 @login_required

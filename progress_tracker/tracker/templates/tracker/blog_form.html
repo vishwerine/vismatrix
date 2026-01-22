@@ -57,15 +57,10 @@
     <!-- Excerpt -->
     <div class="form-control">
       <label class="label">
-        <span class="label-text font-semibold">Excerpt *</span>
+        <span class="label-text font-semibold">Excerpt (Optional)</span>
         <span class="label-text-alt text-base-content/60">{{ form.excerpt.help_text }}</span>
       </label>
       {{ form.excerpt }}
-      <label class="label">
-        <span class="label-text-alt text-base-content/60">
-          <span id="excerptCount">0</span>/300 characters
-        </span>
-      </label>
       {% if form.excerpt.errors %}
         <label class="label">
           <span class="label-text-alt text-error">{{ form.excerpt.errors.0 }}</span>
@@ -82,7 +77,7 @@
       {{ form.content }}
       <label class="label">
         <span class="label-text-alt text-base-content/60">
-          <span id="wordCount">0</span> words · Estimated <span id="readTime">1</span> min read
+          <span id="wordCount">0</span> words
         </span>
       </label>
       {% if form.content.errors %}
@@ -162,27 +157,15 @@
 </div>
 
 <script>
-  // Character and word counters
+  // Word counter
   document.addEventListener('DOMContentLoaded', function() {
-    const excerptField = document.querySelector('textarea[name="excerpt"]');
     const contentField = document.querySelector('textarea[name="content"]');
-    const excerptCount = document.getElementById('excerptCount');
     const wordCount = document.getElementById('wordCount');
-    const readTime = document.getElementById('readTime');
     
-    if (excerptField && excerptCount) {
-      const updateExcerptCount = () => {
-        excerptCount.textContent = excerptField.value.length;
-      };
-      excerptField.addEventListener('input', updateExcerptCount);
-      updateExcerptCount();
-    }
-    
-    if (contentField && wordCount && readTime) {
+    if (contentField && wordCount) {
       const updateContentStats = () => {
         const words = contentField.value.trim().split(/\s+/).filter(w => w.length > 0).length;
         wordCount.textContent = words;
-        readTime.textContent = Math.max(1, Math.round(words / 200));
       };
       contentField.addEventListener('input', updateContentStats);
       updateContentStats();

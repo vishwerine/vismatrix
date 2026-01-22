@@ -1038,7 +1038,7 @@ class BlogPost(models.Model):
     author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_posts', db_index=True)
     title = models.CharField(max_length=200, help_text="Catchy, descriptive title for your post")
     slug = models.SlugField(max_length=250, unique=True, db_index=True, help_text="URL-friendly version of title (auto-generated)")
-    excerpt = models.TextField(max_length=300, help_text="Brief summary (150-300 characters) for the blog list")
+    excerpt = models.TextField(max_length=300, blank=True, help_text="Optional: Brief summary for the blog list")
     content = models.TextField(help_text="Full article content (Markdown supported)")
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='personal-development', db_index=True)
     
