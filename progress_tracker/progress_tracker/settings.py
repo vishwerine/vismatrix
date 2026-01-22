@@ -239,3 +239,21 @@ else:
 
 # --- End Same-domain Next.js + Django (reverse proxy) ---
 
+
+# --- Google AdSense Configuration ---
+# Enable/disable ads globally (set to False during development/testing)
+GOOGLE_ADSENSE_ENABLED = env.bool('GOOGLE_ADSENSE_ENABLED', default=False)
+
+# Your AdSense Publisher ID (get this from AdSense dashboard)
+# Format: ca-pub-XXXXXXXXXXXXXXXX
+GOOGLE_ADSENSE_CLIENT_ID = env('GOOGLE_ADSENSE_CLIENT_ID', default='ca-pub-7653466283203958')
+
+# Ad unit slots (get these from AdSense dashboard after creating ad units)
+# Each ad unit has a unique slot ID
+GOOGLE_ADS_SLOTS = {
+    'header_banner': env('GOOGLE_ADS_HEADER_SLOT', default=''),      # Top banner (728x90 or responsive)
+    'sidebar': env('GOOGLE_ADS_SIDEBAR_SLOT', default=''),           # Sidebar ad (300x250)
+    'in_content': env('GOOGLE_ADS_CONTENT_SLOT', default=''),        # In-content ad (336x280)
+    'mobile_banner': env('GOOGLE_ADS_MOBILE_SLOT', default=''),      # Mobile banner (320x50)
+}
+# --- End Google AdSense Configuration ---
