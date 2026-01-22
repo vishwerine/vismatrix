@@ -35,3 +35,22 @@ def pending_friend_requests_count(request):
         return {'pending_friend_requests_count': 0}
     count = FriendRequest.objects.filter(to_user=request.user, status='pending').count()
     return {'pending_friend_requests_count': count}
+
+
+def user_subscription(request):
+    """Add user subscription to context for all templates."""
+    from .models import Subscription
+    
+    if request.user.is_authenticated:
+        try:
+            subscription = request.user.subscription
+        except Subscription.DoesNotExist:
+            # Create free subscription if doesn't exist
+            subscription = Subscription.objects.create(
+                user=request.user,
+                plan='free',
+                status='active'
+            )
+        return {'user_subscription': subscription}
+    return {}
+

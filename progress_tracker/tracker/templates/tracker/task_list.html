@@ -311,6 +311,29 @@
           </div>
 
           <div class="flex items-center gap-2">
+            <!-- Pro Feature: Bulk Operations -->
+            {% if user_subscription.is_pro %}
+            <button 
+              id="bulkModeBtn" 
+              class="btn btn-ghost btn-sm gap-2" 
+              aria-label="Bulk edit tasks"
+              title="Pro: Bulk Operations">
+              <i class="bi bi-layers"></i>
+              <span class="hidden sm:inline">Bulk Edit</span>
+              <span class="badge badge-xs badge-primary">Pro</span>
+            </button>
+            {% else %}
+            <a 
+              href="{% url 'subscription_plans' %}" 
+              class="btn btn-ghost btn-sm gap-2 opacity-60" 
+              aria-label="Upgrade to Pro for bulk operations"
+              title="Upgrade to Pro">
+              <i class="bi bi-lock"></i>
+              <span class="hidden sm:inline">Bulk Edit</span>
+              <span class="badge badge-xs">Pro</span>
+            </a>
+            {% endif %}
+            
             <a href="{% url 'category_list' %}" class="btn btn-ghost btn-sm gap-2" aria-label="Manage categories">
               <i class="bi bi-tags" aria-hidden="true"></i>
               <span class="hidden sm:inline">Categories</span>

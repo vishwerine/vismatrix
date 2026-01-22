@@ -1,0 +1,164 @@
+{% extends 'tracker/base.html' %}
+{% load ad_tags %}
+
+{% block title %}{{ blog_post.title }} | VisMatrix Blog{% endblock %}
+
+{% block meta_description %}{{ blog_post.meta_description|default:blog_post.excerpt }}{% endblock %}
+
+{% block content %}
+
+<!-- Header Banner Ad -->
+{% ad_container 'header_banner' %}
+
+<article class="max-w-4xl mx-auto">
+  
+  <!-- Article Header -->
+  <header class="mb-8">
+    <!-- Category Badge -->
+    <div class="mb-4">
+      <span class="badge badge-primary badge-lg">{{ blog_post.get_category_display }}</span>
+    </div>
+    
+    <!-- Title -->
+    <h1 class="text-4xl sm:text-5xl font-black text-base-content mb-6 leading-tight">
+      {{ blog_post.title }}
+    </h1>
+    
+    <!-- Meta Info -->
+    <div class="flex flex-wrap items-center gap-4 text-base-content/70 mb-4">
+      <div class="flex items-center gap-2">
+        <i class="bi bi-person-circle text-xl"></i>
+        <span class="font-medium">{{ blog_post.author.username }}</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="bi bi-calendar3"></i>
+        <time datetime="{{ blog_post.published_at|date:'Y-m-d' }}">
+          {{ blog_post.published_at|date:"F d, Y" }}
+        </time>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="bi bi-clock"></i>
+        <span>{{ blog_post.read_time }} min read</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <i class="bi bi-eye"></i>
+        <span>{{ blog_post.views }} views</span>
+      </div>
+    </div>
+    
+    <!-- Excerpt -->
+    <p class="text-xl text-base-content/80 leading-relaxed border-l-4 border-primary pl-4">
+      {{ blog_post.excerpt }}
+    </p>
+  </header>
+  
+  <!-- Featured Image (if exists) -->
+  {% if blog_post.featured_image %}
+    <figure class="mb-8 rounded-lg overflow-hidden">
+      <img src="{{ blog_post.featured_image }}" 
+           alt="{{ blog_post.title }}" 
+           class="w-full h-auto object-cover">
+    </figure>
+  {% endif %}
+  
+  <!-- Article Content -->
+  <div class="prose prose-lg max-w-none mb-12">
+    {{ content_html|safe }}
+  </div>
+  
+  <!-- In-Content Ad -->
+  <div class="my-12">
+    {% ad_container 'in_content' %}
+  </div>
+  
+  <!-- Author Info Card -->
+  <div class="card bg-base-200 mb-12">
+    <div class="card-body">
+      <div class="flex items-start gap-4">
+        <div class="avatar placeholder">
+          <div class="bg-primary text-primary-content rounded-full w-16">
+            <span class="text-2xl">{{ blog_post.author.username|first|upper }}</span>
+          </div>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-bold text-xl mb-1">{{ blog_post.author.username }}</h3>
+          <p class="text-base-content/70 mb-3">
+            Contributor at VisMatrix Blog
+          </p>
+          {% if user == blog_post.author %}
+            <a href="{% url 'blog_edit' blog_post.slug %}" class="btn btn-sm btn-primary gap-2">
+              <i class="bi bi-pencil"></i>
+              <span>Edit This Post</span>
+            </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Share Section -->
+  <div class="card bg-gradient-to-r from-primary/10 to-secondary/10 mb-12">
+    <div class="card-body">
+      <h3 class="card-title mb-4">Share This Article</h3>
+      <div class="flex flex-wrap gap-3">
+        <a href="https://twitter.com/intent/tweet?text={{ blog_post.title|urlencode }}&url={{ request.build_absolute_uri }}" 
+           target="_blank" 
+           class="btn btn-sm gap-2">
+          <i class="bi bi-twitter"></i>
+          <span>Twitter</span>
+        </a>
+        <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" 
+           target="_blank" 
+           class="btn btn-sm gap-2">
+          <i class="bi bi-facebook"></i>
+          <span>Facebook</span>
+        </a>
+        <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ request.build_absolute_uri }}&title={{ blog_post.title|urlencode }}" 
+           target="_blank" 
+           class="btn btn-sm gap-2">
+          <i class="bi bi-linkedin"></i>
+          <span>LinkedIn</span>
+        </a>
+        <button onclick="copyToClipboard()" class="btn btn-sm gap-2">
+          <i class="bi bi-link-45deg"></i>
+          <span>Copy Link</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- CTA Card -->
+  <div class="card bg-primary text-primary-content mb-12">
+    <div class="card-body text-center">
+      <h3 class="card-title text-2xl justify-center mb-4">
+        Start Your Growth Journey
+      </h3>
+      <p class="mb-6">
+        Join VisMatrix to track your habits, set goals, and achieve personal growth with our powerful progress tracking tools.
+      </p>
+      <div class="flex gap-3 justify-center">
+        <a href="/accounts/signup/" class="btn btn-accent gap-2">
+          <i class="bi bi-person-plus"></i>
+          <span>Sign Up Free</span>
+        </a>
+        <a href="{% url 'blog_list' %}" class="btn btn-ghost gap-2">
+          <i class="bi bi-arrow-left"></i>
+          <span>More Articles</span>
+        </a>
+      </div>
+    </div>
+  </div>
+  
+</article>
+
+<script>
+  function copyToClipboard() {
+    navigator.clipboard.writeText(window.location.href).then(function() {
+      alert('Link copied to clipboard!');
+    }, function() {
+      alert('Failed to copy link');
+    });
+  }
+</script>
+
+{% endblock %}

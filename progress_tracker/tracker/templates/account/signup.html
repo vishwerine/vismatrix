@@ -269,7 +269,7 @@
             <div>
               <div class="font-extrabold theme-text-primary transition-colors duration-300">Free to start</div>
               <p class="text-sm theme-text-secondary mt-1 transition-colors duration-300">
-                Create unlimited tasks and logs. Keep things simple, consistent, and visible.
+                Create unlimited tasks and logs. Upgrade to Pro anytime for advanced features.
               </p>
             </div>
           </div>
@@ -286,6 +286,30 @@
             <div class="flex items-start gap-2">
               <i class="bi bi-check-circle text-success mt-0.5" aria-hidden="true"></i>
               <span>Friends & accountability features</span>
+            </div>
+          </div>
+
+          <div class="divider text-xs">Or go Pro</div>
+
+          <div class="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 rounded-xl p-3 border border-purple-200 dark:border-purple-700">
+            <div class="flex items-center gap-2 mb-2">
+              <i class="bi bi-star-fill text-warning" aria-hidden="true"></i>
+              <span class="font-extrabold theme-text-primary transition-colors duration-300">Pro Features</span>
+              <span class="badge badge-primary badge-xs">$20/mo</span>
+            </div>
+            <div class="space-y-1 text-xs theme-text-secondary transition-colors duration-300">
+              <div class="flex items-start gap-1.5">
+                <i class="bi bi-check-circle-fill text-success mt-0.5 text-xs" aria-hidden="true"></i>
+                <span>Advanced analytics</span>
+              </div>
+              <div class="flex items-start gap-1.5">
+                <i class="bi bi-check-circle-fill text-success mt-0.5 text-xs" aria-hidden="true"></i>
+                <span>CSV exports</span>
+              </div>
+              <div class="flex items-start gap-1.5">
+                <i class="bi bi-check-circle-fill text-success mt-0.5 text-xs" aria-hidden="true"></i>
+                <span>AI categorization</span>
+              </div>
             </div>
           </div>
         </div>
@@ -417,9 +441,70 @@
           </div>
         </div>
 
+        <!-- Pro Subscription Option -->
+        <div class="border-2 border-dashed border-primary/30 rounded-2xl p-5 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-900/10 dark:to-indigo-900/10">
+          <div class="flex items-start gap-4">
+            <div class="flex-shrink-0">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-lg">
+                <i class="bi bi-star-fill text-xl" aria-hidden="true"></i>
+              </div>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-2">
+                <h3 class="text-lg font-extrabold theme-text-primary transition-colors duration-300">Upgrade to Pro</h3>
+                <span class="badge badge-primary badge-sm">$20/month</span>
+              </div>
+              <p class="text-sm theme-text-secondary mb-3 transition-colors duration-300">
+                Unlock advanced features immediately after signup
+              </p>
+              
+              <div class="grid sm:grid-cols-2 gap-2 text-sm theme-text-secondary mb-4 transition-colors duration-300">
+                <div class="flex items-start gap-2">
+                  <i class="bi bi-check-circle-fill text-success mt-0.5" aria-hidden="true"></i>
+                  <span>Advanced analytics & insights</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <i class="bi bi-check-circle-fill text-success mt-0.5" aria-hidden="true"></i>
+                  <span>CSV data export</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <i class="bi bi-check-circle-fill text-success mt-0.5" aria-hidden="true"></i>
+                  <span>AI auto-categorization</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <i class="bi bi-check-circle-fill text-success mt-0.5" aria-hidden="true"></i>
+                  <span>Bulk operations</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <i class="bi bi-check-circle-fill text-success mt-0.5" aria-hidden="true"></i>
+                  <span>Unlimited history</span>
+                </div>
+                <div class="flex items-start gap-2">
+                  <i class="bi bi-check-circle-fill text-success mt-0.5" aria-hidden="true"></i>
+                  <span>Priority support</span>
+                </div>
+              </div>
+
+              <div class="form-control">
+                <label class="label cursor-pointer justify-start gap-3 bg-white/50 dark:bg-slate-800/50 rounded-xl p-3 border border-primary/20 hover:border-primary/40 transition-colors">
+                  <input type="checkbox" name="subscribe_to_pro" id="subscribe_to_pro" class="checkbox checkbox-primary" />
+                  <span class="label-text font-bold theme-text-primary">
+                    Yes, upgrade me to Pro after account creation
+                  </span>
+                </label>
+              </div>
+
+              <p class="text-xs theme-text-muted mt-2 transition-colors duration-300">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                You'll be redirected to secure payment after creating your account
+              </p>
+            </div>
+          </div>
+        </div>
+
         <button type="submit" class="btn btn-primary w-full h-12 text-base font-extrabold shadow-lg hover:shadow-xl gap-2">
           <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
-          <span>Create my account</span>
+          <span id="submitBtnText">Create my account</span>
         </button>
 
         <p class="text-xs theme-text-muted leading-relaxed transition-colors duration-300">
@@ -508,6 +593,19 @@
           window.location.href = "{% url 'account_login' %}";
         }
       });
+
+      // Update submit button text based on Pro selection
+      const proCheckbox = document.getElementById('subscribe_to_pro');
+      const submitBtnText = document.getElementById('submitBtnText');
+      if (proCheckbox && submitBtnText) {
+        proCheckbox.addEventListener('change', () => {
+          if (proCheckbox.checked) {
+            submitBtnText.innerHTML = '<i class="bi bi-star-fill"></i> Create Pro account';
+          } else {
+            submitBtnText.textContent = 'Create my account';
+          }
+        });
+      }
     });
   </script>
 </body>

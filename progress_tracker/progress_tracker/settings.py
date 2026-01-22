@@ -22,8 +22,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 import environ
+import os
 env = environ.Env()
-environ.Env.read_env()
+# Read .env file from the same directory as settings.py
+environ.Env.read_env(os.path.join(os.path.dirname(__file__), '.env'))
 SECRET_KEY = env('SECRET_KEY')
 
 ENVIRONMENT = env("ENVIRONMENT", default="local")  # local | prod
@@ -84,6 +86,9 @@ AUTHENTICATION_BACKENDS = [
 # ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 ACCOUNT_EMAIL_VERIFICATION = 'none'  # Disable email verification
 
+# Custom adapter for Pro subscription handling
+ACCOUNT_ADAPTER = 'tracker.adapter.ProSubscriptionAdapter'
+
 # Updated Allauth settings for newer versions
 ACCOUNT_LOGIN_METHODS = {'username', 'email'}
 ACCOUNT_SIGNUP_FIELDS = ['username*', 'email', 'password1*', 'password2*']
@@ -136,6 +141,7 @@ TEMPLATES = [
                 # Your new processor
                 'tracker.context_processors.pending_friend_requests_count',
                 'tracker.context_processors.user_timezone',  # Add timezone context
+                'tracker.context_processors.user_subscription',  # Add subscription context
             ],
         },
     },
@@ -257,3 +263,18 @@ GOOGLE_ADS_SLOTS = {
     'mobile_banner': env('GOOGLE_ADS_MOBILE_SLOT', default=''),      # Mobile banner (320x50)
 }
 # --- End Google AdSense Configuration ---
+
+
+# --- Stripe Payment Configuration ---
+# Get these from https://dashboard.stripe.com/apikeys
+STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', default='')
+STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='')
+
+# Webhook secret for verifying Stripe webhook signatures
+# Get this from Stripe Dashboard > Developers > Webhooks
+STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='')
+
+# Pro subscription pricing
+PRO_SUBSCRIPTION_PRICE = 20.00  # USD per month
+# --- End Stripe Payment Configuration ---
+

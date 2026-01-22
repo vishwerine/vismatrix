@@ -14,6 +14,7 @@ from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Frien
 from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm, UserProfileForm
 from django.views.decorators.http import require_http_methods
 import logging
+import markdown
 
 from .decorators import rate_limit, validate_ajax, validate_json, log_errors
 from .services import ICloudCalendarService
@@ -5518,3 +5519,316 @@ def clear_all_notifications(request):
         return redirect('notifications_list')
     
     return redirect('notifications_list')
+
+
+# ============================================================================
+# PUBLIC BLOG PAGES (No login required)
+# ============================================================================
+
+def blog_list(request):
+    """Display list of all blog posts (static + user-generated)."""
+    from .visitor_tracking import track_landing_page_visitor
+    from .models import BlogPost
+    
+    # Track visitor
+    try:
+        track_landing_page_visitor(request)
+    except Exception as e:
+        logger.error(f"Error tracking blog visitor: {e}")
+    
+    # Static featured blogs
+    static_blogs = [
+        {
+            'slug': 'power-of-daily-habits',
+            'title': 'The Power of Daily Habits: Transform Your Life One Day at a Time',
+            'excerpt': 'Discover how small, consistent actions compound into remarkable life changes. Learn the science behind habit formation and practical strategies to build lasting positive habits.',
+            'category': 'Habits & Productivity',
+            'read_time': '8 min read',
+            'image': 'bi-arrow-repeat',
+            'is_static': True,
+            'author': 'VisMatrix Team',
+            'date': 'January 20, 2026',
+        },
+        {
+            'slug': 'goal-setting-mastery',
+            'title': 'Goal Setting Mastery: How to Set and Actually Achieve Your Goals',
+            'excerpt': 'Stop setting goals you never achieve. Learn the proven framework used by successful people to set meaningful goals and create actionable plans to reach them.',
+            'category': 'Personal Development',
+            'read_time': '10 min read',
+            'image': 'bi-bullseye',
+            'is_static': True,
+            'author': 'VisMatrix Team',
+            'date': 'January 18, 2026',
+        },
+        {
+            'slug': 'time-management-secrets',
+            'title': 'Time Management Secrets: Get More Done in Less Time',
+            'excerpt': 'Master your schedule and boost productivity with battle-tested time management techniques. Learn how to prioritize effectively and eliminate time wasters.',
+            'category': 'Productivity',
+            'read_time': '7 min read',
+            'image': 'bi-clock-history',
+            'is_static': True,
+            'author': 'VisMatrix Team',
+            'date': 'January 15, 2026',
+        },
+        {
+            'slug': 'building-self-discipline',
+            'title': 'Building Unshakeable Self-Discipline: Your Path to Success',
+            'excerpt': 'Self-discipline is the bridge between goals and accomplishment. Discover powerful strategies to strengthen your willpower and stay committed to your aspirations.',
+            'category': 'Self-Improvement',
+            'read_time': '9 min read',
+            'image': 'bi-shield-check',
+            'is_static': True,
+            'author': 'VisMatrix Team',
+            'date': 'January 12, 2026',
+        },
+        {
+            'slug': 'morning-routine-success',
+            'title': 'Morning Routines of Successful People: Start Your Day Right',
+            'excerpt': 'How you start your day determines how you live your day. Learn the morning rituals that set high achievers apart and energize them for peak performance.',
+            'category': 'Habits & Productivity',
+            'read_time': '6 min read',
+            'image': 'bi-sunrise',
+            'is_static': True,
+            'author': 'VisMatrix Team',
+            'date': 'January 10, 2026',
+        },
+        {
+            'slug': 'overcoming-procrastination',
+            'title': 'Overcoming Procrastination: Stop Putting Off Your Dreams',
+            'excerpt': 'Procrastination is the thief of time and dreams. Understand why you procrastinate and implement proven techniques to take immediate action.',
+            'category': 'Productivity',
+            'read_time': '8 min read',
+            'image': 'bi-lightning-charge',
+            'is_static': True,
+            'author': 'VisMatrix Team',
+            'date': 'January 8, 2026',
+        },
+    ]
+    
+    # Get user-generated published posts
+    user_posts = BlogPost.objects.filter(status='published').select_related('author')
+    
+    # Convert user posts to dict format
+    user_blogs = []
+    for post in user_posts:
+        user_blogs.append({
+            'slug': post.slug,
+            'title': post.title,
+            'excerpt': post.excerpt,
+            'category': post.get_category_display(),
+            'read_time': f'{post.read_time} min read',
+            'image': 'bi-file-text',
+            'is_static': False,
+            'author': post.author.username,
+            'date': post.published_at.strftime('%B %d, %Y') if post.published_at else post.created_at.strftime('%B %d, %Y'),
+            'views': post.views,
+        })
+    
+    # Combine and sort by date
+    all_blogs = static_blogs + user_blogs
+    
+    context = {
+        'blogs': all_blogs,
+        'user_blog_count': len(user_blogs),
+    }
+    
+    return render(request, 'tracker/blog_list.html', context)
+
+
+def blog_detail(request, slug):
+    """Display individual blog post (static or user-generated)."""
+    from .visitor_tracking import track_landing_page_visitor
+    from .models import BlogPost
+    
+    # Track visitor
+    try:
+        track_landing_page_visitor(request)
+    except Exception as e:
+        logger.error(f"Error tracking blog visitor: {e}")
+    
+    # Check if it's a user-generated post
+    try:
+        user_post = BlogPost.objects.select_related('author').get(slug=slug, status='published')
+        # Increment view count
+        user_post.views += 1
+        user_post.save(update_fields=['views'])
+        
+        # Convert markdown to HTML
+        content_html = markdown.markdown(user_post.content, extensions=['extra', 'codehilite'])
+        
+        context = {
+            'blog_post': user_post,
+            'content_html': content_html,
+        }
+        
+        return render(request, 'tracker/blog_detail_user.html', context)
+        
+    except BlogPost.DoesNotExist:
+        pass
+    
+    # Fall back to static blog posts
+    blogs = {
+        'power-of-daily-habits': {
+            'title': 'The Power of Daily Habits: Transform Your Life One Day at a Time',
+            'category': 'Habits & Productivity',
+            'read_time': '8 min read',
+            'date': 'January 20, 2026',
+            'author': 'VisMatrix Team',
+        },
+        'goal-setting-mastery': {
+            'title': 'Goal Setting Mastery: How to Set and Actually Achieve Your Goals',
+            'category': 'Personal Development',
+            'read_time': '10 min read',
+            'date': 'January 18, 2026',
+            'author': 'VisMatrix Team',
+        },
+        'time-management-secrets': {
+            'title': 'Time Management Secrets: Get More Done in Less Time',
+            'category': 'Productivity',
+            'read_time': '7 min read',
+            'date': 'January 15, 2026',
+            'author': 'VisMatrix Team',
+        },
+        'building-self-discipline': {
+            'title': 'Building Unshakeable Self-Discipline: Your Path to Success',
+            'category': 'Self-Improvement',
+            'read_time': '9 min read',
+            'date': 'January 12, 2026',
+            'author': 'VisMatrix Team',
+        },
+        'morning-routine-success': {
+            'title': 'Morning Routines of Successful People: Start Your Day Right',
+            'category': 'Habits & Productivity',
+            'read_time': '6 min read',
+            'date': 'January 10, 2026',
+            'author': 'VisMatrix Team',
+        },
+        'overcoming-procrastination': {
+            'title': 'Overcoming Procrastination: Stop Putting Off Your Dreams',
+            'category': 'Productivity',
+            'read_time': '8 min read',
+            'date': 'January 8, 2026',
+            'author': 'VisMatrix Team',
+        },
+    }
+    
+    if slug not in blogs:
+        messages.error(request, 'Blog post not found.')
+        return redirect('blog_list')
+    
+    blog = blogs[slug]
+    blog['slug'] = slug
+    
+    # Get other blog posts for recommendations
+    other_blogs = [{'slug': k, **v} for k, v in blogs.items() if k != slug][:3]
+    
+    context = {
+        'blog': blog,
+        'other_blogs': other_blogs,
+    }
+    
+    return render(request, f'tracker/blog_{slug}.html', context)
+
+
+@login_required
+def blog_create(request):
+    """Create a new blog post."""
+    from .forms import BlogPostForm
+    from .models import BlogPost
+    
+    if request.method == 'POST':
+        form = BlogPostForm(request.POST)
+        if form.is_valid():
+            blog_post = form.save(commit=False)
+            blog_post.author = request.user
+            blog_post.save()
+            
+            if blog_post.status == 'published':
+                messages.success(request, f'Your blog post "{blog_post.title}" has been published!')
+            else:
+                messages.success(request, f'Your blog post "{blog_post.title}" has been saved as a draft.')
+            
+            return redirect('blog_my_posts')
+    else:
+        form = BlogPostForm()
+    
+    context = {
+        'form': form,
+        'title': 'Write a New Blog Post',
+    }
+    
+    return render(request, 'tracker/blog_form.html', context)
+
+
+@login_required
+def blog_edit(request, slug):
+    """Edit an existing blog post."""
+    from .forms import BlogPostForm
+    from .models import BlogPost
+    
+    blog_post = get_object_or_404(BlogPost, slug=slug, author=request.user)
+    
+    if request.method == 'POST':
+        form = BlogPostForm(request.POST, instance=blog_post)
+        if form.is_valid():
+            blog_post = form.save()
+            
+            if blog_post.status == 'published':
+                messages.success(request, f'Your blog post "{blog_post.title}" has been updated and is live!')
+            else:
+                messages.success(request, f'Your blog post "{blog_post.title}" has been updated.')
+            
+            return redirect('blog_my_posts')
+    else:
+        form = BlogPostForm(instance=blog_post)
+    
+    context = {
+        'form': form,
+        'blog_post': blog_post,
+        'title': f'Edit: {blog_post.title}',
+    }
+    
+    return render(request, 'tracker/blog_form.html', context)
+
+
+@login_required
+def blog_delete(request, slug):
+    """Delete a blog post."""
+    from .models import BlogPost
+    
+    blog_post = get_object_or_404(BlogPost, slug=slug, author=request.user)
+    
+    if request.method == 'POST':
+        title = blog_post.title
+        blog_post.delete()
+        messages.success(request, f'Blog post "{title}" has been deleted.')
+        return redirect('blog_my_posts')
+    
+    context = {
+        'blog_post': blog_post,
+    }
+    
+    return render(request, 'tracker/blog_confirm_delete.html', context)
+
+
+@login_required
+def blog_my_posts(request):
+    """View user's own blog posts."""
+    from .models import BlogPost
+    
+    posts = BlogPost.objects.filter(author=request.user).order_by('-created_at')
+    
+    # Count by status
+    draft_count = posts.filter(status='draft').count()
+    published_count = posts.filter(status='published').count()
+    archived_count = posts.filter(status='archived').count()
+    
+    context = {
+        'posts': posts,
+        'draft_count': draft_count,
+        'published_count': published_count,
+        'archived_count': archived_count,
+    }
+    
+    return render(request, 'tracker/blog_my_posts.html', context)

@@ -1,0 +1,310 @@
+{% extends 'tracker/base.html' %}
+{% load static %}
+
+{% block title %}Subscription Plans | VisMatrix{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+  
+  <!-- Welcome Message for New Signups -->
+  {% if post_signup_pro %}
+  <div class="alert bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-0 shadow-xl mb-8">
+    <i class="bi bi-star-fill text-3xl"></i>
+    <div class="flex-1">
+      <h3 class="font-bold text-xl">Welcome to VisMatrix! 🎉</h3>
+      <p class="text-white/90">Your account is ready! Complete your Pro subscription below to unlock all advanced features.</p>
+    </div>
+  </div>
+  {% endif %}
+  
+  <!-- Header -->
+  <div class="text-center mb-12">
+    <h1 class="text-4xl sm:text-5xl font-black text-base-content mb-4">
+      Choose Your Plan
+    </h1>
+    <p class="text-lg text-base-content/70 max-w-2xl mx-auto">
+      Unlock advanced features with VisMatrix Pro and supercharge your productivity
+    </p>
+  </div>
+
+  <!-- Current Subscription Alert -->
+  {% if subscription.is_pro %}
+    <div class="alert alert-success mb-8">
+      <i class="bi bi-check-circle-fill"></i>
+      <div>
+        <div class="font-bold">You're on VisMatrix Pro! 🎉</div>
+        <div class="text-sm">
+          {% if subscription.current_period_end %}
+            Your subscription renews on {{ subscription.current_period_end|date:"F d, Y" }}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Pricing Cards -->
+  <div class="grid md:grid-cols-2 gap-8 mb-12">
+    
+    <!-- Free Plan -->
+    <div class="card bg-base-100 shadow-xl border-2 {% if subscription.plan == 'free' %}border-primary{% else %}border-base-300{% endif %}">
+      <div class="card-body">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="card-title text-2xl">Free</h2>
+          {% if subscription.plan == 'free' %}
+            <span class="badge badge-primary">Current Plan</span>
+          {% endif %}
+        </div>
+        
+        <div class="mb-6">
+          <div class="text-4xl font-black">$0</div>
+          <div class="text-base-content/60">Forever free</div>
+        </div>
+        
+        <div class="space-y-3 mb-6">
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-success mt-1"></i>
+            <span>Basic task tracking</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-success mt-1"></i>
+            <span>Daily logs and habits</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-success mt-1"></i>
+            <span>Progress analytics</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-success mt-1"></i>
+            <span>Friend connections (up to 10)</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-success mt-1"></i>
+            <span>Basic calendar sync</span>
+          </div>
+        </div>
+        
+        {% if subscription.plan != 'free' %}
+          <form method="post" action="{% url 'subscription_cancel' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline w-full" onclick="return confirm('Are you sure you want to downgrade to Free?')">
+              Downgrade to Free
+            </button>
+          </form>
+        {% else %}
+          <button class="btn btn-disabled w-full">Current Plan</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Pro Plan -->
+    <div class="card bg-gradient-to-br from-primary/10 to-secondary/10 shadow-xl border-2 border-primary relative overflow-hidden">
+      <!-- Popular Badge -->
+      <div class="absolute top-4 right-4 badge badge-primary gap-1">
+        <i class="bi bi-star-fill"></i>
+        Popular
+      </div>
+      
+      <div class="card-body">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="card-title text-2xl">Pro</h2>
+          {% if subscription.is_pro %}
+            <span class="badge badge-success">Active</span>
+          {% endif %}
+        </div>
+        
+        <div class="mb-6">
+          <div class="text-4xl font-black">${{ pro_price|floatformat:0 }}</div>
+          <div class="text-base-content/60">per month</div>
+        </div>
+        
+        <div class="space-y-3 mb-6">
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-primary mt-1"></i>
+            <span class="font-semibold">Everything in Free, plus:</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-primary mt-1"></i>
+            <span>Unlimited friend connections</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-primary mt-1"></i>
+            <span>Advanced analytics & insights</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-primary mt-1"></i>
+            <span>AI-powered smart scheduling</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-primary mt-1"></i>
+            <span>Custom categories & templates</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-primary mt-1"></i>
+            <span>Priority support</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-primary mt-1"></i>
+            <span>Export data & reports</span>
+          </div>
+          <div class="flex items-start gap-2">
+            <i class="bi bi-check-circle text-primary mt-1"></i>
+            <span>Ad-free experience</span>
+          </div>
+        </div>
+        
+        {% if subscription.is_pro %}
+          <div class="space-y-2">
+            <a href="{% url 'subscription_portal' %}" class="btn btn-primary w-full gap-2">
+              <i class="bi bi-credit-card"></i>
+              Manage Subscription
+            </a>
+            <form method="post" action="{% url 'subscription_cancel' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-ghost btn-sm w-full" onclick="return confirm('Are you sure you want to cancel your Pro subscription?')">
+                Cancel Subscription
+              </button>
+            </form>
+          </div>
+        {% else %}
+          <button id="checkoutButton" class="btn btn-primary w-full gap-2">
+            <i class="bi bi-rocket-takeoff"></i>
+            Upgrade to Pro
+          </button>
+        {% endif %}
+      </div>
+    </div>
+    
+  </div>
+
+  <!-- FAQ Section -->
+  <div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+      <h3 class="card-title text-2xl mb-4">Frequently Asked Questions</h3>
+      
+      <div class="space-y-4">
+        <div class="collapse collapse-arrow bg-base-200">
+          <input type="radio" name="faq-accordion" checked="checked" /> 
+          <div class="collapse-title font-bold">
+            Can I cancel anytime?
+          </div>
+          <div class="collapse-content"> 
+            <p>Yes! You can cancel your Pro subscription at any time. You'll continue to have access to Pro features until the end of your billing period.</p>
+          </div>
+        </div>
+        
+        <div class="collapse collapse-arrow bg-base-200">
+          <input type="radio" name="faq-accordion" /> 
+          <div class="collapse-title font-bold">
+            What payment methods do you accept?
+          </div>
+          <div class="collapse-content"> 
+            <p>We accept all major credit cards (Visa, Mastercard, American Express) through our secure payment processor, Stripe.</p>
+          </div>
+        </div>
+        
+        <div class="collapse collapse-arrow bg-base-200">
+          <input type="radio" name="faq-accordion" /> 
+          <div class="collapse-title font-bold">
+            Is my payment information secure?
+          </div>
+          <div class="collapse-content"> 
+            <p>Absolutely! We use Stripe for payment processing, which is PCI-DSS compliant. We never store your credit card information on our servers.</p>
+          </div>
+        </div>
+        
+        <div class="collapse collapse-arrow bg-base-200">
+          <input type="radio" name="faq-accordion" /> 
+          <div class="collapse-title font-bold">
+            What happens to my data if I downgrade?
+          </div>
+          <div class="collapse-content"> 
+            <p>Your data is never deleted! If you downgrade to Free, you'll keep all your existing data but some Pro features will become unavailable.</p>
+          </div>
+        </div>
+        
+        <div class="collapse collapse-arrow bg-base-200">
+          <input type="radio" name="faq-accordion" /> 
+          <div class="collapse-title font-bold">
+            Do you offer refunds?
+          </div>
+          <div class="collapse-content"> 
+            <p>We offer a 30-day money-back guarantee. If you're not satisfied with Pro within the first 30 days, contact support for a full refund.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment History Link -->
+  <div class="text-center mt-8">
+    <a href="{% url 'payment_history' %}" class="link link-hover">
+      <i class="bi bi-clock-history"></i>
+      View Payment History
+    </a>
+  </div>
+
+</div>
+
+<!-- Stripe Checkout Script -->
+<script src="https://js.stripe.com/v3/"></script>
+<script>
+  {% if not subscription.is_pro %}
+  const stripeKey = '{{ stripe_publishable_key }}';
+  
+  if (!stripeKey || stripeKey === '') {
+    console.error('Stripe publishable key is not configured');
+    const checkoutButton = document.getElementById('checkoutButton');
+    if (checkoutButton) {
+      checkoutButton.disabled = true;
+      checkoutButton.innerHTML = '<i class="bi bi-exclamation-triangle"></i> Configuration Error';
+      checkoutButton.onclick = () => alert('Stripe is not configured. Please contact support.');
+    }
+  } else {
+    const stripe = Stripe(stripeKey);
+    const checkoutButton = document.getElementById('checkoutButton');
+    
+    checkoutButton.addEventListener('click', async function() {
+      checkoutButton.disabled = true;
+      checkoutButton.innerHTML = '<span class="loading loading-spinner"></span> Processing...';
+      
+      try {
+        // Create checkout session
+        const response = await fetch('{% url "create_checkout_session" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}',
+          },
+        });
+      
+      const session = await response.json();
+      
+      if (session.error) {
+        alert('Error: ' + session.error);
+        checkoutButton.disabled = false;
+        checkoutButton.innerHTML = '<i class="bi bi-rocket-takeoff"></i> Upgrade to Pro';
+        return;
+      }
+      
+      // Redirect to Stripe Checkout
+      const result = await stripe.redirectToCheckout({
+        sessionId: session.sessionId
+      });
+      
+      if (result.error) {
+        alert(result.error.message);
+        checkoutButton.disabled = false;
+        checkoutButton.innerHTML = '<i class="bi bi-rocket-takeoff"></i> Upgrade to Pro';
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('An error occurred. Please try again.');
+      checkoutButton.disabled = false;
+      checkoutButton.innerHTML = '<i class="bi bi-rocket-takeoff"></i> Upgrade to Pro';
+    }
+    });
+  }
+  {% endif %}
+</script>
+
+{% endblock %}

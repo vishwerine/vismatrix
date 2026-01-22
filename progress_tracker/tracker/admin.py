@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession, Friendship, LandingPageVisitor, Habit, HabitCompletion
+from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession, Friendship, LandingPageVisitor, Habit, HabitCompletion, BlogPost, Subscription, PaymentHistory
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -217,3 +217,89 @@ class HabitCompletionAdmin(admin.ModelAdmin):
             return qs
         # Non-superusers only see their own completions
         return qs.filter(user=request.user)
+
+
+@admin.register(BlogPost)
+class BlogPostAdmin(admin.ModelAdmin):
+    list_display = ['title', 'author', 'category', 'status', 'views', 'published_at', 'created_at']
+    list_filter = ['status', 'category', 'created_at', 'published_at']
+    search_fields = ['title', 'excerpt', 'content', 'author__username']
+    prepopulated_fields = {'slug': ('title',)}
+    readonly_fields = ['slug', 'read_time', 'views', 'created_at', 'updated_at']
+    ordering = ['-created_at']
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Basic Info', {
+            'fields': ('author', 'title', 'slug', 'category', 'status')
+        }),
+        ('Content', {
+            'fields': ('excerpt', 'content', 'featured_image')
+        }),
+        ('SEO & Metadata', {
+            'fields': ('meta_description',)
+        }),
+        ('Stats', {
+            'fields': ('read_time', 'views', 'published_at', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        if request.user.is_superuser:
+            return qs
+        # Non-superusers only see their own blog posts
+        return qs.filter(author=request.user)
+
+
+@admin.register(Subscription)
+class SubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['user', 'plan', 'status', 'current_period_end', 'created_at']
+    list_filter = ['plan', 'status', 'created_at']
+    search_fields = ['user__username', 'user__email', 'stripe_customer_id', 'stripe_subscription_id']
+    readonly_fields = ['stripe_customer_id', 'stripe_subscription_id', 'stripe_price_id', 'created_at', 'updated_at']
+    ordering = ['-created_at']
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('User & Plan', {
+            'fields': ('user', 'plan', 'status')
+        }),
+        ('Stripe Details', {
+            'fields': ('stripe_customer_id', 'stripe_subscription_id', 'stripe_price_id'),
+            'classes': ('collapse',)
+        }),
+        ('Subscription Dates', {
+            'fields': ('current_period_start', 'current_period_end', 'trial_end', 'canceled_at')
+        }),
+        ('Metadata', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(PaymentHistory)
+class PaymentHistoryAdmin(admin.ModelAdmin):
+    list_display = ['user', 'amount', 'currency', 'status', 'created_at']
+    list_filter = ['status', 'currency', 'created_at']
+    search_fields = ['user__username', 'user__email', 'stripe_payment_intent_id', 'stripe_invoice_id']
+    readonly_fields = ['stripe_payment_intent_id', 'stripe_invoice_id', 'created_at']
+    ordering = ['-created_at']
+    date_hierarchy = 'created_at'
+    
+    fieldsets = (
+        ('Payment Info', {
+            'fields': ('user', 'subscription', 'amount', 'currency', 'status')
+        }),
+        ('Stripe Details', {
+            'fields': ('stripe_payment_intent_id', 'stripe_invoice_id'),
+            'classes': ('collapse',)
+        }),
+        ('Details', {
+            'fields': ('description', 'failure_reason', 'created_at')
+        }),
+    )
+
+

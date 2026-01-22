@@ -1,0 +1,173 @@
+{% extends 'tracker/base.html' %}
+{% load ad_tags %}
+
+{% block title %}{{ blog.title }} | VisMatrix Blog{% endblock %}
+
+{% block content %}
+<article class="max-w-4xl mx-auto">
+  <nav class="text-sm breadcrumbs mb-6">
+    <ul>
+      <li><a href="{% url 'landing_page' %}" class="link link-hover">Home</a></li>
+      <li><a href="{% url 'blog_list' %}" class="link link-hover">Blog</a></li>
+      <li>{{ blog.category }}</li>
+    </ul>
+  </nav>
+
+  <header class="mb-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="badge badge-primary badge-lg">{{ blog.category }}</span>
+      <span class="text-base-content/60">{{ blog.read_time }}</span>
+    </div>
+    <h1 class="text-4xl sm:text-5xl font-black text-base-content mb-4 leading-tight">{{ blog.title }}</h1>
+    <div class="flex items-center gap-4 text-sm text-base-content/70">
+      <span class="flex items-center gap-2"><i class="bi bi-person-circle"></i>{{ blog.author }}</span>
+      <span class="flex items-center gap-2"><i class="bi bi-calendar3"></i>{{ blog.date }}</span>
+    </div>
+  </header>
+
+  {% ad_container 'header_banner' 'my-8' %}
+
+  <div class="prose prose-lg max-w-none">
+    <div class="card border border-base-200 bg-gradient-to-br from-primary/5 to-transparent p-6 sm:p-8 mb-8">
+      <p class="text-xl text-base-content leading-relaxed m-0">
+        Procrastination is the silent dream killer. It whispers "tomorrow" while your goals slip away. Learn the psychology behind procrastination and proven strategies to take immediate action.
+      </p>
+    </div>
+
+    <h2 class="text-3xl font-bold mt-8 mb-4">Why We Procrastinate</h2>
+    <p class="text-lg leading-relaxed mb-6">
+      Procrastination isn't about laziness—it's about avoiding discomfort. Our brains are wired to seek pleasure and avoid pain. When a task feels overwhelming or unpleasant, we naturally delay it.
+    </p>
+
+    <div class="grid sm:grid-cols-2 gap-6 my-8">
+      <div class="card border border-error/30 bg-base-100 shadow-md">
+        <div class="card-body">
+          <h3 class="text-xl font-bold text-error">Fear of Failure</h3>
+          <p class="text-sm">If we don't try, we can't fail. But we also can't succeed.</p>
+        </div>
+      </div>
+      <div class="card border border-warning/30 bg-base-100 shadow-md">
+        <div class="card-body">
+          <h3 class="text-xl font-bold text-warning">Perfectionism</h3>
+          <p class="text-sm">Waiting for the "perfect" time or conditions that never come.</p>
+        </div>
+      </div>
+      <div class="card border border-info/30 bg-base-100 shadow-md">
+        <div class="card-body">
+          <h3 class="text-xl font-bold text-info">Overwhelm</h3>
+          <p class="text-sm">The task seems too big, so we don't know where to start.</p>
+        </div>
+      </div>
+      <div class="card border border-secondary/30 bg-base-100 shadow-md">
+        <div class="card-body">
+          <h3 class="text-xl font-bold text-secondary">Lack of Clarity</h3>
+          <p class="text-sm">Unclear goals lead to unclear action—or no action at all.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="my-10">{% ad_container 'in_content' '' %}</div>
+
+    <h2 class="text-3xl font-bold mt-10 mb-4">The 2-Minute Rule</h2>
+    <p class="text-lg leading-relaxed mb-6">
+      If a task takes less than 2 minutes, do it now. For bigger tasks, commit to just 2 minutes of work. Starting is the hardest part—once you begin, momentum takes over.
+    </p>
+
+    <div class="alert alert-success my-8">
+      <i class="bi bi-lightbulb text-2xl"></i>
+      <div>
+        <h3 class="font-bold">Key Insight</h3>
+        <p>Action creates motivation, not the other way around. Don't wait to feel motivated—start, and motivation will follow.</p>
+      </div>
+    </div>
+
+    <h2 class="text-3xl font-bold mt-10 mb-4">7 Anti-Procrastination Strategies</h2>
+    
+    <ol class="space-y-4 text-lg">
+      <li><strong>Break It Down:</strong> Divide big tasks into small, manageable steps</li>
+      <li><strong>Set Deadlines:</strong> Even for tasks without external deadlines</li>
+      <li><strong>Remove Distractions:</strong> Create an environment that supports focus</li>
+      <li><strong>Use Implementation Intentions:</strong> "When X happens, I will do Y"</li>
+      <li><strong>Reward Yourself:</strong> Give yourself something to look forward to</li>
+      <li><strong>Get an Accountability Partner:</strong> Tell someone your commitment</li>
+      <li><strong>Visualize Completion:</strong> Imagine how good you'll feel when it's done</li>
+    </ol>
+
+    <div class="my-10">{% ad_container 'sidebar' '' %}</div>
+
+    <h2 class="text-3xl font-bold mt-10 mb-4">The Procrastination-Action Cycle</h2>
+    
+    <div class="mockup-window border border-base-300 bg-base-100 my-8">
+      <div class="p-6 space-y-4">
+        <div class="flex items-center gap-3 p-4 bg-error/10 rounded-lg">
+          <span class="text-3xl">😰</span>
+          <div>
+            <p class="font-bold text-error">Procrastination</p>
+            <p class="text-sm">Anxiety, guilt, stress accumulate</p>
+          </div>
+        </div>
+        <div class="flex justify-center">
+          <i class="bi bi-arrow-down text-3xl text-base-content/30"></i>
+        </div>
+        <div class="flex items-center gap-3 p-4 bg-warning/10 rounded-lg">
+          <span class="text-3xl">💪</span>
+          <div>
+            <p class="font-bold text-warning">Take Action</p>
+            <p class="text-sm">Start with just 2 minutes</p>
+          </div>
+        </div>
+        <div class="flex justify-center">
+          <i class="bi bi-arrow-down text-3xl text-base-content/30"></i>
+        </div>
+        <div class="flex items-center gap-3 p-4 bg-success/10 rounded-lg">
+          <span class="text-3xl">🎉</span>
+          <div>
+            <p class="font-bold text-success">Momentum Builds</p>
+            <p class="text-sm">Progress creates motivation</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <h2 class="text-3xl font-bold mt-10 mb-4">Tomorrow Never Comes</h2>
+    <p class="text-lg leading-relaxed mb-6">
+      The most dangerous phrase is "I'll do it tomorrow." Tomorrow becomes next week, next month, next year. Your dreams deserve better than that. They deserve action today.
+    </p>
+
+    <div class="card border border-success/30 bg-gradient-to-br from-success/10 to-transparent p-6 sm:p-8 my-8">
+      <h3 class="text-2xl font-bold mb-4">Stop Procrastinating, Start Achieving</h3>
+      <p class="text-lg mb-6">VisMatrix helps you break tasks into actionable steps, track your progress, and build the momentum you need to crush procrastination for good.</p>
+      <a href="{% url 'landing_page' %}" class="btn btn-success btn-lg gap-2">
+        <span>Take Action Now</span>
+        <i class="bi bi-arrow-right"></i>
+      </a>
+    </div>
+  </div>
+
+  <div class="mt-12 pt-8 border-t border-base-300">
+    <p class="text-base-content/70 mb-4">Share this article:</p>
+    <div class="flex gap-3">
+      <button class="btn btn-circle btn-outline"><i class="bi bi-twitter"></i></button>
+      <button class="btn btn-circle btn-outline"><i class="bi bi-facebook"></i></button>
+      <button class="btn btn-circle btn-outline"><i class="bi bi-linkedin"></i></button>
+    </div>
+  </div>
+
+  {% if other_blogs %}
+  <div class="mt-16">
+    <h3 class="text-2xl font-bold mb-6">Related Articles</h3>
+    <div class="grid sm:grid-cols-3 gap-6">
+      {% for related in other_blogs %}
+      <a href="{% url 'blog_detail' related.slug %}" class="card border border-base-200 bg-base-100 hover:shadow-xl hover:-translate-y-1 transition-all">
+        <div class="card-body p-5">
+          <span class="badge badge-primary badge-sm mb-2">{{ related.category }}</span>
+          <h4 class="font-bold text-base line-clamp-2 mb-2">{{ related.title }}</h4>
+          <p class="text-xs text-base-content/60">{{ related.read_time }}</p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</article>
+{% endblock %}

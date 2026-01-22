@@ -1,0 +1,385 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Pro Analytics - VisMatrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .pro-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .stat-card {
+    transition: transform 0.2s;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-2px);
+  }
+  
+  .trend-up {
+    color: #10b981;
+  }
+  
+  .trend-down {
+    color: #ef4444;
+  }
+  
+  .chart-wrap {
+    position: relative;
+    height: 320px;
+  }
+  
+  @media (max-width: 768px) {
+    .chart-wrap {
+      height: 260px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-7xl">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-3xl font-bold">Advanced Analytics</h1>
+        <span class="pro-badge">
+          <i class="bi bi-star-fill"></i> Pro
+        </span>
+      </div>
+      <p class="text-base-content/70 mt-1">Exclusive insights for Pro members</p>
+    </div>
+    
+    <!-- Time range selector -->
+    <div class="dropdown dropdown-end">
+      <label tabindex="0" class="btn btn-outline gap-2">
+        <i class="bi bi-calendar"></i>
+        Last {{ days }} days
+        <i class="bi bi-chevron-down"></i>
+      </label>
+      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-52 border border-base-300">
+        <li><a href="?days=7">Last 7 days</a></li>
+        <li><a href="?days=30" class="{% if days == 30 %}active{% endif %}">Last 30 days</a></li>
+        <li><a href="?days=90">Last 90 days</a></li>
+        <li><a href="?days=365">Last year</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Export Options -->
+  <div class="alert mb-6">
+    <i class="bi bi-download text-xl"></i>
+    <div class="flex-1">
+      <h3 class="font-bold">Export Your Data</h3>
+      <p class="text-sm">Download detailed reports in CSV format</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="{% url 'export_data_csv' %}?type=tasks" class="btn btn-sm btn-outline gap-2">
+        <i class="bi bi-file-earmark-text"></i> Tasks
+      </a>
+      <a href="{% url 'export_data_csv' %}?type=logs" class="btn btn-sm btn-outline gap-2">
+        <i class="bi bi-clock-history"></i> Logs
+      </a>
+      <a href="{% url 'export_data_csv' %}?type=habits" class="btn btn-sm btn-outline gap-2">
+        <i class="bi bi-repeat"></i> Habits
+      </a>
+      <a href="{% url 'export_data_csv' %}?type=analytics" class="btn btn-sm btn-primary gap-2">
+        <i class="bi bi-bar-chart"></i> Summary
+      </a>
+    </div>
+  </div>
+
+  <!-- Task Stats Overview -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card card bg-base-100 border border-base-200">
+      <div class="card-body p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-base-content/70">Total Tasks</p>
+            <p class="text-3xl font-bold">{{ task_stats.total }}</p>
+          </div>
+          <div class="bg-primary/10 p-3 rounded-lg">
+            <i class="bi bi-list-task text-2xl text-primary"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card card bg-base-100 border border-base-200">
+      <div class="card-body p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-base-content/70">Completed</p>
+            <p class="text-3xl font-bold text-success">{{ task_stats.completed }}</p>
+          </div>
+          <div class="bg-success/10 p-3 rounded-lg">
+            <i class="bi bi-check-circle text-2xl text-success"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card card bg-base-100 border border-base-200">
+      <div class="card-body p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-base-content/70">In Progress</p>
+            <p class="text-3xl font-bold text-warning">{{ task_stats.in_progress }}</p>
+          </div>
+          <div class="bg-warning/10 p-3 rounded-lg">
+            <i class="bi bi-hourglass-split text-2xl text-warning"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card card bg-base-100 border border-base-200">
+      <div class="card-body p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-base-content/70">Overdue</p>
+            <p class="text-3xl font-bold text-error">{{ task_stats.overdue }}</p>
+          </div>
+          <div class="bg-error/10 p-3 rounded-lg">
+            <i class="bi bi-exclamation-triangle text-2xl text-error"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Week-over-week comparison -->
+  <div class="card bg-base-100 border border-base-200 mb-6">
+    <div class="card-body p-5">
+      <h2 class="text-lg font-bold mb-4">Week-over-Week Progress</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <p class="text-sm text-base-content/70">Last Week</p>
+          <p class="text-2xl font-bold">{{ last_week_minutes }} min</p>
+          <p class="text-sm text-base-content/60">{{ last_week_hours }} hours</p>
+        </div>
+        <div>
+          <p class="text-sm text-base-content/70">Previous Week</p>
+          <p class="text-2xl font-bold">{{ previous_week_minutes }} min</p>
+          <p class="text-sm text-base-content/60">{{ previous_week_hours }} hours</p>
+        </div>
+        <div>
+          <p class="text-sm text-base-content/70">Change</p>
+          <p class="text-2xl font-bold {% if week_change > 0 %}trend-up{% elif week_change < 0 %}trend-down{% endif %}">
+            {% if week_change > 0 %}+{% endif %}{{ week_change }}%
+          </p>
+          <p class="text-sm text-base-content/60">
+            {% if week_change > 0 %}
+              <i class="bi bi-arrow-up"></i> Improvement
+            {% elif week_change < 0 %}
+              <i class="bi bi-arrow-down"></i> Decline
+            {% else %}
+              <i class="bi bi-dash"></i> No change
+            {% endif %}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Priority Completion Rates -->
+    <div class="card bg-base-100 border border-base-200">
+      <div class="card-body p-5">
+        <h2 class="text-lg font-bold mb-4">Completion Rate by Priority</h2>
+        <div class="space-y-4">
+          {% for stat in priority_stats %}
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-medium">{{ stat.priority }}</span>
+              <span class="text-sm text-base-content/70">{{ stat.completed }}/{{ stat.total }} ({{ stat.rate|floatformat:0 }}%)</span>
+            </div>
+            <div class="w-full bg-base-200 rounded-full h-2">
+              <div class="bg-primary h-2 rounded-full" style="width: {{ stat.rate }}%"></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Time Distribution -->
+    <div class="card bg-base-100 border border-base-200">
+      <div class="card-body p-5">
+        <h2 class="text-lg font-bold mb-4">Time by Category (Top 10)</h2>
+        <div class="space-y-3">
+          {% for cat in category_time %}
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <p class="font-medium">{{ cat.category__name|default:"Uncategorized" }}</p>
+              <p class="text-xs text-base-content/60">{{ cat.log_count }} logs</p>
+            </div>
+            <div class="text-right">
+              <p class="font-bold">{{ cat.total_time }} min</p>
+              <p class="text-xs text-base-content/60">{% widthratio cat.total_time 60 1 %}h</p>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-center text-base-content/70 py-4">No data available</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Daily Productivity Trend -->
+  <div class="card bg-base-100 border border-base-200 mb-6">
+    <div class="card-body p-5">
+      <h2 class="text-lg font-bold mb-4">Daily Productivity Trend</h2>
+      <div class="chart-wrap">
+        <canvas id="productivityChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Habit Success Rates -->
+  {% if habit_success %}
+  <div class="card bg-base-100 border border-base-200">
+    <div class="card-body p-5">
+      <h2 class="text-lg font-bold mb-4">Habit Success Rates</h2>
+      <div class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Habit</th>
+              <th>Success Rate</th>
+              <th>Current Streak</th>
+              <th>Best Streak</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for habit in habit_success %}
+            <tr>
+              <td class="font-medium">{{ habit.name }}</td>
+              <td>
+                <div class="flex items-center gap-2">
+                  <div class="w-24 bg-base-200 rounded-full h-2">
+                    <div class="bg-success h-2 rounded-full" style="width: {{ habit.success_rate|floatformat:0 }}%"></div>
+                  </div>
+                  <span class="text-sm">{{ habit.success_rate|floatformat:1 }}%</span>
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-primary">{{ habit.current_streak }} days</span>
+              </td>
+              <td>
+                <span class="badge badge-outline">{{ habit.best_streak }} days</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const dailyTrend = {{ daily_trend|safe }};
+  
+  if (dailyTrend && dailyTrend.length > 0) {
+    const ctx = document.getElementById('productivityChart').getContext('2d');
+    
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: dailyTrend.map(d => d.date),
+        datasets: [
+          {
+            label: 'Minutes Logged',
+            data: dailyTrend.map(d => d.minutes),
+            borderColor: 'rgb(99, 102, 241)',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            tension: 0.4,
+            fill: true,
+            yAxisID: 'y'
+          },
+          {
+            label: 'Tasks Completed',
+            data: dailyTrend.map(d => d.tasks),
+            borderColor: 'rgb(16, 185, 129)',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            tension: 0.4,
+            fill: true,
+            yAxisID: 'y1'
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: false,
+        },
+        scales: {
+          y: {
+            type: 'linear',
+            display: true,
+            position: 'left',
+            title: {
+              display: true,
+              text: 'Minutes'
+            }
+          },
+          y1: {
+            type: 'linear',
+            display: true,
+            position: 'right',
+            title: {
+              display: true,
+              text: 'Tasks'
+            },
+            grid: {
+              drawOnChartArea: false,
+            },
+          },
+          x: {
+            ticks: {
+              maxRotation: 45,
+              minRotation: 45
+            }
+          }
+        },
+        plugins: {
+          legend: {
+            position: 'top',
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                let label = context.dataset.label || '';
+                if (label) {
+                  label += ': ';
+                }
+                label += context.parsed.y;
+                if (context.dataset.label === 'Minutes Logged') {
+                  label += ' min (' + (context.parsed.y / 60).toFixed(1) + 'h)';
+                }
+                return label;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,192 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ title }} | VisMatrix Blog{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+  
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl sm:text-4xl font-black text-base-content mb-2">
+      {{ title }}
+    </h1>
+    <p class="text-base-content/70">
+      Share your insights on personal development, productivity, and growth
+    </p>
+  </div>
+
+  <!-- Form -->
+  <form method="post" class="space-y-6">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+      <div class="alert alert-error">
+        <i class="bi bi-exclamation-triangle"></i>
+        <span>{{ form.non_field_errors }}</span>
+      </div>
+    {% endif %}
+
+    <!-- Title -->
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text font-semibold">Title *</span>
+        <span class="label-text-alt text-base-content/60">{{ form.title.help_text }}</span>
+      </label>
+      {{ form.title }}
+      {% if form.title.errors %}
+        <label class="label">
+          <span class="label-text-alt text-error">{{ form.title.errors.0 }}</span>
+        </label>
+      {% endif %}
+    </div>
+
+    <!-- Category -->
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text font-semibold">Category *</span>
+        <span class="label-text-alt text-base-content/60">{{ form.category.help_text }}</span>
+      </label>
+      {{ form.category }}
+      {% if form.category.errors %}
+        <label class="label">
+          <span class="label-text-alt text-error">{{ form.category.errors.0 }}</span>
+        </label>
+      {% endif %}
+    </div>
+
+    <!-- Excerpt -->
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text font-semibold">Excerpt *</span>
+        <span class="label-text-alt text-base-content/60">{{ form.excerpt.help_text }}</span>
+      </label>
+      {{ form.excerpt }}
+      <label class="label">
+        <span class="label-text-alt text-base-content/60">
+          <span id="excerptCount">0</span>/300 characters
+        </span>
+      </label>
+      {% if form.excerpt.errors %}
+        <label class="label">
+          <span class="label-text-alt text-error">{{ form.excerpt.errors.0 }}</span>
+        </label>
+      {% endif %}
+    </div>
+
+    <!-- Content -->
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text font-semibold">Content *</span>
+        <span class="label-text-alt text-base-content/60">{{ form.content.help_text }}</span>
+      </label>
+      {{ form.content }}
+      <label class="label">
+        <span class="label-text-alt text-base-content/60">
+          <span id="wordCount">0</span> words · Estimated <span id="readTime">1</span> min read
+        </span>
+      </label>
+      {% if form.content.errors %}
+        <label class="label">
+          <span class="label-text-alt text-error">{{ form.content.errors.0 }}</span>
+        </label>
+      {% endif %}
+      <div class="alert alert-info mt-2">
+        <i class="bi bi-info-circle"></i>
+        <div class="text-sm">
+          <strong>Markdown Tips:</strong>
+          <ul class="mt-2 space-y-1">
+            <li># Heading 1, ## Heading 2, ### Heading 3</li>
+            <li>**bold text**, *italic text*</li>
+            <li>[link text](https://url.com)</li>
+            <li>- Bullet point</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Featured Image URL (Optional) -->
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text font-semibold">Featured Image URL (Optional)</span>
+      </label>
+      {{ form.featured_image }}
+      {% if form.featured_image.errors %}
+        <label class="label">
+          <span class="label-text-alt text-error">{{ form.featured_image.errors.0 }}</span>
+        </label>
+      {% endif %}
+    </div>
+
+    <!-- Meta Description (Optional) -->
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text font-semibold">SEO Meta Description (Optional)</span>
+        <span class="label-text-alt text-base-content/60">Helps with search engine optimization</span>
+      </label>
+      {{ form.meta_description }}
+      {% if form.meta_description.errors %}
+        <label class="label">
+          <span class="label-text-alt text-error">{{ form.meta_description.errors.0 }}</span>
+        </label>
+      {% endif %}
+    </div>
+
+    <!-- Status -->
+    <div class="form-control">
+      <label class="label">
+        <span class="label-text font-semibold">Status *</span>
+        <span class="label-text-alt text-base-content/60">{{ form.status.help_text }}</span>
+      </label>
+      {{ form.status }}
+      {% if form.status.errors %}
+        <label class="label">
+          <span class="label-text-alt text-error">{{ form.status.errors.0 }}</span>
+        </label>
+      {% endif %}
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex gap-3 pt-6">
+      <button type="submit" class="btn btn-primary gap-2">
+        <i class="bi bi-check-circle"></i>
+        <span>{% if blog_post %}Update Post{% else %}Create Post{% endif %}</span>
+      </button>
+      <a href="{% url 'blog_my_posts' %}" class="btn btn-ghost gap-2">
+        <i class="bi bi-x-circle"></i>
+        <span>Cancel</span>
+      </a>
+    </div>
+
+  </form>
+
+</div>
+
+<script>
+  // Character and word counters
+  document.addEventListener('DOMContentLoaded', function() {
+    const excerptField = document.querySelector('textarea[name="excerpt"]');
+    const contentField = document.querySelector('textarea[name="content"]');
+    const excerptCount = document.getElementById('excerptCount');
+    const wordCount = document.getElementById('wordCount');
+    const readTime = document.getElementById('readTime');
+    
+    if (excerptField && excerptCount) {
+      const updateExcerptCount = () => {
+        excerptCount.textContent = excerptField.value.length;
+      };
+      excerptField.addEventListener('input', updateExcerptCount);
+      updateExcerptCount();
+    }
+    
+    if (contentField && wordCount && readTime) {
+      const updateContentStats = () => {
+        const words = contentField.value.trim().split(/\s+/).filter(w => w.length > 0).length;
+        wordCount.textContent = words;
+        readTime.textContent = Math.max(1, Math.round(words / 200));
+      };
+      contentField.addEventListener('input', updateContentStats);
+      updateContentStats();
+    }
+  });
+</script>
+{% endblock %}

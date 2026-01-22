@@ -108,7 +108,26 @@
         <li><a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active{% endif %} rounded-lg"><i class="bi bi-bar-chart"></i> Analytics</a></li>
         <li><a href="{% url 'plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' %}active{% endif %} rounded-lg"><i class="bi bi-diagram-3"></i> Plans</a></li>
         <li><a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active{% endif %} rounded-lg"><i class="bi bi-calendar-event"></i> Day Planner</a></li>
+        <li><a href="{% url 'blog_list' %}" class="{% if 'blog' in request.resolver_match.url_name %}active{% endif %} rounded-lg"><i class="bi bi-journal-text"></i> Blog</a></li>
         <li><a href="{% url 'friends_list' %}" class="{% if request.resolver_match.url_name == 'friends_list' %}active{% endif %} rounded-lg">Friends</a></li>
+        
+        <!-- Pro Features Menu -->
+        {% if user_subscription.is_pro %}
+        <li>
+          <details>
+            <summary class="rounded-lg">
+              <i class="bi bi-star-fill text-warning"></i> Pro
+            </summary>
+            <ul class="p-2 bg-base-100 rounded-box shadow-xl border border-base-200 w-56">
+              <li><a href="{% url 'pro_dashboard' %}" class="gap-3"><i class="bi bi-speedometer2"></i> Pro Dashboard</a></li>
+              <li><a href="{% url 'advanced_analytics' %}" class="gap-3"><i class="bi bi-graph-up-arrow"></i> Advanced Analytics</a></li>
+              <li class="menu-title text-xs opacity-50 px-3 py-2">Quick Actions</li>
+              <li><a href="{% url 'export_data_csv' %}?type=tasks" class="gap-3"><i class="bi bi-download"></i> Export Tasks</a></li>
+              <li><a href="{% url 'export_data_csv' %}?type=logs" class="gap-3"><i class="bi bi-clock-history"></i> Export Logs</a></li>
+            </ul>
+          </details>
+        </li>
+        {% endif %}
       </ul>
     </div>
 
@@ -132,6 +151,16 @@
           <ul tabindex="0" class="mt-3 z-[1] p-2 shadow-2xl menu menu-sm dropdown-content bg-base-100 rounded-2xl w-56 border border-base-content/5">
             <li class="menu-title px-4 py-2 opacity-60">Account</li>
             <li><a href="{% url 'profile_settings' %}" class="py-3"><i class="bi bi-person text-lg"></i> Profile</a></li>
+            <li>
+              <a href="{% url 'subscription_plans' %}" class="py-3 justify-between">
+                <span class="flex items-center gap-2"><i class="bi bi-star"></i> Subscription</span>
+                {% if user_subscription.is_pro %}
+                  <span class="badge badge-primary badge-sm">Pro</span>
+                {% else %}
+                  <span class="badge badge-ghost badge-sm">Free</span>
+                {% endif %}
+              </a>
+            </li>
             <li>
                 <button id="themeToggleBtn" class="py-3 justify-between">
                     <span class="flex items-center gap-2"><i class="bi bi-moon-stars"></i> Appearance</span>

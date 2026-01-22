@@ -67,6 +67,33 @@
     </div>
   </header>
 
+  <!-- Pro Analytics Banner -->
+  {% if user_subscription.is_pro %}
+  <div class="alert bg-gradient-to-r from-purple-500 to-indigo-600 text-white border-0 shadow-lg">
+    <i class="bi bi-star-fill text-2xl"></i>
+    <div class="flex-1">
+      <h3 class="font-bold text-lg">Unlock Deeper Insights</h3>
+      <p class="text-sm text-white/90">Access advanced analytics with trends, predictions, and detailed reports</p>
+    </div>
+    <a href="{% url 'advanced_analytics' %}" class="btn btn-sm bg-white text-purple-600 border-0 hover:bg-purple-50 gap-2">
+      <i class="bi bi-graph-up-arrow"></i>
+      View Pro Analytics
+    </a>
+  </div>
+  {% else %}
+  <div class="alert bg-base-200 border border-base-300">
+    <i class="bi bi-lock text-2xl"></i>
+    <div class="flex-1">
+      <h3 class="font-bold">Want More Insights?</h3>
+      <p class="text-sm text-base-content/70">Upgrade to Pro for advanced analytics, data exports, and AI-powered features</p>
+    </div>
+    <a href="{% url 'subscription_plans' %}" class="btn btn-sm btn-primary gap-2">
+      <i class="bi bi-star"></i>
+      Upgrade to Pro
+    </a>
+  </div>
+  {% endif %}
+
   {% if random_quote %}
   <!-- Quote of the Day -->
   <section class="card border border-info/20 bg-gradient-to-br from-info/10 via-info/5 to-transparent shadow-md hover:shadow-lg transition-all">

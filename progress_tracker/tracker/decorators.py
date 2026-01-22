@@ -227,3 +227,43 @@ def require_ownership(model_class, param_name='pk', owner_field='user'):
         
         return wrapper
     return decorator
+
+
+def pro_required(redirect_url='subscription_plans'):
+    """
+    Decorator to require Pro subscription for accessing a view.
+    
+    Usage:
+        @login_required
+        @pro_required()
+        def advanced_feature(request):
+            ...
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(request, *args, **kwargs):
+            from .models import Subscription
+            
+            # Check if user has active pro subscription
+            try:
+                subscription = request.user.subscription
+                if subscription.is_pro:
+                    return func(request, *args, **kwargs)
+            except Subscription.DoesNotExist:
+                # Create free subscription if doesn't exist
+                Subscription.objects.create(
+                    user=request.user,
+                    plan='free',
+                    status='active'
+                )
+            
+            # User doesn't have pro access
+            messages.warning(
+                request,
+                '⭐ This is a Pro feature. Upgrade to VisMatrix Pro to unlock advanced features!'
+            )
+            return redirect(redirect_url)
+        
+        return wrapper
+    return decorator
+

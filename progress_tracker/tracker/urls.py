@@ -1,5 +1,7 @@
 from django.urls import path
 from . import views
+from . import subscription_views as sub_views
+from . import pro_views
 
 urlpatterns = [
     # Public landing page
@@ -155,5 +157,32 @@ urlpatterns = [
     
     # Landing Page Analytics (Admin only)
     path("admin-analytics/landing/", views.landing_analytics, name="landing_analytics"),
+    
+    # Public Blog Pages (No login required)
+    path("blog/", views.blog_list, name="blog_list"),
+    path("blog/<slug:slug>/", views.blog_detail, name="blog_detail"),
+    
+    # User Blog Management (Login required)
+    path("blog/new/create/", views.blog_create, name="blog_create"),
+    path("blog/<slug:slug>/edit/", views.blog_edit, name="blog_edit"),
+    path("blog/<slug:slug>/delete/", views.blog_delete, name="blog_delete"),
+    path("my-blog-posts/", views.blog_my_posts, name="blog_my_posts"),
+    
+    # Subscription & Payments
+    path("subscription/", sub_views.subscription_plans, name="subscription_plans"),
+    path("subscription/checkout/create/", sub_views.create_checkout_session, name="create_checkout_session"),
+    path("subscription/success/", sub_views.subscription_success, name="subscription_success"),
+    path("subscription/cancel/", sub_views.subscription_cancel, name="subscription_cancel"),
+    path("subscription/portal/", sub_views.subscription_portal, name="subscription_portal"),
+    path("subscription/payments/", sub_views.payment_history, name="payment_history"),
+    path("webhooks/stripe/", sub_views.stripe_webhook, name="stripe_webhook"),
+    
+    # Pro Features (requires Pro subscription)
+    path("pro/", pro_views.pro_features_dashboard, name="pro_dashboard"),
+    path("pro/analytics/", pro_views.advanced_analytics, name="advanced_analytics"),
+    path("pro/export/csv/", pro_views.export_data_csv, name="export_data_csv"),
+    path("pro/api/bulk-operations/", pro_views.bulk_operations, name="bulk_operations"),
+    path("pro/api/ai-categorize/", pro_views.ai_categorize_task, name="ai_categorize_task"),
 
 ]
+

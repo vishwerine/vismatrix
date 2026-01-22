@@ -1,0 +1,160 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}My Blog Posts | VisMatrix{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  
+  <!-- Header with Stats -->
+  <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+    <div>
+      <h1 class="text-3xl sm:text-4xl font-black text-base-content mb-2">
+        My Blog Posts
+      </h1>
+      <p class="text-base-content/70">
+        Manage your published articles and drafts
+      </p>
+    </div>
+    <a href="{% url 'blog_create' %}" class="btn btn-primary gap-2">
+      <i class="bi bi-plus-circle"></i>
+      <span>Write New Post</span>
+    </a>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+    <div class="stats shadow">
+      <div class="stat">
+        <div class="stat-figure text-primary">
+          <i class="bi bi-file-earmark-text text-3xl"></i>
+        </div>
+        <div class="stat-title">Published</div>
+        <div class="stat-value text-primary">{{ published_count }}</div>
+        <div class="stat-desc">Live on the blog</div>
+      </div>
+    </div>
+    
+    <div class="stats shadow">
+      <div class="stat">
+        <div class="stat-figure text-warning">
+          <i class="bi bi-file-earmark-edit text-3xl"></i>
+        </div>
+        <div class="stat-title">Drafts</div>
+        <div class="stat-value text-warning">{{ draft_count }}</div>
+        <div class="stat-desc">Not yet published</div>
+      </div>
+    </div>
+    
+    <div class="stats shadow">
+      <div class="stat">
+        <div class="stat-figure text-secondary">
+          <i class="bi bi-eye text-3xl"></i>
+        </div>
+        <div class="stat-title">Total Views</div>
+        <div class="stat-value text-secondary">{{ total_views }}</div>
+        <div class="stat-desc">Across all posts</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Posts List -->
+  {% if blog_posts %}
+    <div class="space-y-4">
+      {% for post in blog_posts %}
+        <div class="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow">
+          <div class="card-body">
+            <div class="flex flex-col lg:flex-row justify-between items-start gap-4">
+              
+              <!-- Post Info -->
+              <div class="flex-1">
+                <div class="flex flex-wrap items-center gap-2 mb-2">
+                  <h2 class="card-title text-xl">{{ post.title }}</h2>
+                  
+                  <!-- Status Badge -->
+                  {% if post.status == 'published' %}
+                    <span class="badge badge-success gap-1">
+                      <i class="bi bi-check-circle"></i> Published
+                    </span>
+                  {% elif post.status == 'draft' %}
+                    <span class="badge badge-warning gap-1">
+                      <i class="bi bi-file-earmark-edit"></i> Draft
+                    </span>
+                  {% else %}
+                    <span class="badge badge-ghost gap-1">
+                      <i class="bi bi-archive"></i> Archived
+                    </span>
+                  {% endif %}
+                  
+                  <!-- Category Badge -->
+                  <span class="badge badge-outline">{{ post.get_category_display }}</span>
+                </div>
+                
+                <p class="text-base-content/70 mb-3 line-clamp-2">
+                  {{ post.excerpt }}
+                </p>
+                
+                <!-- Meta Info -->
+                <div class="flex flex-wrap gap-4 text-sm text-base-content/60">
+                  <span class="flex items-center gap-1">
+                    <i class="bi bi-calendar3"></i>
+                    {% if post.published_at %}
+                      {{ post.published_at|date:"M d, Y" }}
+                    {% else %}
+                      Created {{ post.created_at|date:"M d, Y" }}
+                    {% endif %}
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i class="bi bi-clock"></i>
+                    {{ post.read_time }} min read
+                  </span>
+                  <span class="flex items-center gap-1">
+                    <i class="bi bi-eye"></i>
+                    {{ post.views }} views
+                  </span>
+                </div>
+              </div>
+              
+              <!-- Actions -->
+              <div class="flex lg:flex-col gap-2">
+                {% if post.status == 'published' %}
+                  <a href="{% url 'blog_detail' post.slug %}" target="_blank" class="btn btn-sm btn-outline gap-2">
+                    <i class="bi bi-box-arrow-up-right"></i>
+                    <span>View</span>
+                  </a>
+                {% endif %}
+                <a href="{% url 'blog_edit' post.slug %}" class="btn btn-sm btn-primary gap-2">
+                  <i class="bi bi-pencil"></i>
+                  <span>Edit</span>
+                </a>
+                <a href="{% url 'blog_delete' post.slug %}" class="btn btn-sm btn-error btn-outline gap-2">
+                  <i class="bi bi-trash"></i>
+                  <span>Delete</span>
+                </a>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Empty State -->
+    <div class="hero bg-base-200 rounded-box py-20">
+      <div class="hero-content text-center">
+        <div class="max-w-md">
+          <i class="bi bi-file-earmark-text text-6xl text-base-content/30 mb-4"></i>
+          <h2 class="text-2xl font-bold mb-4">No blog posts yet</h2>
+          <p class="text-base-content/70 mb-6">
+            Start sharing your insights on personal development, productivity, and growth!
+          </p>
+          <a href="{% url 'blog_create' %}" class="btn btn-primary gap-2">
+            <i class="bi bi-plus-circle"></i>
+            <span>Write Your First Post</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endblock %}

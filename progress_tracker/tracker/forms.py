@@ -1,7 +1,7 @@
 from django import forms
 from django.db import models
 from django.contrib.auth.models import User
-from .models import Task, DailyLog, Category, DailySummary, Plan, PlanNode, Habit
+from .models import Task, DailyLog, Category, DailySummary, Plan, PlanNode, Habit, BlogPost
 
 class TaskForm(forms.ModelForm):
     class Meta:
@@ -327,3 +327,73 @@ class HabitForm(forms.ModelForm):
             pass
         return start_date
 
+
+class BlogPostForm(forms.ModelForm):
+    """Form for creating and editing user blog posts"""
+    class Meta:
+        model = BlogPost
+        fields = ['title', 'excerpt', 'content', 'category', 'status', 'featured_image', 'meta_description']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'Enter a catchy title for your post...',
+                'maxlength': '200'
+            }),
+            'excerpt': forms.Textarea(attrs={
+                'class': 'textarea textarea-bordered w-full',
+                'rows': 3,
+                'placeholder': 'Brief summary of your post (150-300 characters)...',
+                'maxlength': '300'
+            }),
+            'content': forms.Textarea(attrs={
+                'class': 'textarea textarea-bordered w-full',
+                'rows': 20,
+                'placeholder': 'Write your article content here... (Markdown supported)'
+            }),
+            'category': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'status': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'featured_image': forms.URLInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'https://example.com/image.jpg (optional)'
+            }),
+            'meta_description': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'SEO description (optional)',
+                'maxlength': '160'
+            }),
+        }
+        help_texts = {
+            'title': 'Make it catchy and descriptive',
+            'excerpt': 'This appears on the blog list page',
+            'content': 'Use Markdown formatting for rich text',
+            'category': 'Choose the most relevant category',
+            'status': 'Draft = only you can see it, Published = public',
+        }
+    
+    def clean_title(self):
+        title = self.cleaned_data.get('title', '').strip()
+        if not title:
+            raise forms.ValidationError("Title is required.")
+        if len(title) < 10:
+            raise forms.ValidationError("Title should be at least 10 characters long.")
+        return title
+    
+    def clean_excerpt(self):
+        excerpt = self.cleaned_data.get('excerpt', '').strip()
+        if not excerpt:
+            raise forms.ValidationError("Excerpt is required.")
+        if len(excerpt) < 50:
+            raise forms.ValidationError("Excerpt should be at least 50 characters long.")
+        return excerpt
+    
+    def clean_content(self):
+        content = self.cleaned_data.get('content', '').strip()
+        if not content:
+            raise forms.ValidationError("Content is required.")
+        if len(content) < 200:
+            raise forms.ValidationError("Content should be at least 200 characters long.")
+        return content

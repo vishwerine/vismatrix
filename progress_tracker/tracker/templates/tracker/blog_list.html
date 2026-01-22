@@ -1,0 +1,154 @@
+{% extends 'tracker/base.html' %}
+{% load ad_tags %}
+
+{% block title %}Blog - Personal Development & Self-Improvement | VisMatrix{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+  
+  <!-- Header -->
+  <header class="text-center py-12 sm:py-16">
+    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-base-content mb-4">
+      <span class="gradient-text">VisMatrix.Space Blog</span>
+    </h1>
+    <p class="text-lg sm:text-xl text-base-content/70 max-w-3xl mx-auto mb-6">
+      Insights, strategies, and inspiration for personal growth, productivity, and success, written by our users.
+    </p>
+    {% if user.is_authenticated %}
+      <div class="flex justify-center gap-3">
+        <a href="{% url 'blog_create' %}" class="btn btn-primary gap-2">
+          <i class="bi bi-plus-circle"></i>
+          <span>Write a Post</span>
+        </a>
+        <a href="{% url 'blog_my_posts' %}" class="btn btn-outline gap-2">
+          <i class="bi bi-file-earmark-text"></i>
+          <span>My Posts</span>
+        </a>
+      </div>
+    {% endif %}
+  </header>
+
+  <!-- Advertisement: Header Banner -->
+  {% ad_container 'header_banner' 'my-8 max-w-5xl mx-auto' %}
+
+  <!-- Blog Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-12">
+    
+    <!-- Main Content: Blog Posts -->
+    <main class="lg:col-span-8 space-y-6">
+      {% for blog in blogs %}
+      <article class="card border border-base-200 bg-base-100 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div class="card-body p-6 sm:p-8">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="flex-shrink-0 w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+              <i class="bi {{ blog.image }} text-3xl text-primary"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <span class="badge badge-primary badge-sm">{{ blog.category }}</span>
+              <p class="text-sm text-base-content/60 mt-1">{{ blog.read_time }}</p>
+            </div>
+          </div>
+          
+          <h2 class="text-2xl sm:text-3xl font-bold text-base-content mb-3 hover:text-primary transition-colors">
+            <a href="{% url 'blog_detail' blog.slug %}">{{ blog.title }}</a>
+          </h2>
+          
+          <p class="text-base text-base-content/70 mb-6 leading-relaxed">
+            {{ blog.excerpt }}
+          </p>
+          
+          <a href="{% url 'blog_detail' blog.slug %}" 
+             class="btn btn-primary gap-2 w-full sm:w-auto">
+            <span>Read Article</span>
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+      </article>
+
+      {% if forloop.counter == 2 %}
+        <!-- Advertisement: In-Content -->
+        {% ad_container 'in_content' 'my-8' %}
+      {% endif %}
+      {% endfor %}
+    </main>
+
+    <!-- Sidebar -->
+    <aside class="lg:col-span-4 space-y-6">
+      
+      <!-- Advertisement: Sidebar -->
+      {% ad_container 'sidebar' 'mb-6' %}
+      
+      <!-- Categories -->
+      <div class="card border border-base-200 bg-base-100 shadow-md">
+        <div class="card-body p-6">
+          <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <i class="bi bi-tags-fill text-primary"></i>
+            <span>Categories</span>
+          </h3>
+          <div class="space-y-2">
+            <a href="#" class="flex items-center justify-between p-3 rounded-lg bg-base-200/50 hover:bg-primary/10 transition-colors">
+              <span class="font-semibold">Personal Development</span>
+              <span class="badge badge-sm">12</span>
+            </a>
+            <a href="#" class="flex items-center justify-between p-3 rounded-lg bg-base-200/50 hover:bg-primary/10 transition-colors">
+              <span class="font-semibold">Productivity</span>
+              <span class="badge badge-sm">18</span>
+            </a>
+            <a href="#" class="flex items-center justify-between p-3 rounded-lg bg-base-200/50 hover:bg-primary/10 transition-colors">
+              <span class="font-semibold">Habits & Routines</span>
+              <span class="badge badge-sm">15</span>
+            </a>
+            <a href="#" class="flex items-center justify-between p-3 rounded-lg bg-base-200/50 hover:bg-primary/10 transition-colors">
+              <span class="font-semibold">Self-Improvement</span>
+              <span class="badge badge-sm">10</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Call to Action -->
+      <div class="card border border-primary/30 bg-gradient-to-br from-primary/5 to-secondary/5 shadow-lg">
+        <div class="card-body p-6 text-center">
+          <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+            <i class="bi bi-rocket-takeoff text-3xl text-primary"></i>
+          </div>
+          <h3 class="text-xl font-bold mb-2">Start Your Journey</h3>
+          <p class="text-sm text-base-content/70 mb-4">
+            Track your progress, build better habits, and achieve your goals with VisMatrix.
+          </p>
+          <a href="{% url 'landing_page' %}" class="btn btn-primary w-full gap-2">
+            <span>Get Started Free</span>
+            <i class="bi bi-arrow-right"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Popular Posts -->
+      <div class="card border border-base-200 bg-base-100 shadow-md">
+        <div class="card-body p-6">
+          <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <i class="bi bi-fire text-warning"></i>
+            <span>Popular Posts</span>
+          </h3>
+          <div class="space-y-4">
+            {% for blog in blogs|slice:":3" %}
+            <a href="{% url 'blog_detail' blog.slug %}" 
+               class="block p-3 rounded-lg hover:bg-base-200/50 transition-colors">
+              <h4 class="font-semibold text-sm mb-1 line-clamp-2">{{ blog.title }}</h4>
+              <p class="text-xs text-base-content/60">{{ blog.read_time }}</p>
+            </a>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+
+  <!-- Bottom Ad -->
+  <div class="mt-12">
+    {% ad_container 'in_content' 'my-8 max-w-5xl mx-auto' %}
+  </div>
+
+</div>
+{% endblock %}

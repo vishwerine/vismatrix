@@ -1014,3 +1014,186 @@ class HabitCompletion(models.Model):
     
     def __str__(self):
         return f"{self.habit.title} - {self.completion_date}"
+
+
+class BlogPost(models.Model):
+    """User-generated blog posts for the public blog section"""
+    STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('published', 'Published'),
+        ('archived', 'Archived'),
+    ]
+    
+    CATEGORY_CHOICES = [
+        ('personal-development', 'Personal Development'),
+        ('productivity', 'Productivity'),
+        ('habits', 'Habits & Routines'),
+        ('self-improvement', 'Self-Improvement'),
+        ('motivation', 'Motivation'),
+        ('mindfulness', 'Mindfulness'),
+        ('goal-setting', 'Goal Setting'),
+        ('time-management', 'Time Management'),
+    ]
+    
+    author = models.ForeignKey(User, on_delete=models.CASCADE, related_name='blog_posts', db_index=True)
+    title = models.CharField(max_length=200, help_text="Catchy, descriptive title for your post")
+    slug = models.SlugField(max_length=250, unique=True, db_index=True, help_text="URL-friendly version of title (auto-generated)")
+    excerpt = models.TextField(max_length=300, help_text="Brief summary (150-300 characters) for the blog list")
+    content = models.TextField(help_text="Full article content (Markdown supported)")
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default='personal-development', db_index=True)
+    
+    # Metadata
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='draft', db_index=True)
+    featured_image = models.URLField(blank=True, help_text="Optional featured image URL")
+    read_time = models.IntegerField(default=5, help_text="Estimated reading time in minutes")
+    views = models.IntegerField(default=0)
+    
+    # SEO
+    meta_description = models.CharField(max_length=160, blank=True, help_text="SEO meta description")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    published_at = models.DateTimeField(null=True, blank=True, db_index=True)
+    
+    class Meta:
+        ordering = ['-published_at', '-created_at']
+        indexes = [
+            models.Index(fields=['status', '-published_at']),
+            models.Index(fields=['author', '-created_at']),
+            models.Index(fields=['category', '-published_at']),
+        ]
+    
+    def __str__(self):
+        return self.title
+    
+    def save(self, *args, **kwargs):
+        # Auto-generate slug from title if not provided
+        if not self.slug:
+            from django.utils.text import slugify
+            base_slug = slugify(self.title)
+            slug = base_slug
+            counter = 1
+            while BlogPost.objects.filter(slug=slug).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+            self.slug = slug
+        
+        # Set published_at when status changes to published
+        if self.status == 'published' and not self.published_at:
+            self.published_at = timezone.now()
+        
+        # Calculate read time based on content length (average reading speed: 200 words/min)
+        word_count = len(self.content.split())
+        self.read_time = max(1, round(word_count / 200))
+        
+        super().save(*args, **kwargs)
+    
+    def get_absolute_url(self):
+        from django.urls import reverse
+        return reverse('blog_detail', kwargs={'slug': self.slug})
+
+
+class Subscription(models.Model):
+    """User subscription model for Pro features."""
+    
+    PLAN_CHOICES = [
+        ('free', 'Free'),
+        ('pro', 'Pro'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('active', 'Active'),
+        ('canceled', 'Canceled'),
+        ('past_due', 'Past Due'),
+        ('trialing', 'Trialing'),
+        ('incomplete', 'Incomplete'),
+    ]
+    
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='subscription')
+    plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default='free')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    
+    # Stripe integration fields
+    stripe_customer_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_subscription_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_price_id = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Subscription dates
+    current_period_start = models.DateTimeField(null=True, blank=True)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    trial_end = models.DateTimeField(null=True, blank=True)
+    canceled_at = models.DateTimeField(null=True, blank=True)
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'tracker_subscription'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['stripe_customer_id']),
+            models.Index(fields=['stripe_subscription_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_plan_display()} ({self.status})"
+    
+    @property
+    def is_pro(self):
+        """Check if user has active pro subscription."""
+        return self.plan == 'pro' and self.status in ['active', 'trialing']
+    
+    @property
+    def is_active(self):
+        """Check if subscription is active (includes trial)."""
+        return self.status in ['active', 'trialing']
+    
+    @property
+    def days_until_renewal(self):
+        """Calculate days until next billing."""
+        if self.current_period_end:
+            delta = self.current_period_end - timezone.now()
+            return delta.days
+        return None
+
+
+class PaymentHistory(models.Model):
+    """Track payment transactions."""
+    
+    STATUS_CHOICES = [
+        ('succeeded', 'Succeeded'),
+        ('pending', 'Pending'),
+        ('failed', 'Failed'),
+        ('refunded', 'Refunded'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='payments')
+    subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, related_name='payments')
+    
+    # Payment details
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='USD')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES)
+    
+    # Stripe details
+    stripe_payment_intent_id = models.CharField(max_length=255, blank=True, null=True)
+    stripe_invoice_id = models.CharField(max_length=255, blank=True, null=True)
+    
+    # Metadata
+    description = models.TextField(blank=True)
+    failure_reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        db_table = 'tracker_payment_history'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['stripe_payment_intent_id']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - ${self.amount} ({self.status})"

@@ -137,6 +137,7 @@
 
       <nav class="hidden md:flex items-center gap-6 text-sm" style="color: var(--text); opacity: 0.7;">
         <a href="#features" class="hover:opacity-100 transition-opacity">Features</a>
+        <a href="{% url 'blog_list' %}" class="hover:opacity-100 transition-opacity">Blog</a>
        
         {% if user.is_authenticated %}
           <a href="{% url 'dashboard' %}" class="hover:opacity-100 transition-opacity">Dashboard</a>
@@ -461,6 +462,7 @@
         <p>© 2026 VisMatrix.Space — AI-powered personal development</p>
         <div class="flex gap-4">
           <a href="#features" class="hover:opacity-100 transition-opacity">Features</a>
+          <a href="{% url 'blog_list' %}" class="hover:opacity-100 transition-opacity">Blog</a>
           <a href="{% url 'privacy_policy' %}" class="hover:opacity-100 transition-opacity">Privacy</a>
           <a href="{% url 'terms_of_service' %}" class="hover:opacity-100 transition-opacity">Terms</a>
         </div>
