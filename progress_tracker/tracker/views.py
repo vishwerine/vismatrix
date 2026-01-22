@@ -5873,3 +5873,64 @@ def blog_my_posts(request):
     }
     
     return render(request, 'tracker/blog_my_posts.html', context)
+
+
+# ============================================================================
+# NEW USER TRACKING (Admin Only)
+# ============================================================================
+
+@staff_member_required
+def new_users_tracking(request):
+    """Admin dashboard to track new users who joined the app."""
+    from django.contrib.auth.models import User
+    from django.core.paginator import Paginator
+    
+    # Date range filter
+    days = int(request.GET.get('days', 30))
+    start_date = timezone.now() - timedelta(days=days)
+    
+    # Get all users ordered by join date (newest first)
+    all_users = User.objects.all().select_related('userprofile').order_by('-date_joined')
+    
+    # Filter by date range if specified
+    if request.GET.get('days'):
+        users_queryset = all_users.filter(date_joined__gte=start_date)
+    else:
+        users_queryset = all_users
+    
+    # Stats
+    total_users = User.objects.count()
+    new_users_count = User.objects.filter(date_joined__gte=start_date).count()
+    active_users = User.objects.filter(last_login__gte=timezone.now() - timedelta(days=7)).count()
+    
+    # Daily signups trend
+    daily_signups = []
+    for i in range(days - 1, -1, -1):
+        date = timezone.now().date() - timedelta(days=i)
+        count = User.objects.filter(date_joined__date=date).count()
+        daily_signups.append({
+            'date': date.strftime('%Y-%m-%d'),
+            'count': count
+        })
+    
+    # Pagination
+    page = request.GET.get('page', 1)
+    paginator = Paginator(users_queryset, 50)  # 50 users per page
+    
+    try:
+        users = paginator.page(page)
+    except PageNotAnInteger:
+        users = paginator.page(1)
+    except EmptyPage:
+        users = paginator.page(paginator.num_pages)
+    
+    context = {
+        'users': users,
+        'total_users': total_users,
+        'new_users_count': new_users_count,
+        'active_users': active_users,
+        'days': days,
+        'daily_signups': daily_signups,
+    }
+    
+    return render(request, 'tracker/admin_new_users.html', context)

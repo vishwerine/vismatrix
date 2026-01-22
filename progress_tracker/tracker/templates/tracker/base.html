@@ -167,6 +167,12 @@
                     <span class="badge badge-sm" id="themeToggleText">Light</span>
                 </button>
             </li>
+            {% if user.is_staff %}
+            <div class="divider my-0"></div>
+            <li class="menu-title px-4 py-2 opacity-60">Admin</li>
+            <li><a href="{% url 'new_users_tracking' %}" class="py-3"><i class="bi bi-people"></i> New Users Tracking</a></li>
+            <li><a href="{% url 'landing_analytics' %}" class="py-3"><i class="bi bi-graph-up"></i> Landing Analytics</a></li>
+            {% endif %}
             <div class="divider my-0"></div>
             <li class="menu-title px-4 py-2 opacity-60">Legal</li>
             <li><a href="{% url 'privacy_policy' %}" class="py-3"><i class="bi bi-shield-check"></i> Privacy Policy</a></li>

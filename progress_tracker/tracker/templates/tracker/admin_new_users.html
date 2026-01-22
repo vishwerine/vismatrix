@@ -1,0 +1,312 @@
+{% extends "tracker/base.html" %}
+{% load static %}
+
+{% block title %}New Users Tracking - VisMatrix Admin{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+    .user-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: 9999px;
+    }
+    .badge-success {
+        background-color: #10b981;
+        color: white;
+    }
+    .badge-warning {
+        background-color: #f59e0b;
+        color: white;
+    }
+    .badge-gray {
+        background-color: #6b7280;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="mb-6 flex justify-between items-center flex-wrap gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">👥 New Users Tracking</h1>
+            <p class="text-gray-600 dark:text-gray-400 mt-1">Admin dashboard for monitoring user registrations</p>
+        </div>
+        
+        <!-- Date filter -->
+        <div class="flex gap-2 flex-wrap">
+            <a href="?days=7" class="px-4 py-2 rounded-lg {% if days == 7 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+                Last 7 Days
+            </a>
+            <a href="?days=30" class="px-4 py-2 rounded-lg {% if days == 30 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+                Last 30 Days
+            </a>
+            <a href="?days=90" class="px-4 py-2 rounded-lg {% if days == 90 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+                Last 90 Days
+            </a>
+            <a href="?" class="px-4 py-2 rounded-lg {% if not request.GET.days %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+                All Time
+            </a>
+        </div>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-blue-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Total Users</div>
+                    <div class="text-3xl font-bold text-gray-900 dark:text-white">{{ total_users }}</div>
+                </div>
+                <div class="text-4xl">👤</div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">New Users ({{ days }} days)</div>
+                    <div class="text-3xl font-bold text-green-600">{{ new_users_count }}</div>
+                </div>
+                <div class="text-4xl">✨</div>
+            </div>
+        </div>
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Active (Last 7 Days)</div>
+                    <div class="text-3xl font-bold text-purple-600">{{ active_users }}</div>
+                </div>
+                <div class="text-4xl">⚡</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Daily Signups Chart -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">📈 Daily Signup Trend</h3>
+        <canvas id="signupsChart" style="max-height: 300px;"></canvas>
+    </div>
+
+    <!-- Users List -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            Recent Users ({{ users.paginator.count }} total)
+        </h3>
+        
+        {% if users %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-900">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            User
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Email
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Joined
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Last Login
+                        </th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Status
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {% for user in users %}
+                    <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-10 w-10">
+                                    <div class="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold text-lg">
+                                        {{ user.username|slice:":1"|upper }}
+                                    </div>
+                                </div>
+                                <div class="ml-4">
+                                    <div class="text-sm font-medium text-gray-900 dark:text-white">
+                                        {{ user.username }}
+                                        {% if user.is_superuser %}
+                                        <span class="ml-2 text-xs bg-red-100 text-red-800 px-2 py-1 rounded">SUPERUSER</span>
+                                        {% elif user.is_staff %}
+                                        <span class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">STAFF</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if user.first_name or user.last_name %}
+                                    <div class="text-sm text-gray-500 dark:text-gray-400">
+                                        {{ user.first_name }} {{ user.last_name }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-white">{{ user.email|default:"—" }}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div class="text-sm text-gray-900 dark:text-white">
+                                {{ user.date_joined|date:"M d, Y" }}
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ user.date_joined|date:"g:i A" }}
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if user.last_login %}
+                            <div class="text-sm text-gray-900 dark:text-white">
+                                {{ user.last_login|date:"M d, Y" }}
+                            </div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ user.last_login|timesince }} ago
+                            </div>
+                            {% else %}
+                            <span class="text-sm text-gray-500 dark:text-gray-400">Never</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if user.is_active %}
+                                {% if user.last_login %}
+                                    {% now "U" as now_timestamp %}
+                                    {% if user.last_login.timestamp|add:"604800" > now_timestamp %}
+                                    <span class="badge badge-success">🟢 Active</span>
+                                    {% else %}
+                                    <span class="badge badge-warning">🟡 Inactive</span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="badge badge-gray">⚪ Never Logged In</span>
+                                {% endif %}
+                            {% else %}
+                            <span class="badge badge-gray">⚫ Disabled</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if users.has_other_pages %}
+        <div class="mt-6 flex justify-center items-center gap-2">
+            {% if users.has_previous %}
+            <a href="?page={{ users.previous_page_number }}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}" 
+               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-all">
+                « Previous
+            </a>
+            {% endif %}
+
+            <span class="px-4 py-2 text-gray-700 dark:text-gray-300">
+                Page {{ users.number }} of {{ users.paginator.num_pages }}
+            </span>
+
+            {% if users.has_next %}
+            <a href="?page={{ users.next_page_number }}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}" 
+               class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-all">
+                Next »
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-center py-12">
+            <div class="text-gray-400 text-5xl mb-4">📭</div>
+            <p class="text-gray-600 dark:text-gray-400">No users found for the selected time period.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Daily Signups Chart
+    const ctx = document.getElementById('signupsChart');
+    const chartData = {{ daily_signups|safe }};
+    
+    const labels = chartData.map(item => item.date);
+    const data = chartData.map(item => item.count);
+    
+    // Detect dark mode
+    const isDarkMode = document.documentElement.classList.contains('dark') || 
+                       window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    const textColor = isDarkMode ? '#e5e7eb' : '#374151';
+    const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'New Signups',
+                data: data,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: '#3b82f6',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    backgroundColor: isDarkMode ? '#1f2937' : '#fff',
+                    titleColor: textColor,
+                    bodyColor: textColor,
+                    borderColor: gridColor,
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: false,
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.y + ' new user' + (context.parsed.y !== 1 ? 's' : '');
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        color: textColor,
+                        stepSize: 1,
+                        precision: 0
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                },
+                x: {
+                    ticks: {
+                        color: textColor,
+                        maxRotation: 45,
+                        minRotation: 45
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

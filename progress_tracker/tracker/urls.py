@@ -158,6 +158,9 @@ urlpatterns = [
     # Landing Page Analytics (Admin only)
     path("admin-analytics/landing/", views.landing_analytics, name="landing_analytics"),
     
+    # New Users Tracking (Admin only)
+    path("admin-analytics/new-users/", views.new_users_tracking, name="new_users_tracking"),
+    
     # Public Blog Pages (No login required)
     path("blog/", views.blog_list, name="blog_list"),
     path("blog/<slug:slug>/", views.blog_detail, name="blog_detail"),
