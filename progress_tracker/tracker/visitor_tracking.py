@@ -4,8 +4,105 @@ Visitor tracking utilities for landing page analytics.
 from django.utils import timezone
 from .models import LandingPageVisitor
 import logging
+import ipaddress
 
 logger = logging.getLogger(__name__)
+
+
+def is_bot_ip(ip_address):
+    """
+    Check if an IP address is likely from a bot based on:
+    - Data center IP ranges
+    - Cloud provider ranges (AWS, GCP, Azure, DigitalOcean, etc.)
+    - Known bot networks
+    
+    Returns True if the IP is suspicious, False otherwise.
+    """
+    if not ip_address:
+        return False
+    
+    # Skip checks for local/private IPs
+    if ip_address.startswith(('127.', '192.168.', '10.', '172.', 'localhost')):
+        return False
+    
+    try:
+        ip_obj = ipaddress.ip_address(ip_address)
+        
+        # Check if IP is in private/reserved ranges
+        if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_reserved:
+            return False
+        
+        # Known cloud provider and data center IP ranges (common bot sources)
+        # Note: These are examples. For production, use a comprehensive database.
+        suspicious_ranges = [
+            # AWS ranges (partial list - commonly used for bots)
+            '3.0.0.0/8',
+            '13.0.0.0/8',
+            '18.0.0.0/8',
+            '52.0.0.0/8',
+            '54.0.0.0/8',
+            # DigitalOcean
+            '159.65.0.0/16',
+            '157.230.0.0/16',
+            '138.197.0.0/16',
+            '167.99.0.0/16',
+            '165.227.0.0/16',
+            # Linode
+            '45.79.0.0/16',
+            '50.116.0.0/16',
+            '69.164.0.0/16',
+            # Vultr
+            '45.76.0.0/16',
+            '45.77.0.0/16',
+            '108.61.0.0/16',
+        ]
+        
+        for cidr in suspicious_ranges:
+            if ip_obj in ipaddress.ip_network(cidr):
+                logger.debug(f"IP {ip_address} matches data center range {cidr}")
+                return True
+        
+        # Try using ipapi.co for more comprehensive check (free tier: 1000 requests/day)
+        try:
+            import requests
+            response = requests.get(
+                f'https://ipapi.co/{ip_address}/json/',
+                timeout=2,
+                headers={'User-Agent': 'VisMatrix Tracker'}
+            )
+            if response.status_code == 200:
+                data = response.json()
+                # Check if it's from a hosting/data center
+                org = data.get('org', '').lower()
+                asn = data.get('asn', '').lower()
+                
+                # Common hosting/data center indicators
+                datacenter_keywords = [
+                    'amazon', 'aws', 'google cloud', 'microsoft azure', 'digitalocean',
+                    'linode', 'vultr', 'ovh', 'hetzner', 'hosting', 'datacenter',
+                    'data center', 'cloud', 'server', 'colocation', 'dedicated'
+                ]
+                
+                for keyword in datacenter_keywords:
+                    if keyword in org or keyword in asn:
+                        logger.debug(f"IP {ip_address} from hosting provider: {org}")
+                        return True
+                        
+        except ImportError:
+            # requests not available, skip API check
+            pass
+        except Exception as e:
+            logger.debug(f"IP API check failed for {ip_address}: {e}")
+            pass
+        
+    except ValueError:
+        logger.debug(f"Invalid IP address format: {ip_address}")
+        return False
+    except Exception as e:
+        logger.debug(f"Error checking IP {ip_address}: {e}")
+        return False
+    
+    return False
 
 
 def get_geolocation_from_ip(ip_address):
@@ -69,6 +166,55 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+
+
+def is_bot(user_agent_string):
+    """
+    Detect if the user agent is from a bot/crawler/spider.
+    Returns True if bot detected, False otherwise.
+    """
+    if not user_agent_string:
+        return True  # Empty user agent is suspicious
+    
+    ua_lower = user_agent_string.lower()
+    
+    # Common bot identifiers
+    bot_patterns = [
+        'bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python-requests',
+        'http', 'libwww', 'lwp', 'nutch', 'slurp', 'archiver', 'archive.org',
+        'googlebot', 'bingbot', 'yandexbot', 'baiduspider', 'facebookexternalhit',
+        'twitterbot', 'linkedinbot', 'slackbot', 'telegrambot', 'whatsapp',
+        'discordbot', 'applebot', 'duckduckbot', 'mj12bot', 'ahrefsbot',
+        'semrushbot', 'dotbot', 'rogerbot', 'exabot', 'facebot', 'ia_archiver',
+        'mediapartners-google', 'adsbot-google', 'feedfetcher-google',
+        'google-read-aloud', 'duplexweb-google', 'googleother', 'google-site-verification',
+        'headlesschrome', 'phantomjs', 'selenium', 'webdriver', 'puppeteer',
+        'chrome-lighthouse', 'gtmetrix', 'pingdom', 'uptimerobot', 'statuscake',
+        'monitor', 'check_http', 'nagios', 'zabbix', 'datadog',
+    ]
+    
+    # Check if any bot pattern is in the user agent
+    for pattern in bot_patterns:
+        if pattern in ua_lower:
+            return True
+    
+    # Additional checks for suspicious patterns
+    # Very short user agents (user agent based) - if so, don't track
+    if is_bot(user_agent):
+        logger.debug(f"Bot detected from IP {ip_address}: {user_agent[:100]}")
+        return None
+    
+    # Check if IP is from a bot/data center - if so, don't track
+    if is_bot_ip(ip_address):
+        logger.debug(f"Bot IP detected: {ip_address
+    
+    # User agents without parentheses are often bots (normal browsers have them)
+    if '(' not in user_agent_string and ')' not in user_agent_string:
+        # But allow some legitimate tools
+        if not any(legit in ua_lower for legit in ['mozilla', 'chrome', 'safari', 'firefox', 'edge', 'opera']):
+            return True
+    
+    return False
 
 
 def parse_user_agent(user_agent_string):
@@ -148,11 +294,17 @@ def parse_user_agent(user_agent_string):
 def track_landing_page_visitor(request):
     """
     Track a visitor to the landing page and store their information.
-    Returns the LandingPageVisitor instance.
+    Returns the LandingPageVisitor instance, or None if visitor is a bot.
     """
     # Get visitor information
     ip_address = get_client_ip(request)
     user_agent = request.META.get('HTTP_USER_AGENT', '')
+    
+    # Check if this is a bot - if so, don't track
+    if is_bot(user_agent):
+        logger.debug(f"Bot detected from IP {ip_address}: {user_agent[:100]}")
+        return None
+    
     referrer = request.META.get('HTTP_REFERER', '')
     language = request.META.get('HTTP_ACCEPT_LANGUAGE', '').split(',')[0]
     
