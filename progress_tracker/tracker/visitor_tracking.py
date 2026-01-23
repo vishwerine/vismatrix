@@ -199,14 +199,9 @@ def is_bot(user_agent_string):
             return True
     
     # Additional checks for suspicious patterns
-    # Very short user agents (user agent based) - if so, don't track
-    if is_bot(user_agent):
-        logger.debug(f"Bot detected from IP {ip_address}: {user_agent[:100]}")
-        return None
-    
-    # Check if IP is from a bot/data center - if so, don't track
-    if is_bot_ip(ip_address):
-        logger.debug(f"Bot IP detected: {ip_address
+    # Very short user agents (less than 10 chars) are often bots
+    if len(user_agent_string.strip()) < 10:
+        return True
     
     # User agents without parentheses are often bots (normal browsers have them)
     if '(' not in user_agent_string and ')' not in user_agent_string:
