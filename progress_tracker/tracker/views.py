@@ -706,6 +706,67 @@ def analytics(request):
         {'name': label, 'value': value} 
         for label, value in zip(task_labels, task_values)
     ]
+    
+    # --- Habit tracking statistics ---
+    all_habits = Habit.objects.filter(user=request.user, is_active=True).select_related('category').order_by('-priority', 'title')
+    
+    habits_analytics = []
+    for habit in all_habits:
+        # Last 30 days
+        month_ago = today - timedelta(days=30)
+        completions_last_month = habit.completions.filter(
+            completion_date__gte=month_ago,
+            completion_date__lte=today
+        ).count()
+        
+        # Last 365 days
+        year_ago = today - timedelta(days=365)
+        completions_last_year = habit.completions.filter(
+            completion_date__gte=year_ago,
+            completion_date__lte=today
+        ).count()
+        
+        # Calculate expected completions based on frequency
+        if habit.frequency == 'daily':
+            expected_month = 30
+            expected_year = 365
+        elif habit.frequency == 'weekly':
+            expected_month = 4  # ~4 weeks in a month
+            expected_year = 52  # 52 weeks in a year
+        elif habit.frequency == 'monthly':
+            expected_month = 1
+            expected_year = 12
+        else:
+            expected_month = 1
+            expected_year = 1
+        
+        # Calculate completion rates
+        month_rate = int((completions_last_month / expected_month * 100)) if expected_month > 0 else 0
+        year_rate = int((completions_last_year / expected_year * 100)) if expected_year > 0 else 0
+        
+        # Current streak
+        current_streak = habit.get_current_streak()
+        
+        # Today's status
+        completed_today = habit.is_completed_today()
+        
+        habits_analytics.append({
+            'id': habit.id,
+            'title': habit.title,
+            'description': habit.description,
+            'category': habit.category,
+            'frequency': habit.get_frequency_display(),
+            'frequency_value': habit.frequency,
+            'priority': habit.priority,
+            'completions_last_month': completions_last_month,
+            'expected_month': expected_month,
+            'month_rate': min(100, month_rate),  # Cap at 100%
+            'completions_last_year': completions_last_year,
+            'expected_year': expected_year,
+            'year_rate': min(100, year_rate),  # Cap at 100%
+            'current_streak': current_streak,
+            'completed_today': completed_today,
+        })
 
     # --- Plan statistics ---
     total_plans = Plan.objects.filter(user=request.user).count()
@@ -826,6 +887,7 @@ def analytics(request):
         "week_time": week_time,
         "best_day_info": best_day_info,
         "random_quote": random_quote,
+        "habits_analytics": habits_analytics,
     }
     return render(request, "tracker/analytics.html", context)
 
@@ -5881,9 +5943,12 @@ def blog_my_posts(request):
 
 @staff_member_required
 def new_users_tracking(request):
-    """Admin dashboard to track new users who joined the app."""
+    """Admin dashboard to track new users who joined the app and last active users."""
     from django.contrib.auth.models import User
     from django.core.paginator import Paginator
+    
+    # View mode (new_users or active_users)
+    view_mode = request.GET.get('view', 'new_users')
     
     # Date range filter
     days = int(request.GET.get('days', 30))
@@ -5892,26 +5957,51 @@ def new_users_tracking(request):
     # Get all users ordered by join date (newest first)
     all_users = User.objects.all().select_related('userprofile').order_by('-date_joined')
     
-    # Filter by date range if specified
-    if request.GET.get('days'):
-        users_queryset = all_users.filter(date_joined__gte=start_date)
+    # Get last active users (ordered by last_login)
+    active_users_ordered = User.objects.all().select_related('userprofile').filter(
+        last_login__isnull=False
+    ).order_by('-last_login')
+    
+    # Determine which queryset to use based on view mode
+    if view_mode == 'active_users':
+        # Last active users (sorted by last_login descending)
+        if request.GET.get('days'):
+            users_queryset = active_users_ordered.filter(last_login__gte=start_date)
+        else:
+            users_queryset = active_users_ordered
+        # For chart: daily active users trend
+        daily_trend = []
+        for i in range(days - 1, -1, -1):
+            date = timezone.now().date() - timedelta(days=i)
+            count = User.objects.filter(last_login__date=date).count()
+            daily_trend.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'count': count
+            })
     else:
-        users_queryset = all_users
+        # New users (default view)
+        # Filter by date range if specified
+        if request.GET.get('days'):
+            users_queryset = all_users.filter(date_joined__gte=start_date)
+        else:
+            users_queryset = all_users
+        # For chart: daily signups trend
+        daily_trend = []
+        for i in range(days - 1, -1, -1):
+            date = timezone.now().date() - timedelta(days=i)
+            count = User.objects.filter(date_joined__date=date).count()
+            daily_trend.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'count': count
+            })
     
     # Stats
     total_users = User.objects.count()
     new_users_count = User.objects.filter(date_joined__gte=start_date).count()
-    active_users = User.objects.filter(last_login__gte=timezone.now() - timedelta(days=7)).count()
-    
-    # Daily signups trend
-    daily_signups = []
-    for i in range(days - 1, -1, -1):
-        date = timezone.now().date() - timedelta(days=i)
-        count = User.objects.filter(date_joined__date=date).count()
-        daily_signups.append({
-            'date': date.strftime('%Y-%m-%d'),
-            'count': count
-        })
+    active_users_count = User.objects.filter(last_login__gte=timezone.now() - timedelta(days=7)).count()
+    users_last_30_days_active = User.objects.filter(
+        last_login__gte=timezone.now() - timedelta(days=30)
+    ).count()
     
     # Pagination
     page = request.GET.get('page', 1)
@@ -5928,9 +6018,11 @@ def new_users_tracking(request):
         'users': users,
         'total_users': total_users,
         'new_users_count': new_users_count,
-        'active_users': active_users,
+        'active_users': active_users_count,
+        'users_last_30_days_active': users_last_30_days_active,
         'days': days,
-        'daily_signups': daily_signups,
+        'daily_trend': daily_trend,
+        'view_mode': view_mode,
     }
     
     return render(request, 'tracker/admin_new_users.html', context)

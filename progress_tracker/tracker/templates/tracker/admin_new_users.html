@@ -41,18 +41,32 @@
             <p class="text-gray-600 dark:text-gray-400 mt-1">Admin dashboard for monitoring user registrations</p>
         </div>
         
-        <!-- Date filter -->
+        <!-- View mode toggle -->
         <div class="flex gap-2 flex-wrap">
-            <a href="?days=7" class="px-4 py-2 rounded-lg {% if days == 7 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+            <a href="?view=new_users{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}" 
+               class="px-4 py-2 rounded-lg {% if view_mode == 'new_users' or not view_mode %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+                🆕 New Users
+            </a>
+            <a href="?view=active_users{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}" 
+               class="px-4 py-2 rounded-lg {% if view_mode == 'active_users' %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+                ⚡ Last Active
+            </a>
+        </div>
+    </div>
+
+    <!-- Date filter -->
+    <div class="mb-6 flex justify-end items-center flex-wrap gap-2">
+        <span class="text-sm text-gray-600 dark:text-gray-400">Time period:</span>
+            <a href="?view={{ view_mode }}&days=7" class="px-4 py-2 rounded-lg {% if days == 7 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
                 Last 7 Days
             </a>
-            <a href="?days=30" class="px-4 py-2 rounded-lg {% if days == 30 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+            <a href="?view={{ view_mode }}&days=30" class="px-4 py-2 rounded-lg {% if days == 30 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
                 Last 30 Days
             </a>
-            <a href="?days=90" class="px-4 py-2 rounded-lg {% if days == 90 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+            <a href="?view={{ view_mode }}&days=90" class="px-4 py-2 rounded-lg {% if days == 90 %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
                 Last 90 Days
             </a>
-            <a href="?" class="px-4 py-2 rounded-lg {% if not request.GET.days %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
+            <a href="?view={{ view_mode }}" class="px-4 py-2 rounded-lg {% if not request.GET.days %}bg-blue-600 text-white{% else %}bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300{% endif %} transition-all">
                 All Time
             </a>
         </div>
@@ -70,6 +84,17 @@
             </div>
         </div>
         
+        {% if view_mode == 'active_users' %}
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-green-500">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Active Users (Last {{ days }} days)</div>
+                    <div class="text-3xl font-bold text-green-600">{{ users_last_30_days_active }}</div>
+                </div>
+                <div class="text-4xl">⚡</div>
+            </div>
+        </div>
+        {% else %}
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-green-500">
             <div class="flex items-center justify-between">
                 <div>
@@ -79,6 +104,7 @@
                 <div class="text-4xl">✨</div>
             </div>
         </div>
+        {% endif %}
         
         <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-purple-500">
             <div class="flex items-center justify-between">
@@ -86,21 +112,31 @@
                     <div class="text-sm text-gray-600 dark:text-gray-400 mb-1">Active (Last 7 Days)</div>
                     <div class="text-3xl font-bold text-purple-600">{{ active_users }}</div>
                 </div>
-                <div class="text-4xl">⚡</div>
+                <div class="text-4xl">🔥</div>
             </div>
         </div>
     </div>
 
-    <!-- Daily Signups Chart -->
+    <!-- Daily Trend Chart -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
-        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">📈 Daily Signup Trend</h3>
+        <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            {% if view_mode == 'active_users' %}
+            📈 Daily Active Users Trend
+            {% else %}
+            📈 Daily Signup Trend
+            {% endif %}
+        </h3>
         <canvas id="signupsChart" style="max-height: 300px;"></canvas>
     </div>
 
     <!-- Users List -->
     <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
         <h3 class="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+            {% if view_mode == 'active_users' %}
+            Last Active Users ({{ users.paginator.count }} total)
+            {% else %}
             Recent Users ({{ users.paginator.count }} total)
+            {% endif %}
         </h3>
         
         {% if users %}
@@ -201,7 +237,7 @@
         {% if users.has_other_pages %}
         <div class="mt-6 flex justify-center items-center gap-2">
             {% if users.has_previous %}
-            <a href="?page={{ users.previous_page_number }}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}" 
+            <a href="?view={{ view_mode }}&page={{ users.previous_page_number }}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}" 
                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-all">
                 « Previous
             </a>
@@ -212,7 +248,7 @@
             </span>
 
             {% if users.has_next %}
-            <a href="?page={{ users.next_page_number }}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}" 
+            <a href="?view={{ view_mode }}&page={{ users.next_page_number }}{% if request.GET.days %}&days={{ request.GET.days }}{% endif %}" 
                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600 transition-all">
                 Next »
             </a>
@@ -229,9 +265,9 @@
 </div>
 
 <script>
-    // Daily Signups Chart
+    // Daily Trend Chart
     const ctx = document.getElementById('signupsChart');
-    const chartData = {{ daily_signups|safe }};
+    const chartData = {{ daily_trend|safe }};
     
     const labels = chartData.map(item => item.date);
     const data = chartData.map(item => item.count);
@@ -243,18 +279,25 @@
     const textColor = isDarkMode ? '#e5e7eb' : '#374151';
     const gridColor = isDarkMode ? '#374151' : '#e5e7eb';
     
+    // Determine chart label based on view mode
+    const viewMode = '{{ view_mode }}';
+    const chartLabel = viewMode === 'active_users' ? 'Active Users' : 'New Signups';
+    const borderColor = viewMode === 'active_users' ? '#10b981' : '#3b82f6';
+    const backgroundColor = viewMode === 'active_users' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(59, 130, 246, 0.1)';
+    const pointColor = viewMode === 'active_users' ? '#10b981' : '#3b82f6';
+    
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
             datasets: [{
-                label: 'New Signups',
+                label: chartLabel,
                 data: data,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderColor: borderColor,
+                backgroundColor: backgroundColor,
                 tension: 0.4,
                 fill: true,
-                pointBackgroundColor: '#3b82f6',
+                pointBackgroundColor: pointColor,
                 pointBorderColor: '#fff',
                 pointBorderWidth: 2,
                 pointRadius: 4,
@@ -278,7 +321,9 @@
                     displayColors: false,
                     callbacks: {
                         label: function(context) {
-                            return context.parsed.y + ' new user' + (context.parsed.y !== 1 ? 's' : '');
+                            const count = context.parsed.y;
+                            const userText = viewMode === 'active_users' ? 'user' : 'new user';
+                            return count + ' ' + userText + (count !== 1 ? 's' : '');
                         }
                     }
                 }
