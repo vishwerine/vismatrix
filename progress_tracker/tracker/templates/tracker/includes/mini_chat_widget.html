@@ -1,0 +1,395 @@
+<!-- Mini Chat Widget - Floating at bottom right -->
+<div id="miniChatWidget" class="fixed bottom-4 right-4 z-40 w-80 max-h-96 rounded-2xl border border-base-200 bg-base-100 shadow-2xl flex flex-col hidden lg:flex"
+     style="display: none;">
+
+  <!-- Header -->
+  <div class="flex items-center justify-between p-4 border-b border-base-200 bg-gradient-to-r from-primary/5 to-transparent rounded-t-2xl">
+    <div class="flex items-center gap-2">
+      <i class="bi bi-chat-dots text-primary text-lg"></i>
+      <span class="font-bold text-sm">Messages</span>
+    </div>
+    <button onclick="toggleMiniChat()" class="btn btn-ghost btn-xs btn-circle" aria-label="Close chat">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  </div>
+
+  <!-- Main Chat Area (hidden initially, shown when friend selected) -->
+  <div id="chatArea" class="hidden flex-1 flex flex-col overflow-hidden">
+    
+    <!-- Friend Header -->
+    <div class="p-3 border-b border-base-200 bg-base-200/30 flex items-center justify-between">
+      <div class="flex items-center gap-2 min-w-0 flex-1">
+        <div class="avatar placeholder flex-shrink-0">
+          <div class="bg-primary text-primary-content rounded-full w-8">
+            <span class="text-xs font-bold" id="chatFriendInitial">A</span>
+          </div>
+        </div>
+        <span class="text-sm font-semibold truncate" id="chatFriendName">Friend</span>
+      </div>
+      <button onclick="backToFriendsList()" class="btn btn-ghost btn-xs btn-circle" aria-label="Back to friends">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+    </div>
+
+    <!-- Messages Container -->
+    <div id="chatMessages" class="flex-1 overflow-y-auto p-3 space-y-2 bg-base-50">
+      <!-- Messages will be loaded here -->
+    </div>
+
+    <!-- Message Composer -->
+    <div class="border-t border-base-200 p-3 bg-base-100">
+      <form id="messageForm" class="flex gap-2" onsubmit="sendMessage(event)">
+        <input
+          type="text"
+          id="messageInput"
+          placeholder="Type message..."
+          class="input input-bordered input-sm flex-1 text-xs"
+          maxlength="2000"
+          autocomplete="off"
+        >
+        <button type="submit" class="btn btn-primary btn-sm btn-square" aria-label="Send message">
+          <i class="bi bi-send"></i>
+        </button>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- Friends List -->
+  <div id="friendsList" class="flex-1 overflow-y-auto p-3 space-y-2">
+    <!-- Friends will be loaded here -->
+    <div class="text-center py-6 text-xs text-base-content/70">
+      <i class="bi bi-hourglass-split animate-spin block text-lg mb-2"></i>
+      <p>Loading friends...</p>
+    </div>
+  </div>
+
+  <!-- No Friends State -->
+  <div id="noFriendsState" class="hidden flex-1 flex items-center justify-center p-4 text-center">
+    <div>
+      <i class="bi bi-people text-2xl text-base-content/30 mb-2 block"></i>
+      <p class="text-xs text-base-content/70">No friends yet</p>
+      <a href="{% url 'friends_list' %}" class="btn btn-primary btn-xs mt-2">Find Friends</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Mini Chat Toggle Button (floating) -->
+<button 
+  id="chatToggleBtn"
+  onclick="toggleMiniChat()"
+  class="fixed right-4 btn btn-primary btn-circle btn-lg shadow-lg hover:shadow-xl transition-all z-40 lg:hidden"
+  style="bottom: calc(5rem + env(safe-area-inset-bottom));"
+  aria-label="Open chat"
+>
+  <i class="bi bi-chat-dots text-xl"></i>
+  <span id="unreadBadge" class="badge badge-sm badge-warning absolute -top-2 -right-2 hidden"></span>
+</button>
+
+<!-- Desktop Chat Toggle (minimized state) -->
+<button 
+  id="desktopChatToggle"
+  onclick="toggleMiniChat()"
+  class="fixed bottom-4 right-4 btn btn-primary btn-sm gap-2 shadow-lg hover:shadow-xl transition-all z-40 hidden lg:flex"
+  aria-label="Toggle chat"
+>
+  <i class="bi bi-chat-dots"></i>
+  <span>Chat</span>
+  <span id="desktopUnreadBadge" class="badge badge-sm badge-warning hidden"></span>
+</button>
+
+<script>
+let currentConversationId = null;
+let currentFriendId = null;
+let autoRefreshInterval = null;
+
+async function loadFriends() {
+  try {
+    const response = await fetch('{% url "mini_chat_friends" %}');
+    const data = await response.json();
+    
+    const friendsList = document.getElementById('friendsList');
+    const noFriendsState = document.getElementById('noFriendsState');
+
+    if (data.friends.length === 0) {
+      friendsList.classList.add('hidden');
+      noFriendsState.classList.remove('hidden');
+      return;
+    }
+
+    friendsList.classList.remove('hidden');
+    noFriendsState.classList.add('hidden');
+    friendsList.innerHTML = '';
+
+    let totalUnread = 0;
+
+    data.friends.forEach(friend => {
+      totalUnread += friend.unread;
+
+      const unreadClass = friend.unread > 0 ? 'bg-warning/10 border-warning/30' : '';
+      const unreadBadge = friend.unread > 0 ? 
+        `<span class="badge badge-warning badge-xs">${friend.unread}</span>` : '';
+
+      const item = document.createElement('button');
+      item.className = `w-full text-left p-2 rounded-lg border border-base-200 hover:bg-base-200 transition text-xs flex items-center justify-between gap-2 ${unreadClass}`;
+      item.innerHTML = `
+        <div class="flex items-center gap-2 min-w-0 flex-1">
+          <div class="avatar placeholder flex-shrink-0">
+            <div class="bg-primary text-primary-content rounded-full w-7">
+              <span class="text-[10px] font-bold">${friend.username[0].toUpperCase()}</span>
+            </div>
+          </div>
+          <span class="truncate font-medium">${friend.username}</span>
+        </div>
+        ${unreadBadge}
+      `;
+      item.onclick = () => openChat(friend.id, friend.username, friend.conversation_id);
+      friendsList.appendChild(item);
+    });
+
+    updateUnreadBadges(totalUnread);
+  } catch (error) {
+    console.error('Error loading friends:', error);
+  }
+}
+
+function updateUnreadBadges(count) {
+  const badge = document.getElementById('unreadBadge');
+  const desktopBadge = document.getElementById('desktopUnreadBadge');
+
+  if (count > 0) {
+    badge.textContent = count > 9 ? '9+' : count;
+    badge.classList.remove('hidden');
+    desktopBadge.textContent = count > 9 ? '9+' : count;
+    desktopBadge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+    desktopBadge.classList.add('hidden');
+  }
+}
+
+async function openChat(friendId, friendUsername, conversationId) {
+  currentFriendId = friendId;
+  currentConversationId = conversationId;
+
+  // Update header
+  document.getElementById('chatFriendName').textContent = friendUsername;
+  document.getElementById('chatFriendInitial').textContent = friendUsername[0].toUpperCase();
+
+  // Show chat area
+  document.getElementById('friendsList').classList.add('hidden');
+  document.getElementById('chatArea').classList.remove('hidden');
+
+  // Load messages
+  if (conversationId) {
+    await loadMessages(conversationId);
+    // Auto-refresh messages every 2 seconds
+    if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+    autoRefreshInterval = setInterval(() => loadMessages(conversationId), 2000);
+  } else {
+    document.getElementById('chatMessages').innerHTML = '';
+  }
+
+  // Focus input
+  document.getElementById('messageInput').focus();
+}
+
+async function loadMessages(conversationId) {
+  try {
+    const response = await fetch(`{% url 'mini_chat_messages' conversation_id=0 %}`.replace('0', conversationId));
+    const data = await response.json();
+
+    const container = document.getElementById('chatMessages');
+    container.innerHTML = '';
+
+    if (data.messages.length === 0) {
+      container.innerHTML = '<div class="text-center text-xs text-base-content/50 py-4">No messages yet. Say hi! 👋</div>';
+      return;
+    }
+
+    data.messages.forEach(msg => {
+      const isMe = msg.is_me;
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `chat ${isMe ? 'chat-end' : 'chat-start'}`;
+      msgDiv.innerHTML = `
+        <div class="chat-header text-[10px] opacity-70 mb-1">
+          ${isMe ? 'You' : msg.sender}
+        </div>
+        <div class="chat-bubble ${isMe ? 'chat-bubble-primary' : ''} text-xs max-w-xs break-words">
+          ${escapeHtml(msg.body)}
+        </div>
+        <time class="text-[9px] opacity-50 mt-1">${msg.created_at}</time>
+      `;
+      container.appendChild(msgDiv);
+    });
+
+    // Auto-scroll to bottom
+    container.scrollTop = container.scrollHeight;
+  } catch (error) {
+    console.error('Error loading messages:', error);
+  }
+}
+
+async function sendMessage(event) {
+  event.preventDefault();
+
+  const input = document.getElementById('messageInput');
+  const body = input.value.trim();
+
+  if (!body || !currentFriendId) return;
+
+  try {
+    input.disabled = true;
+
+    let response;
+    if (currentConversationId) {
+      response = await fetch(`{% url 'mini_chat_send' conversation_id=0 %}`.replace('0', currentConversationId), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ body }),
+      });
+    } else {
+      // Start new conversation
+      response = await fetch(`{% url 'mini_chat_start' friend_id=0 %}`.replace('0', currentFriendId), {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ body }),
+      });
+
+      const data = await response.json();
+      if (data.ok) {
+        currentConversationId = data.conversation_id;
+      }
+    }
+
+    if (response.ok) {
+      input.value = '';
+      await loadMessages(currentConversationId);
+    }
+  } catch (error) {
+    console.error('Error sending message:', error);
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+function backToFriendsList() {
+  if (autoRefreshInterval) clearInterval(autoRefreshInterval);
+
+  document.getElementById('chatArea').classList.add('hidden');
+  document.getElementById('friendsList').classList.remove('hidden');
+  document.getElementById('messageInput').value = '';
+
+  currentConversationId = null;
+  currentFriendId = null;
+
+  loadFriends(); // Refresh to update unread counts
+}
+
+function toggleMiniChat() {
+  const widget = document.getElementById('miniChatWidget');
+  const toggleBtn = document.getElementById('desktopChatToggle');
+  const isMobile = window.innerWidth < 1024;
+
+  if (widget.style.display === 'none' || !widget.style.display) {
+    widget.style.display = 'flex';
+    if (!isMobile) toggleBtn.classList.add('hidden');
+    loadFriends();
+  } else {
+    widget.style.display = 'none';
+    if (!isMobile) toggleBtn.classList.remove('hidden');
+    backToFriendsList();
+  }
+}
+
+function escapeHtml(text) {
+  const map = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
+  };
+  return text.replace(/[&<>"']/g, m => map[m]);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+  // Show desktop toggle by default on desktop
+  if (window.innerWidth >= 1024) {
+    document.getElementById('desktopChatToggle').classList.remove('hidden');
+  }
+
+  // Load friends periodically to update unread counts
+  setInterval(loadFriends, 5000);
+});
+
+// Close chat on mobile when clicking outside
+document.addEventListener('click', (e) => {
+  const widget = document.getElementById('miniChatWidget');
+  const toggleBtn = document.getElementById('chatToggleBtn');
+  
+  if (window.innerWidth < 1024 && 
+      widget.style.display === 'flex' && 
+      !widget.contains(e.target) && 
+      !toggleBtn.contains(e.target)) {
+    toggleMiniChat();
+  }
+});
+</script>
+
+<style>
+  #miniChatWidget {
+    animation: slideUp 0.3s ease-out;
+  }
+
+  @keyframes slideUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* Smooth scrolling in chat */
+  #chatMessages {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar */
+  #chatMessages::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  #chatMessages::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  #chatMessages::-webkit-scrollbar-thumb {
+    background: hsl(var(--bc) / 0.2);
+    border-radius: 2px;
+  }
+
+  #chatMessages::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--bc) / 0.4);
+  }
+
+  @media (max-width: 1024px) {
+    #miniChatWidget {
+      width: calc(100vw - 2rem);
+      max-height: calc(100vh - 10rem - env(safe-area-inset-bottom));
+      bottom: calc(1rem + env(safe-area-inset-bottom)) !important;
+    }
+  }
+</style>

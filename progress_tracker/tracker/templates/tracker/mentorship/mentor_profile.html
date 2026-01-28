@@ -21,7 +21,15 @@
           </div>
         </div>
         <div class="flex-1">
-          <h1 class="text-2xl font-bold mb-1">{{ mentor_profile.user.username }}</h1>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-2xl font-bold mb-1">{{ mentor_profile.user.username }}</h1>
+            {% if mentor_profile.user.subscription.is_pro %}
+            <span class="badge badge-warning gap-2 font-bold">
+              <i class="bi bi-star-fill" aria-hidden="true"></i>
+              Pro
+            </span>
+            {% endif %}
+          </div>
           <p class="text-gray-600 mb-2">{{ mentor_profile.experience_years }} years of experience</p>
           <div class="flex flex-wrap gap-2">
             {% for category in categories_display %}

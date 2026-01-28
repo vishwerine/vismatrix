@@ -22,9 +22,17 @@
 
         <!-- Details -->
         <div class="min-w-0 flex-1">
-          <h1 class="text-2xl sm:text-3xl md:text-4xl font-black" style="color: var(--text);">
-            {{ user.get_full_name|default:user.username }}
-          </h1>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-2xl sm:text-3xl md:text-4xl font-black" style="color: var(--text);">
+              {{ user.get_full_name|default:user.username }}
+            </h1>
+            {% if user.subscription.is_pro %}
+            <span class="badge badge-warning gap-2 text-xs md:text-sm font-bold mt-1 md:mt-0">
+              <i class="bi bi-star-fill" aria-hidden="true"></i>
+              Pro
+            </span>
+            {% endif %}
+          </div>
           <p class="text-sm md:text-base mb-1" style="color: var(--muted);">
             @{{ user.username }}
           </p>

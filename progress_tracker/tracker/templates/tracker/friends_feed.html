@@ -86,6 +86,12 @@
                    class="font-bold text-sm link link-primary hover:underline">
                   {{ item.user.username }}
                 </a>
+                {% if item.user.subscription.is_pro %}
+                <span class="badge badge-warning badge-sm gap-1 shadow-sm">
+                  <i class="bi bi-star-fill" aria-hidden="true"></i>
+                  <span>Pro</span>
+                </span>
+                {% endif %}
                 {% if item.type == 'task' %}
                   <span class="badge badge-success badge-sm gap-1 shadow-sm">
                     <i class="bi bi-check-circle-fill" aria-hidden="true"></i>

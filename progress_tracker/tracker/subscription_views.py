@@ -47,7 +47,7 @@ def subscription_plans(request):
         'subscription': subscription,
         'stripe_publishable_key': settings.STRIPE_PUBLISHABLE_KEY,
         'post_signup_pro': post_signup_pro,
-        'pro_price': 20.00,
+        'pro_price': 2.99,  # Monthly price in USD
     }
     
     return render(request, 'tracker/subscription_plans.html', context)
@@ -89,7 +89,7 @@ def create_checkout_session(request):
                             'name': 'VisMatrix Pro Subscription',
                             'description': 'Monthly subscription to VisMatrix Pro features',
                         },
-                        'unit_amount': 2000,  # $20.00 in cents
+                        'unit_amount': 299,  # $2.99 in cents
                         'recurring': {
                             'interval': 'month',
                         },
@@ -179,7 +179,7 @@ def subscription_success(request):
             PaymentHistory.objects.create(
                 user=request.user,
                 subscription=subscription,
-                amount=Decimal('20.00'),
+                amount=Decimal('2.99'),
                 currency='USD',
                 status='succeeded',
                 stripe_payment_intent_id=payment_intent_id,
