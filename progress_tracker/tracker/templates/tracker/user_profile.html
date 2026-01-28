@@ -1,7 +1,7 @@
 {% extends 'tracker/base.html' %}
 {% load math_filters %}
 
-{% block title %}{{ user.get_full_name|default:user.username }} - VisMatrix.Space{% endblock %}
+{% block title %}{{ otheruser.get_full_name|default:otheruser.username }} - VisMatrix.Space{% endblock %}
 
 {% block content %}
 <!-- Theme-aware page wrapper -->
@@ -24,9 +24,9 @@
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2 flex-wrap">
             <h1 class="text-2xl sm:text-3xl md:text-4xl font-black" style="color: var(--text);">
-              {{ user.get_full_name|default:user.username }}
+              {{ otheruser.get_full_name|default:otheruser.username }}
             </h1>
-            {% if user.subscription.is_pro %}
+            {% if otheruser.subscription.is_pro %}
             <span class="badge badge-warning gap-2 text-xs md:text-sm font-bold mt-1 md:mt-0">
               <i class="bi bi-star-fill" aria-hidden="true"></i>
               Pro
@@ -34,12 +34,12 @@
             {% endif %}
           </div>
           <p class="text-sm md:text-base mb-1" style="color: var(--muted);">
-            @{{ user.username }}
+            @{{ otheruser.username }}
           </p>
 
           <p class="text-xs md:text-sm mt-3" style="color: var(--muted);">
             <i class="bi bi-calendar mr-1" aria-hidden="true"></i>
-            Joined {{ user.date_joined|date:"M Y" }}
+            Joined {{ otheruser.date_joined|date:"M Y" }}
           </p>
         </div>
       </div>
@@ -59,17 +59,17 @@
           </a>
 
         {% elif friend_request %}
-          <button onclick="cancelFriendRequest({{ user.id }})"
+          <button onclick="cancelFriendRequest({{ otheruser.id }})"
                   class="btn btn-secondary btn-sm md:btn-md flex-1 md:flex-none gap-2"
-                  id="action-btn-{{ user.id }}">
+                  id="action-btn-{{ otheruser.id }}">
             <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
             <span class="hidden sm:inline">Requested</span>
           </button>
 
         {% else %}
-          <button onclick="sendFriendRequest({{ user.id }})"
+          <button onclick="sendFriendRequest({{ otheruser.id }})"
                   class="btn btn-primary btn-sm md:btn-md flex-1 md:flex-none gap-2"
-                  id="action-btn-{{ user.id }}">
+                  id="action-btn-{{ otheruser.id }}">
             <i class="bi bi-person-plus" aria-hidden="true"></i>
             <span class="hidden sm:inline">Add Friend</span>
           </button>
@@ -149,11 +149,11 @@
         <div class="space-y-3 text-xs md:text-sm">
           <div class="flex justify-between">
             <span style="color: var(--muted);">Member Since</span>
-            <span class="font-semibold" style="color: var(--text);">{{ user.date_joined|date:"M d, Y" }}</span>
+            <span class="font-semibold" style="color: var(--text);">{{ otheruser.date_joined|date:"M d, Y" }}</span>
           </div>
           <div class="flex justify-between">
             <span style="color: var(--muted);">Last Active</span>
-            <span class="font-semibold" style="color: var(--text);">{{ user.last_login|date:"M d, Y"|default:"Never" }}</span>
+            <span class="font-semibold" style="color: var(--text);">{{ otheruser.last_login|date:"M d, Y"|default:"Never" }}</span>
           </div>
         </div>
       </div>

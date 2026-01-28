@@ -707,25 +707,31 @@
           </div>
 
           <div class="grid grid-cols-7 gap-2">
-            {% for day in calendar_days %}
-              {% if day.logged %}
-                <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
-                   class="cal-day cal-day--active {% if day.intensity %}cal-day--intensity-{{ day.intensity }}{% endif %}"
-                   {% if day.minutes %}data-minutes="{{ day.minutes }}m"{% endif %}
-                   aria-label="View summary for {{ day.date|date:'F j, Y' }} ({{ day.minutes|default:0 }} minutes logged)">
-                  <span>{{ day.day }}</span>
-                </a>
-              {% elif day.is_future %}
-                <div class="cal-day cal-day--future" aria-label="{{ day.date|date:'F j, Y' }} (future day)">
-                  <span>{{ day.day }}</span>
-                </div>
-              {% else %}
-                <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
-                   class="cal-day"
-                   aria-label="View summary for {{ day.date|date:'F j, Y' }}">
-                  <span>{{ day.day }}</span>
-                </a>
-              {% endif %}
+            {% for week in calendar_days %}
+              {% for day in week %}
+                {% if day.day %}
+                  {% if day.logged %}
+                    <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
+                       class="cal-day cal-day--active {% if day.intensity %}cal-day--intensity-{{ day.intensity }}{% endif %}"
+                       {% if day.minutes %}data-minutes="{{ day.minutes }}m"{% endif %}
+                       aria-label="View summary for {{ day.date|date:'F j, Y' }} ({{ day.minutes|default:0 }} minutes logged)">
+                      <span>{{ day.day }}</span>
+                    </a>
+                  {% elif day.is_future %}
+                    <div class="cal-day cal-day--future" aria-label="{{ day.date|date:'F j, Y' }} (future day)">
+                      <span>{{ day.day }}</span>
+                    </div>
+                  {% else %}
+                    <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
+                       class="cal-day"
+                       aria-label="View summary for {{ day.date|date:'F j, Y' }}">
+                      <span>{{ day.day }}</span>
+                    </a>
+                  {% endif %}
+                {% else %}
+                  <div class="cal-day cal-day--empty"></div>
+                {% endif %}
+              {% endfor %}
             {% endfor %}
           </div>
         </div>

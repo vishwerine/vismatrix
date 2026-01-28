@@ -379,24 +379,30 @@
           </div>
 
           <div class="grid grid-cols-7 gap-2">
-            {% for day in calendar_days %}
-              {% if day.logged %}
-                <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
-                   class="cal-day cal-day--active"
-                   aria-label="View summary for {{ day.date|date:'F j, Y' }} (active day)">
-                  <span>{{ day.day }}</span>
-                </a>
-              {% elif day.is_future %}
-                <div class="cal-day cal-day--future" aria-label="{{ day.date|date:'F j, Y' }} (future day)">
-                  <span>{{ day.day }}</span>
-                </div>
-              {% else %}
-                <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
-                   class="cal-day"
-                   aria-label="View summary for {{ day.date|date:'F j, Y' }}">
-                  <span>{{ day.day }}</span>
-                </a>
-              {% endif %}
+            {% for week in calendar_days %}
+              {% for day in week %}
+                {% if day.day %}
+                  {% if day.logged %}
+                    <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
+                       class="cal-day cal-day--active"
+                       aria-label="View summary for {{ day.date|date:'F j, Y' }} (active day)">
+                      <span>{{ day.day }}</span>
+                    </a>
+                  {% elif day.is_future %}
+                    <div class="cal-day cal-day--future" aria-label="{{ day.date|date:'F j, Y' }} (future day)">
+                      <span>{{ day.day }}</span>
+                    </div>
+                  {% else %}
+                    <a href="{% url 'daily_summary' day.date.year day.date.month day.date.day %}"
+                       class="cal-day"
+                       aria-label="View summary for {{ day.date|date:'F j, Y' }}">
+                      <span>{{ day.day }}</span>
+                    </a>
+                  {% endif %}
+                {% else %}
+                  <div class="cal-day cal-day--empty"></div>
+                {% endif %}
+              {% endfor %}
             {% endfor %}
           </div>
         </div>
@@ -722,21 +728,50 @@ document.addEventListener('DOMContentLoaded', function() {
       });
       html += '</div><div class="grid grid-cols-7 gap-2">';
 
-      data.calendar_days.forEach(day => {
-        const date = new Date(day.date);
-        const y = date.getFullYear();
-        const m = date.getMonth() + 1;
-        const d = date.getDate();
-        const dailyUrl = `{% url 'daily_summary' 0 0 0 %}`.replace('0/0/0', `${y}/${m}/${d}`);
+      // Handle nested weeks structure
+      if (Array.isArray(data.calendar_days) && data.calendar_days.length > 0 && Array.isArray(data.calendar_days[0])) {
+        // New week-based structure
+        data.calendar_days.forEach(week => {
+          week.forEach(day => {
+            if (day.day) {
+              const date = new Date(day.date);
+              const y = date.getFullYear();
+              const m = date.getMonth() + 1;
+              const d = date.getDate();
+              const dailyUrl = `{% url 'daily_summary' 0 0 0 %}`.replace('0/0/0', `${y}/${m}/${d}`);
 
-        if (day.logged) {
-          html += `<a href="${dailyUrl}" class="cal-day cal-day--active" aria-label="View summary for ${date.toDateString()} (active day)">${day.day}</a>`;
-        } else if (day.is_future) {
-          html += `<div class="cal-day cal-day--future" aria-label="${date.toDateString()} (future day)">${day.day}</div>`;
-        } else {
-          html += `<a href="${dailyUrl}" class="cal-day" aria-label="View summary for ${date.toDateString()}">${day.day}</a>`;
-        }
-      });
+              if (day.logged) {
+                html += `<a href="${dailyUrl}" class="cal-day cal-day--active" aria-label="View summary for ${date.toDateString()} (active day)">${day.day}</a>`;
+              } else if (day.is_future) {
+                html += `<div class="cal-day cal-day--future" aria-label="${date.toDateString()} (future day)">${day.day}</div>`;
+              } else {
+                html += `<a href="${dailyUrl}" class="cal-day" aria-label="View summary for ${date.toDateString()}">${day.day}</a>`;
+              }
+            } else {
+              html += `<div class="cal-day cal-day--empty"></div>`;
+            }
+          });
+        });
+      } else {
+        // Fallback to old flat structure (for backwards compatibility)
+        data.calendar_days.forEach(day => {
+          if (day.date) {
+            const date = new Date(day.date);
+            const y = date.getFullYear();
+            const m = date.getMonth() + 1;
+            const d = date.getDate();
+            const dailyUrl = `{% url 'daily_summary' 0 0 0 %}`.replace('0/0/0', `${y}/${m}/${d}`);
+
+            if (day.logged) {
+              html += `<a href="${dailyUrl}" class="cal-day cal-day--active" aria-label="View summary for ${date.toDateString()} (active day)">${day.day}</a>`;
+            } else if (day.is_future) {
+              html += `<div class="cal-day cal-day--future" aria-label="${date.toDateString()} (future day)">${day.day}</div>`;
+            } else {
+              html += `<a href="${dailyUrl}" class="cal-day" aria-label="View summary for ${date.toDateString()}">${day.day}</a>`;
+            }
+          }
+        });
+      }
 
       html += '</div>';
       calendarGrid.innerHTML = html;

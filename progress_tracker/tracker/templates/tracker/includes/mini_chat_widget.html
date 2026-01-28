@@ -105,6 +105,13 @@ let currentFriendId = null;
 let autoRefreshInterval = null;
 
 async function loadFriends() {
+  // Don't update the friends list UI if a chat is currently open
+  // Only update unread counts via a separate call
+  if (currentFriendId !== null) {
+    await updateUnreadCounts();
+    return;
+  }
+
   try {
     const response = await fetch('{% url "mini_chat_friends" %}');
     const data = await response.json();
@@ -151,6 +158,23 @@ async function loadFriends() {
     updateUnreadBadges(totalUnread);
   } catch (error) {
     console.error('Error loading friends:', error);
+  }
+}
+
+async function updateUnreadCounts() {
+  // Silently update unread counts without affecting UI layout
+  try {
+    const response = await fetch('{% url "mini_chat_friends" %}');
+    const data = await response.json();
+    
+    let totalUnread = 0;
+    data.friends.forEach(friend => {
+      totalUnread += friend.unread;
+    });
+    
+    updateUnreadBadges(totalUnread);
+  } catch (error) {
+    console.error('Error updating unread counts:', error);
   }
 }
 
@@ -363,54 +387,193 @@ document.addEventListener('click', (e) => {
     }
   }
 
-  /* Ensure completely opaque backgrounds in both modes */
+  /* Base styles without color overrides */
   #miniChatWidget {
-    background-color: hsl(var(--b1)) !important;
     backdrop-filter: none;
   }
 
-  /* Light mode - soft blue-tinted background with appropriate styling */
+  /* Light mode - professional and clean styling */
   @media (prefers-color-scheme: light) {
     #miniChatWidget {
-      background-color: #f0f7ff !important;
-      border-color: #e0e8f5 !important;
+      background-color: #f8fafc !important;
+      border-color: #e2e8f0 !important;
     }
 
     #miniChatWidget > div:first-child {
-      background: linear-gradient(135deg, #e3f2fd 0%, #f3f7ff 100%) !important;
-      border-color: #e0e8f5 !important;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+      border-color: #e2e8f0 !important;
+    }
+
+    #miniChatWidget > div:first-child .text-primary {
+      color: #ffffff !important;
+    }
+
+    #miniChatWidget > div:first-child span {
+      color: #ffffff !important;
+    }
+
+    #miniChatWidget > div:first-child i {
+      color: #ffffff !important;
+    }
+
+    #friendsList {
+      background-color: #f8fafc !important;
+    }
+
+    #friendsList button {
+      background-color: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      color: #1e293b !important;
+    }
+
+    #friendsList button:hover {
+      background-color: #f1f5f9 !important;
+      border-color: #cbd5e1 !important;
+    }
+
+    #friendsList button span {
+      color: #1e293b !important;
     }
 
     #chatMessages {
       background-color: #ffffff !important;
+      color: #1e293b !important;
+    }
+
+    #chatMessages .chat-bubble {
+      color: #1e293b !important;
+    }
+
+    #chatMessages .chat-bubble-primary {
+      background-color: #3b82f6 !important;
+      color: #ffffff !important;
+    }
+
+    #chatMessages .chat-header {
+      color: #64748b !important;
+    }
+
+    #chatMessages time {
+      color: #94a3b8 !important;
+    }
+
+    #messageInput {
+      background-color: #ffffff !important;
+      border-color: #e2e8f0 !important;
+      color: #aaadb5 !important;
+    }
+
+    #messageInput::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    #messageInput:focus {
+      border-color: #cddef9 !important;
+      outline: 2px solid rgba(59, 130, 246, 0.1) !important;
     }
 
     #chatMessages::-webkit-scrollbar-thumb {
-      background: rgba(59, 130, 246, 0.3);
+      background: rgba(71, 85, 105, 0.2);
     }
 
     #chatMessages::-webkit-scrollbar-thumb:hover {
-      background: rgba(59, 130, 246, 0.5);
+      background: rgba(71, 85, 105, 0.4);
     }
   }
 
   /* Dark mode - solid dark background */
   @media (prefers-color-scheme: dark) {
     #miniChatWidget {
-      background-color: #1f2937 !important;
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
     }
-  }
 
-  /* Ensure header has solid background */
-  #miniChatWidget > div:first-child {
-    background-color: hsl(var(--b1)) !important;
-    backdrop-filter: none;
+    #miniChatWidget > div:first-child {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+      border-color: #334155 !important;
+    }
+
+    #miniChatWidget > div:first-child .text-primary {
+      color: #ffffff !important;
+    }
+
+    #miniChatWidget > div:first-child span {
+      color: #e2e8f0 !important;
+    }
+
+    #miniChatWidget > div:first-child i {
+      color: #e2e8f0 !important;
+    }
+
+    #friendsList {
+      background-color: #1e293b !important;
+    }
+
+    #friendsList button {
+      background-color: #0f172a !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+
+    #friendsList button:hover {
+      background-color: #1e293b !important;
+      border-color: #475569 !important;
+    }
+
+    #friendsList button span {
+      color: #e2e8f0 !important;
+    }
+
+    #chatMessages {
+      background-color: #0f172a !important;
+      color: #e2e8f0 !important;
+    }
+
+    #chatMessages .chat-bubble {
+      background-color: #1e293b !important;
+      color: #e2e8f0 !important;
+    }
+
+    #chatMessages .chat-bubble-primary {
+      background-color: #3b82f6 !important;
+      color: #ffffff !important;
+    }
+
+    #chatMessages .chat-header {
+      color: #94a3b8 !important;
+    }
+
+    #chatMessages time {
+      color: #64748b !important;
+    }
+
+    #messageInput {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+
+    #messageInput::placeholder {
+      color: #64748b !important;
+    }
+
+    #messageInput:focus {
+      border-color: #3b82f6 !important;
+      outline: 2px solid rgba(59, 130, 246, 0.2) !important;
+    }
+
+    #chatMessages::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.2);
+    }
+
+    #chatMessages::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.4);
+    }
   }
 
   /* Smooth scrolling in chat */
   #chatMessages {
     scroll-behavior: smooth;
-    background-color: hsl(var(--b1)) !important;
   }
 
   /* Custom scrollbar */
@@ -419,7 +582,7 @@ document.addEventListener('click', (e) => {
   }
 
   #chatMessages::-webkit-scrollbar-track {
-    background: transparent;
+    background: opaque;
   }
 
   #chatMessages::-webkit-scrollbar-thumb {

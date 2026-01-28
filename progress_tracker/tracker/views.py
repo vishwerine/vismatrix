@@ -307,18 +307,25 @@ def dashboard(request):
             date__month=today.month
         ).values_list("date", flat=True)
     )
-    calendar_days = []
+    
+    # Build calendar with proper week structure
+    calendar_weeks = []
     for week in cal:
-        for day in week:
-            if day == 0:
-                continue  # Empty day
-            date_obj = timezone.datetime(today.year, today.month, day).date()
-            calendar_days.append({
-                "day": day,
-                "logged": date_obj in logged_dates,
-            })
+        week_data = []
+        for day_num in week:
+            if day_num == 0:
+                # Empty day (from previous/next month)
+                week_data.append({"day": None, "logged": False})
+            else:
+                # Create date object for the specific day
+                date_obj = date(today.year, today.month, day_num)
+                week_data.append({
+                    "day": day_num,
+                    "logged": date_obj in logged_dates,
+                })
+        calendar_weeks.append(week_data)
 
-    # Day names for calendar header
+    # Day names for calendar header (Monday-Sunday, matching Python's weekday order)
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
     # --- Optional: pending friend requests (for the small card on the right) ---
@@ -432,7 +439,8 @@ def dashboard(request):
         "unread_app_notifications_count": unread_app_notifications_count,
         "active_plans": plans_with_stats,
         "logs_this_month": logs_this_month,
-        "calendar_days": calendar_days,
+        "calendar_weeks": calendar_weeks,
+        "calendar_days": calendar_weeks,  # Backwards compatibility
         "day_names": day_names,
         "is_mentor": is_mentor,
         "todays_habits": habits_with_status,
@@ -606,30 +614,33 @@ def analytics(request):
     
     calendar_days = []
     for week in cal:
+        week_data = []
         for day in week:
             if day == 0:
-                continue
-            date_obj = timezone.datetime(year, month, day).date()
-            minutes = date_minutes_map.get(date_obj, 0)
-            
-            # Calculate intensity (1-5)
-            intensity = 0
-            if minutes > 0:
-                if max_minutes_month > min_minutes_month:
-                    normalized = (minutes - min_minutes_month) / (max_minutes_month - min_minutes_month)
-                    intensity = max(1, min(5, int(normalized * 5) + 1))
-                else:
-                    intensity = 3  # Default to medium if all values are the same
-            
-            calendar_days.append({
-                "day": day,
-                "date": date_obj,
-                "logged": minutes > 0,
-                "is_today": date_obj == today,
-                "is_future": date_obj > today,
-                "minutes": minutes,
-                "intensity": intensity,
-            })
+                week_data.append({"day": None, "date": None, "logged": False, "is_today": False, "is_future": False, "minutes": 0, "intensity": 0})
+            else:
+                date_obj = date(year, month, day)
+                minutes = date_minutes_map.get(date_obj, 0)
+                
+                # Calculate intensity (1-5)
+                intensity = 0
+                if minutes > 0:
+                    if max_minutes_month > min_minutes_month:
+                        normalized = (minutes - min_minutes_month) / (max_minutes_month - min_minutes_month)
+                        intensity = max(1, min(5, int(normalized * 5) + 1))
+                    else:
+                        intensity = 3  # Default to medium if all values are the same
+                
+                week_data.append({
+                    "day": day,
+                    "date": date_obj,
+                    "logged": minutes > 0,
+                    "is_today": date_obj == today,
+                    "is_future": date_obj > today,
+                    "minutes": minutes,
+                    "intensity": intensity,
+                })
+        calendar_days.append(week_data)
 
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -2941,7 +2952,7 @@ def view_user_profile(request, user_id):
     ).first()
     
     context = {
-        'user': user,
+        'otheruser': user,
         'tasks': tasks,
         'logs': logs,
         'weekly_completed': weekly_completed,
@@ -3000,12 +3011,12 @@ def view_friend_profile(request, friendship_id):
     weekly_labels = []
     weekly_values = []
     for i in range(6, -1, -1):
-        date = today - timedelta(days=i)
+        day_date = today - timedelta(days=i)
         daily_time = DailyLog.objects.filter(
             user=friend,
-            date=date
+            date=day_date
         ).aggregate(total=Sum('duration'))['total'] or 0
-        weekly_labels.append(date.strftime('%a'))
+        weekly_labels.append(day_date.strftime('%a'))
         weekly_values.append(daily_time)
 
     weekly_data = {
@@ -3095,17 +3106,20 @@ def view_friend_profile(request, friendship_id):
     )
     calendar_days = []
     for week in cal:
+        week_data = []
         for day in week:
             if day == 0:
-                continue
-            date_obj = timezone.datetime(today.year, today.month, day).date()
-            calendar_days.append({
-                "day": day,
-                "date": date_obj,
-                "logged": date_obj in logged_dates,
-                "is_today": date_obj == today,
-                "is_future": date_obj > today,
-            })
+                week_data.append({"day": None, "date": None, "logged": False, "is_today": False, "is_future": False})
+            else:
+                date_obj = date(today.year, today.month, day)
+                week_data.append({
+                    "day": day,
+                    "date": date_obj,
+                    "logged": date_obj in logged_dates,
+                    "is_today": date_obj == today,
+                    "is_future": date_obj > today,
+                })
+        calendar_days.append(week_data)
 
     day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 

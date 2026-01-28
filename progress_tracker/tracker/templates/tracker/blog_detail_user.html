@@ -11,6 +11,13 @@
 {% ad_container 'header_banner' %}
 
 <article class="max-w-4xl mx-auto">
+    <nav class="text-sm breadcrumbs mb-6">
+    <ul>
+      <li><a href="{% url 'landing_page' %}" class="link link-hover">Home</a></li>
+      <li><a href="{% url 'blog_list' %}" class="link link-hover">Blog</a></li>
+      <li>{{ blog_post.title }}</li>
+    </ul>
+  </nav>
   
   <!-- Article Header -->
   <header class="mb-8">
