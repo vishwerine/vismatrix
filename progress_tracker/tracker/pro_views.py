@@ -198,7 +198,6 @@ def advanced_analytics(request):
         current_streak = habit.get_current_streak()
         
         # Calculate best/longest streak
-        from datetime import timedelta
         best_streak = 0
         if total_completed > 0:
             completions = HabitCompletion.objects.filter(habit=habit).order_by('completion_date').values_list('completion_date', flat=True)
