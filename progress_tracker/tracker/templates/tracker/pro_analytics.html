@@ -389,7 +389,13 @@
           <tbody>
             {% for habit in habit_success %}
             <tr>
-              <td class="font-medium">{{ habit.title }}</td>
+              <td class="font-medium">
+                <a href="?days={{ days }}&habit={{ habit.title|slugify }}" 
+                   class="link link-primary hover:link-primary-focus transition-colors"
+                   title="Click to view daily trend for this habit">
+                  {{ habit.title }}
+                </a>
+              </td>
               <td>
                 <div class="flex items-center gap-2">
                   <div class="w-24 bg-base-200 rounded-full h-2">
