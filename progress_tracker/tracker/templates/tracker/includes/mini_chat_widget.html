@@ -1,6 +1,6 @@
 <!-- Mini Chat Widget - Floating at bottom right -->
 <div id="miniChatWidget" class="fixed bottom-4 right-4 z-40 w-80 max-h-96 rounded-2xl border border-base-200 bg-base-100 shadow-2xl flex flex-col hidden lg:flex"
-     style="display: none;">
+     style="display: none; opacity: 1;">
 
   <!-- Header -->
   <div class="flex items-center justify-between p-4 border-b border-base-200 bg-gradient-to-r from-primary/5 to-transparent rounded-t-2xl">
@@ -79,7 +79,7 @@
 <button 
   id="chatToggleBtn"
   onclick="toggleMiniChat()"
-  class="fixed right-4 btn btn-primary btn-circle btn-lg shadow-lg hover:shadow-xl transition-all z-40 lg:hidden"
+  class="fixed right-4 btn btn-primary btn-circle btn-lg shadow-lg hover:shadow-xl transition-all z-40 lg:hidden opacity-90 hover:opacity-100"
   style="bottom: calc(5rem + env(safe-area-inset-bottom));"
   aria-label="Open chat"
 >
@@ -91,7 +91,7 @@
 <button 
   id="desktopChatToggle"
   onclick="toggleMiniChat()"
-  class="fixed bottom-4 right-4 btn btn-primary btn-sm gap-2 shadow-lg hover:shadow-xl transition-all z-40 hidden lg:flex"
+  class="fixed bottom-4 right-4 btn btn-primary btn-sm gap-2 shadow-lg hover:shadow-xl transition-all z-40 hidden lg:flex opacity-90 hover:opacity-100"
   aria-label="Toggle chat"
 >
   <i class="bi bi-chat-dots"></i>
@@ -349,6 +349,7 @@ document.addEventListener('click', (e) => {
 <style>
   #miniChatWidget {
     animation: slideUp 0.3s ease-out;
+    opacity: 1 !important;
   }
 
   @keyframes slideUp {
@@ -362,9 +363,54 @@ document.addEventListener('click', (e) => {
     }
   }
 
+  /* Ensure completely opaque backgrounds in both modes */
+  #miniChatWidget {
+    background-color: hsl(var(--b1)) !important;
+    backdrop-filter: none;
+  }
+
+  /* Light mode - soft blue-tinted background with appropriate styling */
+  @media (prefers-color-scheme: light) {
+    #miniChatWidget {
+      background-color: #f0f7ff !important;
+      border-color: #e0e8f5 !important;
+    }
+
+    #miniChatWidget > div:first-child {
+      background: linear-gradient(135deg, #e3f2fd 0%, #f3f7ff 100%) !important;
+      border-color: #e0e8f5 !important;
+    }
+
+    #chatMessages {
+      background-color: #ffffff !important;
+    }
+
+    #chatMessages::-webkit-scrollbar-thumb {
+      background: rgba(59, 130, 246, 0.3);
+    }
+
+    #chatMessages::-webkit-scrollbar-thumb:hover {
+      background: rgba(59, 130, 246, 0.5);
+    }
+  }
+
+  /* Dark mode - solid dark background */
+  @media (prefers-color-scheme: dark) {
+    #miniChatWidget {
+      background-color: #1f2937 !important;
+    }
+  }
+
+  /* Ensure header has solid background */
+  #miniChatWidget > div:first-child {
+    background-color: hsl(var(--b1)) !important;
+    backdrop-filter: none;
+  }
+
   /* Smooth scrolling in chat */
   #chatMessages {
     scroll-behavior: smooth;
+    background-color: hsl(var(--b1)) !important;
   }
 
   /* Custom scrollbar */
