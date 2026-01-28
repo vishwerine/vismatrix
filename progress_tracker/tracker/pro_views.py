@@ -194,7 +194,7 @@ def advanced_analytics(request):
         total_completed = HabitCompletion.objects.filter(habit=habit).count()
         success_rate = (total_completed / total_expected * 100) if total_expected > 0 else 0
         habit_success.append({
-            'name': habit.name,
+            'title': habit.title,
             'success_rate': success_rate,
             'current_streak': habit.current_streak,
             'best_streak': habit.best_streak
