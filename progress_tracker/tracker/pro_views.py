@@ -115,6 +115,35 @@ def advanced_analytics(request):
     days = int(request.GET.get('days', 30))
     start_date = today - timedelta(days=days)
     
+    # Habit selection
+    selected_habit_slug = request.GET.get('habit', None)
+    selected_habit = None
+    habit_daily_trend = []
+    
+    # Get all habits for selection
+    all_habits = Habit.objects.filter(user=user)
+    
+    # If a specific habit is selected, get that habit
+    if selected_habit_slug and all_habits.exists():
+        # Convert slug back to title and find matching habit
+        from django.utils.text import slugify
+        for habit in all_habits:
+            if slugify(habit.title) == selected_habit_slug:
+                selected_habit = habit
+                break
+    
+    # Calculate habit-specific daily trend if habit is selected
+    if selected_habit:
+        for i in range(days - 1, -1, -1):
+            date = today - timedelta(days=i)
+            completed = HabitCompletion.objects.filter(habit=selected_habit, completion_date=date).exists()
+            completions_count = HabitCompletion.objects.filter(habit=selected_habit, completion_date=date).count()
+            habit_daily_trend.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'completed': 1 if completed else 0,
+                'count': completions_count
+            })
+    
     # Advanced task insights
     task_stats = {
         'total': Task.objects.filter(user=user, is_global=False).count(),
@@ -231,6 +260,9 @@ def advanced_analytics(request):
         'priority_stats': priority_stats,
         'category_time': list(category_time),
         'daily_trend': daily_trend,
+        'habit_daily_trend': habit_daily_trend,
+        'selected_habit': selected_habit_slug,
+        'selected_habit_obj': selected_habit,
         'last_week_minutes': last_week_minutes,
         'last_week_hours': last_week_hours,
         'previous_week_minutes': previous_week_minutes,
