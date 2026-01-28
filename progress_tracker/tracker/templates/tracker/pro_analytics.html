@@ -139,7 +139,7 @@
       </div>
 
       <!-- Habit selector -->
-      {% if habit_success %}
+      {% if all_habits_list %}
       <div class="dropdown dropdown-end">
         <label tabindex="1" class="btn btn-sm btn-outline gap-2 hover:bg-secondary/10">
           <i class="bi bi-repeat"></i>
@@ -156,7 +156,7 @@
             </a>
           </li>
           <li><hr class="my-2"></li>
-          {% for habit in habit_success %}
+          {% for habit in all_habits_list %}
           <li>
             <a href="?days={{ days }}&habit={{ habit.title|slugify }}" 
                class="{% if selected_habit == habit.title|slugify %}active{% endif %}"

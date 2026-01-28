@@ -253,6 +253,20 @@ def advanced_analytics(request):
     hour_productivity = [0] * 24  # Hours 0-23
     # Note: This would require storing time in logs, placeholder for now
     
+    # Build a dict for quick lookup of habit data by title
+    habit_data_map = {h['title']: h for h in habit_success}
+    
+    # Create list with all habits, using data from habit_success where available
+    all_habits_list = []
+    for habit in all_habits:
+        habit_info = habit_data_map.get(habit.title, {
+            'title': habit.title,
+            'success_rate': 0,
+            'current_streak': 0,
+            'best_streak': 0
+        })
+        all_habits_list.append(habit_info)
+    
     context = {
         'days': days,
         'start_date': start_date,
@@ -270,6 +284,7 @@ def advanced_analytics(request):
         'week_change': round(week_change, 1),
         'avg_completion_time': list(avg_completion_time),
         'habit_success': habit_success,
+        'all_habits_list': all_habits_list,
         'is_pro': True,
     }
     
