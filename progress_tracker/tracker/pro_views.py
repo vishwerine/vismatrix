@@ -193,11 +193,32 @@ def advanced_analytics(request):
         total_expected = (today - habit.created_at.date()).days
         total_completed = HabitCompletion.objects.filter(habit=habit).count()
         success_rate = (total_completed / total_expected * 100) if total_expected > 0 else 0
+        
+        # Calculate streaks
+        current_streak = habit.get_current_streak()
+        
+        # Calculate best/longest streak
+        from datetime import timedelta
+        best_streak = 0
+        if total_completed > 0:
+            completions = HabitCompletion.objects.filter(habit=habit).order_by('completion_date').values_list('completion_date', flat=True)
+            if completions:
+                current_streak_calc = 1
+                for i, comp_date in enumerate(completions):
+                    if i > 0:
+                        prev_date = completions[i-1]
+                        if (comp_date - prev_date).days == 1:
+                            current_streak_calc += 1
+                        else:
+                            best_streak = max(best_streak, current_streak_calc)
+                            current_streak_calc = 1
+                best_streak = max(best_streak, current_streak_calc)
+        
         habit_success.append({
             'title': habit.title,
             'success_rate': success_rate,
-            'current_streak': habit.current_streak,
-            'best_streak': habit.best_streak
+            'current_streak': current_streak,
+            'best_streak': best_streak
         })
     
     # Peak productivity hours (from logs with time data)
