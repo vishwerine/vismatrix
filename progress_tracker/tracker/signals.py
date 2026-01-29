@@ -3,7 +3,7 @@ from django.db.models.signals import post_save
 from allauth.account.signals import user_signed_up
 from allauth.socialaccount.signals import social_account_added
 from django.contrib.auth.models import User
-from .models import Task, Category, UserProfile
+from .models import Task, Category, UserProfile, DailyLog, HabitCompletion
 
 @receiver(user_signed_up)
 def handle_user_signup(sender, request, user, **kwargs):
@@ -65,3 +65,48 @@ def track_visitor_conversion(request, user):
         import logging
         logger = logging.getLogger(__name__)
         logger.error(f"Error tracking visitor conversion: {e}")
+
+
+# User Activity Signals
+@receiver(post_save, sender=Task)
+def create_activity_on_task_completion(sender, instance, created, **kwargs):
+    """Create UserActivity when a task is marked as completed."""
+    from .models import UserActivity
+    
+    if instance.completed_at and not created:
+        # Check if activity already exists
+        if not UserActivity.objects.filter(task=instance, activity_type='task_completed').exists():
+            UserActivity.objects.create(
+                user=instance.user,
+                activity_type='task_completed',
+                task=instance,
+                visibility=instance.visibility,
+            )
+
+
+@receiver(post_save, sender=DailyLog)
+def create_activity_on_daily_log(sender, instance, created, **kwargs):
+    """Create UserActivity when a daily log is created."""
+    from .models import UserActivity
+    
+    if created:
+        UserActivity.objects.create(
+            user=instance.user,
+            activity_type='log_created',
+            daily_log=instance,
+            visibility=instance.visibility,
+        )
+
+
+@receiver(post_save, sender=HabitCompletion)
+def create_activity_on_habit_completion(sender, instance, created, **kwargs):
+    """Create UserActivity when a habit is completed."""
+    from .models import UserActivity
+    
+    if created:
+        UserActivity.objects.create(
+            user=instance.user,
+            activity_type='habit_completed',
+            habit_completion=instance,
+            visibility='friends',  # Default visibility for habits
+        )

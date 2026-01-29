@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession, Friendship, LandingPageVisitor, Habit, HabitCompletion, BlogPost, Subscription, PaymentHistory
+from .models import Category, Task, DailyLog, DailySummary, Plan, PlanNode, GoogleCalendarIntegration, ICloudCalendarIntegration, DaySchedule, MentorProfile, MentorshipRequest, Notification, UserPoints, PointsActivity, UserNotification, TimerSession, Friendship, LandingPageVisitor, Habit, HabitCompletion, BlogPost, Subscription, PaymentHistory, UserActivity
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -299,6 +299,22 @@ class PaymentHistoryAdmin(admin.ModelAdmin):
         }),
         ('Details', {
             'fields': ('description', 'failure_reason', 'created_at')
+        }),
+    )
+
+
+@admin.register(UserActivity)
+class UserActivityAdmin(admin.ModelAdmin):
+    list_display = ('user', 'activity_type', 'visibility', 'created_at')
+    list_filter = ('activity_type', 'visibility', 'created_at', 'user')
+    search_fields = ('user__username', 'activity_type')
+    readonly_fields = ('created_at', 'activity_date')
+    fieldsets = (
+        ('Activity Info', {
+            'fields': ('user', 'activity_type', 'visibility', 'created_at', 'activity_date')
+        }),
+        ('Related Objects', {
+            'fields': ('task', 'daily_log', 'habit_completion', 'blog_post')
         }),
     )
 

@@ -135,6 +135,11 @@ urlpatterns = [
     path("profile/settings/", views.profile_settings, name="profile_settings"),
     path("profile/download-data/", views.download_user_data, name="download_user_data"),
     path("profile/delete-account/", views.delete_account, name="delete_account"),
+    
+    # User profile and timeline
+    path("my-profile/", views.my_profile, name="my_profile"),
+    path("my-profile/activity/<int:activity_id>/toggle-privacy/", views.toggle_activity_privacy, name="toggle_activity_privacy"),
+    path("users/<int:user_id>/profile/timeline/", views.user_timeline, name="user_timeline"),
 
     # Mentorship
     path("mentors/", views.mentor_list, name="mentor_list"),

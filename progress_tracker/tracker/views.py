@@ -10,7 +10,7 @@ from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta, date
-from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule, UserProfile, Habit, HabitCompletion
+from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule, UserProfile, Habit, HabitCompletion, UserActivity
 from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm, UserProfileForm
 from django.views.decorators.http import require_http_methods
 import logging
@@ -171,12 +171,23 @@ def dashboard(request):
     )
 
     # --- Friends list & activity (for other parts of the app) ---
-    friends_qs = Friendship.objects.filter(user=request.user).select_related("friend")
-    total_friends = friends_qs.count()
+    # Get all friends (both directions - where user is 'user' or 'friend')
+    friends_qs_raw = Friendship.objects.filter(
+        Q(user=request.user) | Q(friend=request.user)
+    ).select_related('friend', 'user')
+    
+    # Extract unique friends
+    friends_list = []
+    for f in friends_qs_raw:
+        if f.user == request.user:
+            friends_list.append(f.friend)
+        else:
+            friends_list.append(f.user)
+    
+    total_friends = len(friends_list)
 
     friends_activity = []
-    for f in friends_qs[:5]:
-        friend = f.friend
+    for friend in friends_list[:5]:
         completed = Task.objects.filter(
             user=friend,
             status="completed",
@@ -198,18 +209,24 @@ def dashboard(request):
         )
 
     # --- Friends timeline feed (recent tasks and logs from friends) ---
-    friend_ids = [f.friend_id for f in friends_qs]
+    friend_ids = [f.id for f in friends_list]
     friends_timeline = []
 
     # Create a mapping of friend_id to friendship_id for quick lookup
-    friendship_map = {f.friend_id: f.id for f in friends_qs}
+    friendship_map = {}
+    for f in friends_qs_raw:
+        if f.user == request.user:
+            friendship_map[f.friend_id] = f.id
+        else:
+            friendship_map[f.user_id] = f.id
 
     # Get recent completed tasks from friends
     if friend_ids:
         recent_friend_tasks = Task.objects.filter(
             user_id__in=friend_ids,
             status="completed",
-            completed_at__isnull=False
+            completed_at__isnull=False,
+            visibility__in=['friends', 'public']  # Only show friends/public visibility tasks
         ).select_related("user", "category").order_by("-completed_at")[:10]
 
         for task in recent_friend_tasks:
@@ -232,7 +249,8 @@ def dashboard(request):
 
         # Get recent logs from friends
         recent_friend_logs = DailyLog.objects.filter(
-            user_id__in=friend_ids
+            user_id__in=friend_ids,
+            visibility__in=['friends', 'public']  # Only show friends/public visibility logs
         ).select_related("user", "category").order_by("-date", "-id")[:10]
 
         for log in recent_friend_logs:
@@ -255,10 +273,17 @@ def dashboard(request):
                 "user_starred": user_starred,
             })
 
-        # Get recent habit completions from friends
+        # Get recent habit completions from friends (respect visibility through UserActivity)
+        # Get habit completion IDs that have 'friends' or 'public' visibility from UserActivity
+        visible_habit_ids = UserActivity.objects.filter(
+            user_id__in=friend_ids,
+            activity_type='habit_completed',
+            visibility__in=['friends', 'public']
+        ).values_list('habit_completion_id', flat=True)[:10]
+        
         recent_friend_habits = HabitCompletion.objects.filter(
-            user_id__in=friend_ids
-        ).select_related("user", "habit", "habit__category").order_by("-completion_date", "-id")[:10]
+            id__in=visible_habit_ids
+        ).select_related("user", "habit", "habit__category").order_by("-completion_date", "-id")
 
         for habit_completion in recent_friend_habits:
             # Get reaction info for this habit completion
@@ -287,7 +312,7 @@ def dashboard(request):
         friends_timeline = friends_timeline[:5]
 
     # --- Suggested users (non-friends) ---
-    friend_ids = [f.friend_id for f in friends_qs]
+    friend_ids = [f.id for f in friends_list]
     suggested_users = (
         User.objects.exclude(Q(id=request.user.id) | Q(id__in=friend_ids))[:5]
     )
@@ -2633,19 +2658,37 @@ def friends_list(request):
 @login_required
 def friends_feed(request):
     """View full friends activity feed"""
-    friends_qs = Friendship.objects.filter(user=request.user).select_related('friend')
-    friend_ids = [f.friend_id for f in friends_qs]
+    # Get all friends (both directions - where user is 'user' or 'friend')
+    friends_qs = Friendship.objects.filter(
+        Q(user=request.user) | Q(friend=request.user)
+    ).select_related('friend', 'user')
+    
+    # Extract unique friend IDs
+    friend_ids = set()
+    for f in friends_qs:
+        if f.user == request.user:
+            friend_ids.add(f.friend_id)
+        else:
+            friend_ids.add(f.user_id)
+    
+    friend_ids = list(friend_ids)
     friends_timeline = []
     
     # Create a mapping of friend_id to friendship_id for quick lookup
-    friendship_map = {f.friend_id: f.id for f in friends_qs}
+    friendship_map = {}
+    for f in friends_qs:
+        if f.user == request.user:
+            friendship_map[f.friend_id] = f.id
+        else:
+            friendship_map[f.user_id] = f.id
     
-    # Get recent completed tasks from friends
+    # Get recent completed tasks from friends (respect visibility)
     if friend_ids:
         recent_friend_tasks = Task.objects.filter(
             user_id__in=friend_ids,
             status="completed",
-            completed_at__isnull=False
+            completed_at__isnull=False,
+            visibility__in=['friends', 'public']  # Only show friends/public visibility tasks
         ).select_related("user", "category").order_by("-completed_at")[:50]
         
         for task in recent_friend_tasks:
@@ -2666,9 +2709,10 @@ def friends_feed(request):
                 "user_starred": user_starred,
             })
         
-        # Get recent logs from friends
+        # Get recent logs from friends (respect visibility)
         recent_friend_logs = DailyLog.objects.filter(
-            user_id__in=friend_ids
+            user_id__in=friend_ids,
+            visibility__in=['friends', 'public']  # Only show friends/public visibility logs
         ).select_related("user", "category").order_by("-date", "-id")[:50]
         
         for log in recent_friend_logs:
@@ -2691,10 +2735,17 @@ def friends_feed(request):
                 "user_starred": user_starred,
             })
         
-        # Get recent habit completions from friends
+        # Get recent habit completions from friends (respect visibility through UserActivity)
+        # Get habit completion IDs that have 'friends' or 'public' visibility from UserActivity
+        visible_habit_ids = UserActivity.objects.filter(
+            user_id__in=friend_ids,
+            activity_type='habit_completed',
+            visibility__in=['friends', 'public']
+        ).values_list('habit_completion_id', flat=True)[:50]
+        
         recent_friend_habits = HabitCompletion.objects.filter(
-            user_id__in=friend_ids
-        ).select_related("user", "habit", "habit__category").order_by("-completion_date", "-id")[:50]
+            id__in=visible_habit_ids
+        ).select_related("user", "habit", "habit__category").order_by("-completion_date", "-id")
 
         for habit_completion in recent_friend_habits:
             # Get reaction info for this habit completion
@@ -6040,3 +6091,7 @@ def new_users_tracking(request):
     }
     
     return render(request, 'tracker/admin_new_users.html', context)
+
+
+# Import profile views
+from .profile_views import my_profile, toggle_activity_privacy, user_timeline, create_user_activity

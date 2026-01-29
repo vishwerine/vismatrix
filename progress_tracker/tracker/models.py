@@ -55,6 +55,14 @@ class Task(models.Model):
     due_date = models.DateField(null=True, blank=True, db_index=True)
     completed_at = models.DateTimeField(null=True, blank=True, db_index=True)
     
+    # Privacy settings
+    VISIBILITY_CHOICES = [
+        ('private', 'Private (Only me)'),
+        ('friends', 'Friends (Visible to friends only)'),
+        ('public', 'Public (Everyone)'),
+    ]
+    visibility = models.CharField(max_length=20, choices=VISIBILITY_CHOICES, default='friends', help_text="Who can see this task completion")
+    
     class Meta:
         ordering = ['-created_at']
         indexes = [
@@ -81,6 +89,14 @@ class DailyLog(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='logs')  # Link to task
     duration = models.PositiveIntegerField(help_text="Duration in minutes", default=0)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    
+    # Privacy settings
+    VISIBILITY_CHOICES = [
+        ('private', 'Private (Only me)'),
+        ('friends', 'Friends (Visible to friends only)'),
+        ('public', 'Public (Everyone)'),
+    ]
+    visibility = models.CharField(max_length=20, choices=VISIBILITY_CHOICES, default='friends', help_text="Who can see this activity log")
     
     class Meta:
         ordering = ['-date', '-created_at']
@@ -1197,3 +1213,57 @@ class PaymentHistory(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - ${self.amount} ({self.status})"
+
+
+class UserActivity(models.Model):
+    """Track user activities for friend timelines and profiles"""
+    ACTIVITY_TYPES = [
+        ('task_completed', 'Task Completed'),
+        ('log_created', 'Activity Logged'),
+        ('habit_completed', 'Habit Completed'),
+        ('post_created', 'Blog Post Created'),
+    ]
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities', db_index=True)
+    activity_type = models.CharField(max_length=50, choices=ACTIVITY_TYPES, db_index=True)
+    
+    # Generic relation to any activity object
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, null=True, blank=True, related_name='activity_entries')
+    daily_log = models.ForeignKey(DailyLog, on_delete=models.CASCADE, null=True, blank=True, related_name='activity_entries')
+    habit_completion = models.ForeignKey('HabitCompletion', on_delete=models.CASCADE, null=True, blank=True, related_name='activity_entries')
+    blog_post = models.ForeignKey('BlogPost', on_delete=models.CASCADE, null=True, blank=True, related_name='activity_entries')
+    
+    # Visibility control
+    VISIBILITY_CHOICES = [
+        ('private', 'Private (Only me)'),
+        ('friends', 'Friends (Visible to friends only)'),
+        ('public', 'Public (Everyone)'),
+    ]
+    visibility = models.CharField(max_length=20, choices=VISIBILITY_CHOICES, default='friends', db_index=True, help_text="Who can see this activity")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    activity_date = models.DateField(auto_now_add=True, db_index=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['user', 'visibility', '-created_at']),
+            models.Index(fields=['activity_type', '-created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.get_activity_type_display()}"
+    
+    def get_activity_title(self):
+        """Get a readable title for the activity"""
+        if self.task and self.task.completed_at:
+            return f"Completed task: {self.task.title}"
+        elif self.daily_log:
+            return f"Logged: {self.daily_log.activity}"
+        elif self.habit_completion:
+            return f"Completed habit: {self.habit_completion.habit.title}"
+        elif self.blog_post:
+            return f"Published: {self.blog_post.title}"
+        return self.get_activity_type_display()

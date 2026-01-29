@@ -1,0 +1,188 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{{ profile_user.first_name|default:profile_user.username }}'s Timeline - VisMatrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .activity-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+  }
+  
+  .activity-card:hover {
+    border-left-color: #6366f1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .privacy-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background-color: rgba(99, 102, 241, 0.1);
+    color: #6366f1;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+  <!-- Profile Header -->
+  <div class="card bg-base-100 border border-base-200 mb-8">
+    <div class="card-body">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div class="avatar placeholder">
+            <div class="bg-gradient-to-br from-primary to-secondary text-white rounded-full w-24">
+              <span class="text-3xl">{{ profile_user.first_name|slice:':1'|upper|default:profile_user.username|slice:':1'|upper }}</span>
+            </div>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold">{{ profile_user.first_name|default:profile_user.username }}</h1>
+            <p class="text-base-content/60">@{{ profile_user.username }}</p>
+            <p class="text-sm text-base-content/50 mt-1">Member since {{ profile_user.date_joined|date:"M Y" }}</p>
+          </div>
+        </div>
+
+        <!-- Action buttons -->
+        {% if not is_own_profile %}
+        <div class="flex gap-2">
+          {% if is_friend %}
+          <div class="badge badge-success gap-2">
+            <i class="bi bi-check-circle"></i> Friends
+          </div>
+          {% elif friend_request_sent %}
+          <div class="badge badge-info gap-2">
+            <i class="bi bi-hourglass"></i> Request Sent
+          </div>
+          {% else %}
+          <a href="{% url 'send_friend_request' profile_user.id %}" class="btn btn-primary gap-2">
+            <i class="bi bi-person-plus"></i> Add Friend
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="max-w-2xl mx-auto">
+    <div class="card bg-base-100 border border-base-200">
+      <div class="card-body p-6">
+        <h2 class="card-title text-2xl mb-6">
+          <i class="bi bi-clock-history"></i> Activity Timeline
+        </h2>
+
+        {% if activities %}
+          <div class="space-y-4">
+            {% for activity in activities %}
+            <div class="activity-card card bg-base-100 border border-base-200 p-4">
+              <div class="flex items-start gap-4">
+                <div class="flex-1">
+                  <!-- Activity content -->
+                  {% if activity.task %}
+                  <div class="flex items-start gap-3">
+                    <i class="bi bi-check-circle-fill text-success text-xl mt-1"></i>
+                    <div class="flex-1">
+                      <p class="font-semibold">Completed task: <span class="text-primary">{{ activity.task.title }}</span></p>
+                      {% if activity.task.category %}
+                      <p class="text-sm text-base-content/60">{{ activity.task.category.name }}</p>
+                      {% endif %}
+                      <p class="text-xs text-base-content/50 mt-1">{{ activity.created_at|timesince }} ago</p>
+                    </div>
+                  </div>
+                  
+                  {% elif activity.daily_log %}
+                  <div class="flex items-start gap-3">
+                    <i class="bi bi-clock-fill text-info text-xl mt-1"></i>
+                    <div class="flex-1">
+                      <p class="font-semibold">Logged: <span class="text-primary">{{ activity.daily_log.activity }}</span></p>
+                      <p class="text-sm text-base-content/60">{{ activity.daily_log.duration }} minutes</p>
+                      {% if activity.daily_log.category %}
+                      <p class="text-xs text-base-content/50">{{ activity.daily_log.category.name }}</p>
+                      {% endif %}
+                      <p class="text-xs text-base-content/50 mt-1">{{ activity.created_at|timesince }} ago</p>
+                    </div>
+                  </div>
+                  
+                  {% elif activity.habit_completion %}
+                  <div class="flex items-start gap-3">
+                    <i class="bi bi-repeat text-warning text-xl mt-1"></i>
+                    <div class="flex-1">
+                      <p class="font-semibold">Completed habit: <span class="text-primary">{{ activity.habit_completion.habit.title }}</span></p>
+                      {% if activity.habit_completion.notes %}
+                      <p class="text-sm text-base-content/60">{{ activity.habit_completion.notes }}</p>
+                      {% endif %}
+                      <p class="text-xs text-base-content/50 mt-1">{{ activity.created_at|timesince }} ago</p>
+                    </div>
+                  </div>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <!-- Pagination -->
+          {% if activities.has_other_pages %}
+          <div class="mt-6 flex justify-center gap-2">
+            {% if activities.has_previous %}
+            <a href="?page=1" class="btn btn-sm btn-outline">First</a>
+            <a href="?page={{ activities.previous_page_number }}" class="btn btn-sm btn-outline">Previous</a>
+            {% endif %}
+
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-base-content/60">
+                Page {{ activities.number }} of {{ activities.paginator.num_pages }}
+              </span>
+            </div>
+
+            {% if activities.has_next %}
+            <a href="?page={{ activities.next_page_number }}" class="btn btn-sm btn-outline">Next</a>
+            <a href="?page={{ activities.paginator.num_pages }}" class="btn btn-sm btn-outline">Last</a>
+            {% endif %}
+          </div>
+          {% endif %}
+        {% else %}
+        <div class="text-center py-12">
+          <i class="bi bi-inbox text-4xl text-base-content/30 mb-2"></i>
+          <p class="text-base-content/60">
+            {% if is_own_profile %}
+              No activities yet. Start tracking your progress!
+            {% else %}
+              {% if is_friend %}
+                No public activities to show yet.
+              {% else %}
+                No public activities to show. Add them as a friend to see their activities!
+              {% endif %}
+            {% endif %}
+          </p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Privacy Notice (for non-own profiles) -->
+    {% if not is_own_profile %}
+    <div class="alert mt-6">
+      <i class="bi bi-info-circle text-lg"></i>
+      <div>
+        <h3 class="font-bold">Viewing {{ profile_user.first_name|default:profile_user.username }}'s Public Timeline</h3>
+        <div class="text-sm">
+          {% if is_friend %}
+            You're viewing this user's activities. They have set some activities to be visible only to friends.
+          {% else %}
+            You're viewing only public activities shared by this user. Add them as a friend to see more activities.
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

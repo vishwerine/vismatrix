@@ -481,7 +481,8 @@
           </div>
           <ul tabindex="0" class="mt-3 z-[1] p-2 shadow-2xl menu menu-sm dropdown-content bg-base-100 rounded-2xl w-56 border border-base-content/5">
             <li class="menu-title px-4 py-2 opacity-60">Account</li>
-            <li><a href="{% url 'profile_settings' %}" class="py-3"><i class="bi bi-person text-lg"></i> Profile</a></li>
+            <li><a href="{% url 'my_profile' %}" class="py-3"><i class="bi bi-person-circle text-lg"></i> My Profile</a></li>
+            <li><a href="{% url 'profile_settings' %}" class="py-3"><i class="bi bi-person text-lg"></i> Settings</a></li>
             <li>
               <a href="{% url 'subscription_plans' %}" class="py-3 justify-between">
                 <span class="flex items-center gap-2"><i class="bi bi-star"></i> Subscription</span>

@@ -1,0 +1,375 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}My Profile - VisMatrix{% endblock %}
+
+{% block extra_head %}
+<style>
+  .activity-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+  }
+  
+  .activity-card:hover {
+    border-left-color: #6366f1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  .privacy-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  
+  .privacy-badge.private {
+    background-color: #fee2e2;
+    color: #991b1b;
+  }
+  
+  .privacy-badge.friends {
+    background-color: #dbeafe;
+    color: #1e40af;
+  }
+  
+  .privacy-badge.public {
+    background-color: #dcfce7;
+    color: #166534;
+  }
+  
+  .stat-box {
+    text-align: center;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    background-color: #f8f9fa;
+  }
+  
+  .stat-box .stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #6366f1;
+  }
+  
+  .stat-box .stat-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    margin-top: 0.5rem;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8 max-w-6xl">
+  <!-- Profile Header -->
+  <div class="card bg-base-100 border border-base-200 mb-8">
+    <div class="card-body">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+        <div class="flex items-center gap-4">
+          <div class="avatar placeholder">
+            <div class="bg-gradient-to-br from-primary to-secondary text-white rounded-full w-24">
+              <span class="text-3xl">{{ user.first_name|slice:':1'|upper|default:user.username|slice:':1'|upper }}</span>
+            </div>
+          </div>
+          <div>
+            <h1 class="text-3xl font-bold">{{ user.first_name|default:user.username }}</h1>
+            <p class="text-base-content/60">@{{ user.username }}</p>
+            <p class="text-sm text-base-content/50 mt-1">Member since {{ user.date_joined|date:"M Y" }}</p>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <a href="{% url 'profile_settings' %}" class="btn btn-outline gap-2">
+            <i class="bi bi-gear"></i> Settings
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Overview -->
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="stat-box card bg-base-100 border border-base-200">
+      <div class="stat-number">{{ total_activities }}</div>
+      <div class="stat-label">Total Activities</div>
+    </div>
+    
+    <div class="stat-box card bg-base-100 border border-base-200">
+      <div class="stat-number">{{ today_activities }}</div>
+      <div class="stat-label">Today</div>
+    </div>
+    
+    <div class="stat-box card bg-base-100 border border-base-200">
+      <div class="stat-number">{{ friends_count }}</div>
+      <div class="stat-label">Friends</div>
+    </div>
+    
+    <div class="stat-box card bg-base-100 border border-base-200">
+      <div class="stat-number">{{ pending_requests }}</div>
+      <div class="stat-label">Friend Requests</div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Main Content: Recent Activity -->
+    <div class="lg:col-span-2">
+      <div class="card bg-base-100 border border-base-200">
+        <div class="card-body p-6">
+          <h2 class="card-title text-2xl mb-6">
+            <i class="bi bi-clock-history"></i> Recent Activity
+          </h2>
+
+          {% if activities %}
+            <div class="space-y-4">
+              {% for activity in activities %}
+              <div class="activity-card card bg-base-100 border border-base-200 p-4" data-activity-id="{{ activity.id }}">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1">
+                    <!-- Activity content -->
+                    {% if activity.task %}
+                    <div class="flex items-start gap-3">
+                      <i class="bi bi-check-circle-fill text-success text-xl mt-1"></i>
+                      <div>
+                        <p class="font-semibold">Completed task: <span class="text-primary">{{ activity.task.title }}</span></p>
+                        {% if activity.task.category %}
+                        <p class="text-sm text-base-content/60">{{ activity.task.category.name }}</p>
+                        {% endif %}
+                        <p class="text-xs text-base-content/50 mt-1">{{ activity.created_at|timesince }} ago</p>
+                      </div>
+                    </div>
+                    
+                    {% elif activity.daily_log %}
+                    <div class="flex items-start gap-3">
+                      <i class="bi bi-clock-fill text-info text-xl mt-1"></i>
+                      <div>
+                        <p class="font-semibold">Logged: <span class="text-primary">{{ activity.daily_log.activity }}</span></p>
+                        <p class="text-sm text-base-content/60">{{ activity.daily_log.duration }} minutes</p>
+                        {% if activity.daily_log.category %}
+                        <p class="text-xs text-base-content/50">{{ activity.daily_log.category.name }}</p>
+                        {% endif %}
+                        <p class="text-xs text-base-content/50 mt-1">{{ activity.created_at|timesince }} ago</p>
+                      </div>
+                    </div>
+                    
+                    {% elif activity.habit_completion %}
+                    <div class="flex items-start gap-3">
+                      <i class="bi bi-repeat text-warning text-xl mt-1"></i>
+                      <div>
+                        <p class="font-semibold">Completed habit: <span class="text-primary">{{ activity.habit_completion.habit.title }}</span></p>
+                        {% if activity.habit_completion.notes %}
+                        <p class="text-sm text-base-content/60">{{ activity.habit_completion.notes }}</p>
+                        {% endif %}
+                        <p class="text-xs text-base-content/50 mt-1">{{ activity.created_at|timesince }} ago</p>
+                      </div>
+                    </div>
+                    {% endif %}
+                  </div>
+
+                  <!-- Privacy Control -->
+                  <div class="flex-shrink-0">
+                    <div class="dropdown dropdown-end">
+                      <label tabindex="0" class="privacy-badge {{ activity.visibility }}">
+                        {% if activity.visibility == 'private' %}
+                          <i class="bi bi-lock"></i> Private
+                        {% elif activity.visibility == 'friends' %}
+                          <i class="bi bi-people"></i> Friends
+                        {% else %}
+                          <i class="bi bi-globe"></i> Public
+                        {% endif %}
+                      </label>
+                      <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-lg w-48 border border-base-300 z-50">
+                        <li>
+                            <a onclick="togglePrivacy({{ activity.id }}, 'private')" data-visibility="private" class="{% if activity.visibility == 'private' %}active{% endif %}">
+                            <i class="bi bi-lock"></i> Private (Only me)
+                          </a>
+                        </li>
+                        <li>
+                          <a onclick="togglePrivacy({{ activity.id }}, 'friends')" data-visibility="friends" class="{% if activity.visibility == 'friends' %}active{% endif %}">
+                            <i class="bi bi-people"></i> Friends Only
+                          </a>
+                        </li>
+                        <li>
+                          <a onclick="togglePrivacy({{ activity.id }}, 'public')" data-visibility="public" class="{% if activity.visibility == 'public' %}active{% endif %}">
+                            <i class="bi bi-globe"></i> Public
+                          </a>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            {% if activities.has_other_pages %}
+            <div class="mt-6 flex justify-center gap-2">
+              {% if activities.has_previous %}
+              <a href="?page=1" class="btn btn-sm btn-outline">First</a>
+              <a href="?page={{ activities.previous_page_number }}" class="btn btn-sm btn-outline">Previous</a>
+              {% endif %}
+
+              <div class="flex items-center gap-2">
+                <span class="text-sm text-base-content/60">
+                  Page {{ activities.number }} of {{ activities.paginator.num_pages }}
+                </span>
+              </div>
+
+              {% if activities.has_next %}
+              <a href="?page={{ activities.next_page_number }}" class="btn btn-sm btn-outline">Next</a>
+              <a href="?page={{ activities.paginator.num_pages }}" class="btn btn-sm btn-outline">Last</a>
+              {% endif %}
+            </div>
+            {% endif %}
+          {% else %}
+          <div class="text-center py-8">
+            <i class="bi bi-inbox text-4xl text-base-content/30 mb-2"></i>
+            <p class="text-base-content/60">No activities yet. Start tracking your progress!</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar: Recent Items -->
+    <div class="space-y-6">
+      <!-- Recent Tasks -->
+      {% if recent_tasks %}
+      <div class="card bg-base-100 border border-base-200">
+        <div class="card-body p-4">
+          <h3 class="card-title text-lg mb-4">
+            <i class="bi bi-check-circle"></i> Recent Tasks
+          </h3>
+          <div class="space-y-2">
+            {% for task in recent_tasks %}
+            <div class="p-2 hover:bg-base-200 rounded cursor-pointer transition">
+              <p class="text-sm font-medium truncate">{{ task.title }}</p>
+              <p class="text-xs text-base-content/50">{{ task.completed_at|timesince }} ago</p>
+            </div>
+            {% endfor %}
+          </div>
+          <a href="{% url 'task_list' %}" class="btn btn-sm btn-ghost w-full mt-4">View All Tasks</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Recent Logs -->
+      {% if recent_logs %}
+      <div class="card bg-base-100 border border-base-200">
+        <div class="card-body p-4">
+          <h3 class="card-title text-lg mb-4">
+            <i class="bi bi-clock-history"></i> Recent Logs
+          </h3>
+          <div class="space-y-2">
+            {% for log in recent_logs %}
+            <div class="p-2 hover:bg-base-200 rounded cursor-pointer transition">
+              <p class="text-sm font-medium truncate">{{ log.activity }}</p>
+              <p class="text-xs text-base-content/50">{{ log.duration }}m • {{ log.created_at|timesince }} ago</p>
+            </div>
+            {% endfor %}
+          </div>
+          <a href="{% url 'log_list' %}" class="btn btn-sm btn-ghost w-full mt-4">View All Logs</a>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Recent Habits -->
+      {% if recent_habits %}
+      <div class="card bg-base-100 border border-base-200">
+        <div class="card-body p-4">
+          <h3 class="card-title text-lg mb-4">
+            <i class="bi bi-repeat"></i> Recent Habits
+          </h3>
+          <div class="space-y-2">
+            {% for completion in recent_habits %}
+            <div class="p-2 hover:bg-base-200 rounded cursor-pointer transition">
+              <p class="text-sm font-medium truncate">{{ completion.habit.title }}</p>
+              <p class="text-xs text-base-content/50">{{ completion.completion_date|timesince }} ago</p>
+            </div>
+            {% endfor %}
+          </div>
+          <a href="{% url 'habit_list' %}" class="btn btn-sm btn-ghost w-full mt-4">View All Habits</a>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+function togglePrivacy(activityId, visibility) {
+  const formData = new FormData();
+  formData.append('visibility', visibility);
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const csrftoken = getCookie('csrftoken');
+
+  fetch(`/my-profile/activity/${activityId}/toggle-privacy/`, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': csrftoken,
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    if (data.success) {
+      // Update the specific activity card in-place
+      const card = document.querySelector(`.activity-card[data-activity-id="${activityId}"]`);
+      if (card) {
+        const badge = card.querySelector('.privacy-badge');
+        if (badge) {
+          badge.className = `privacy-badge ${data.new_visibility}`;
+
+          function getBadgeHtml(vis, display) {
+            if (vis === 'private') return `<i class="bi bi-lock"></i> ${display}`;
+            if (vis === 'friends') return `<i class="bi bi-people"></i> ${display}`;
+            return `<i class="bi bi-globe"></i> ${display}`;
+          }
+
+          badge.innerHTML = getBadgeHtml(data.new_visibility, data.visibility_display || data.new_visibility);
+        }
+
+        // Update active state inside dropdown menu for this card
+        const anchors = card.querySelectorAll('.dropdown-content a[data-visibility]');
+        anchors.forEach(a => {
+          if (a.dataset.visibility === data.new_visibility) {
+            a.classList.add('active');
+          } else {
+            a.classList.remove('active');
+          }
+        });
+      }
+
+    } else {
+      alert('Error: ' + (data.error || 'Failed to update privacy'));
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('An error occurred: ' + error.message);
+  });
+}
+</script>
+{% endblock %}
