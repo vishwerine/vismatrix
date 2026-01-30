@@ -224,15 +224,15 @@ GEOIP_PATH = os.path.join(BASE_DIR, 'geoip', 'GeoLite2-City.mmdb')
 
 # --- Same-domain Next.js + Django (reverse proxy) ---
 if ENVIRONMENT == "prod":
-    CSRF_TRUSTED_ORIGINS = ["https://wishpurikaro.com", "https://www.wishpurikaro.com"]
+    CSRF_TRUSTED_ORIGINS = ["https://vismatrix.space", "https://www.vismatrix.space"]
 
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     SESSION_COOKIE_SAMESITE = "Lax"
     CSRF_COOKIE_SAMESITE = "Lax"
 
-    SESSION_COOKIE_DOMAIN = ".wishpurikaro.com"
-    CSRF_COOKIE_DOMAIN = ".wishpurikaro.com"
+    SESSION_COOKIE_DOMAIN = ".vismatrix.space"
+    CSRF_COOKIE_DOMAIN = ".vismatrix.space"
 
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = True
@@ -275,6 +275,6 @@ STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='')
 STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='')
 
 # Pro subscription pricing
-PRO_SUBSCRIPTION_PRICE = 20.00  # USD per month
+PRO_SUBSCRIPTION_PRICE = 2.99  # USD per month
 # --- End Stripe Payment Configuration ---
 
