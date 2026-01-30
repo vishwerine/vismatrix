@@ -6095,3 +6095,10 @@ def new_users_tracking(request):
 
 # Import profile views
 from .profile_views import my_profile, toggle_activity_privacy, user_timeline, create_user_activity
+
+
+from django.http import HttpResponse
+
+def ads_txt(request):
+    content = "google.com, pub-7653466283203958, DIRECT, f08c47fec0942fa0"
+    return HttpResponse(content, content_type="text/plain")

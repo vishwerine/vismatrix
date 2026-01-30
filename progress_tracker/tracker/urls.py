@@ -193,5 +193,7 @@ urlpatterns = [
     path("pro/api/bulk-operations/", pro_views.bulk_operations, name="bulk_operations"),
     path("pro/api/ai-categorize/", pro_views.ai_categorize_task, name="ai_categorize_task"),
 
+    path("ads.txt", views.ads_txt),
+
 ]
 
