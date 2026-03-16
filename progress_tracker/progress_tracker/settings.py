@@ -35,7 +35,7 @@ DEBUG = env.bool("DEBUG", default=(ENVIRONMENT == "local"))
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env.bool("DEBUG", default=False)
 
-ALLOWED_HOSTS = ['vismatrix.space','www.vismatrix.space','3.229.115.6','localhost','127.0.0.1','wishpurikaro.com','www.wishpurikaro.com']
+ALLOWED_HOSTS = ['*','vismatrix.space','www.vismatrix.space','13.204.34.182','localhost','127.0.0.1']
 
 
 # Application definition
@@ -278,3 +278,4 @@ STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='')
 PRO_SUBSCRIPTION_PRICE = 2.99  # USD per month
 # --- End Stripe Payment Configuration ---
 
+ACCOUNT_RATE_LIMITS = False
