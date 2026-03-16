@@ -1,2 +1,2 @@
-web: gunicorn progress_tracker.wsgi
+web: ./start.sh
 
