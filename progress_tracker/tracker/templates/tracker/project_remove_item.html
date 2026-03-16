@@ -1,0 +1,83 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Remove {{ item_type|title }} from {{ project.name }} - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-base-content mb-2">
+        <i class="bi bi-dash-circle text-warning mr-2"></i>Remove {{ item_type|title }}
+      </h1>
+      <p class="text-base vm-muted">
+        Remove this {{ item_type }} from <strong>{{ project.name }}</strong>
+      </p>
+    </div>
+
+    <!-- Item Details -->
+    <div class="card vm-section bg-base-100 mb-6">
+      <div class="card-body p-6">
+        <h3 class="font-bold mb-4">{{ item_type|title }} Details</h3>
+
+        {% if item_type == 'task' %}
+          <div class="space-y-3">
+            <div><span class="vm-muted">Task:</span> <strong>{{ item.name }}</strong></div>
+            {% if item.description %}
+              <div><span class="vm-muted">Description:</span> {{ item.description }}</div>
+            {% endif %}
+            <div><span class="vm-muted">Status:</span>
+              <span class="badge badge-sm ml-2 {% if item.is_completed %}badge-success{% else %}badge-warning{% endif %}">
+                {% if item.is_completed %}Completed{% else %}Active{% endif %}
+              </span>
+            </div>
+            {% if item.category %}
+              <div><span class="vm-muted">Category:</span> {{ item.category.name }}</div>
+            {% endif %}
+          </div>
+        {% elif item_type == 'plan' %}
+          <div class="space-y-3">
+            <div><span class="vm-muted">Plan:</span> <strong>{{ item.name }}</strong></div>
+            {% if item.description %}
+              <div><span class="vm-muted">Description:</span> {{ item.description }}</div>
+            {% endif %}
+            <div><span class="vm-muted">Status:</span>
+              <span class="badge badge-sm ml-2 badge-info">{{ item.get_status_display }}</span>
+            </div>
+            {% if item.category %}
+              <div><span class="vm-muted">Category:</span> {{ item.category.name }}</div>
+            {% endif %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Warning -->
+    <div class="alert alert-warning mb-6">
+      <i class="bi bi-info-circle"></i>
+      <div>
+        <h4 class="font-bold">Note</h4>
+        <p>This will only remove the {{ item_type }} from this project. The {{ item_type }} itself will not be deleted and can still be used elsewhere.</p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3">
+      <form method="post" class="flex-1">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-warning w-full">
+          <i class="bi bi-dash-circle mr-2"></i>
+          Remove from Project
+        </button>
+      </form>
+      <a href="{% url 'project_detail' project.pk %}" class="btn btn-ghost">
+        Cancel
+      </a>
+    </div>
+
+  </div>
+</main>
+
+{% endblock %}

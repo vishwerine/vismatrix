@@ -1,0 +1,217 @@
+{% extends 'tracker/base.html' %}
+{% load math_filters %}
+
+{% block title %}Projects - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<style>
+  /* Page-specific polish */
+  .vm-section { border: 1px solid rgb(226 232 240 / 0.85); }
+  .vm-project {
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .vm-project:hover {
+    box-shadow: 0 12px 24px rgb(15 23 42 / 0.08), 0 4px 8px rgb(15 23 42 / 0.04);
+    transform: translateY(-2px);
+  }
+  .vm-project:active {
+    transform: translateY(0);
+    box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
+  }
+  .vm-chip { background: rgb(15 23 42 / 0.04); border: 1px solid rgb(226 232 240 / 0.9); }
+  .vm-muted { color: rgb(15 23 42 / 0.65); }
+
+  /* Status color coding */
+  .status-active {
+    border-left: 4px solid #10b981 !important;
+  }
+  .status-completed {
+    border-left: 4px solid #3b82f6 !important;
+  }
+  .status-paused,
+  .status-on_hold {
+    border-left: 4px solid #f59e0b !important;
+  }
+  .status-cancelled {
+    border-left: 4px solid #ef4444 !important;
+  }
+
+  /* Progress bar styling */
+  .progress-bar {
+    height: 8px;
+    background: rgb(226 232 240 / 0.5);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  /* Priority badges */
+  .badge-priority-high {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+  }
+  .badge-priority-medium {
+    background-color: #fffbeb;
+    color: #d97706;
+    border-color: #fde68a;
+  }
+  .badge-priority-low {
+    background-color: #eff6ff;
+    color: #2563eb;
+    border-color: #bfdbfe;
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .vm-project {
+      margin-bottom: 0.75rem;
+    }
+    .btn-sm {
+      min-height: 2.5rem;
+    }
+  }
+</style>
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
+
+    <!-- Header -->
+    <header class="card vm-section bg-base-100 animate-slideUp" role="banner">
+      <div class="card-body p-5 sm:p-6">
+        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div class="min-w-0">
+            <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content flex items-center gap-2 truncate">
+              <i class="bi bi-kanban text-primary" aria-hidden="true"></i>
+              <span class="gradient-text">Projects</span>
+              {% if projects %}
+                <span class="badge vm-chip text-xs font-bold ml-2 shadow-sm">
+                  {{ projects|length }} total
+                </span>
+              {% endif %}
+            </h1>
+            <p class="text-sm vm-muted mt-1">
+              Organize your work into projects. Track progress, manage resources, and achieve your goals.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <a href="{% url 'project_dashboard' %}" class="btn btn-ghost btn-sm gap-2" aria-label="Project dashboard">
+              <i class="bi bi-speedometer2" aria-hidden="true"></i>
+              <span class="hidden sm:inline">Dashboard</span>
+            </a>
+            <a href="{% url 'project_create' %}" class="btn btn-primary btn-sm gap-2" aria-label="Create a new project">
+              <i class="bi bi-plus-square" aria-hidden="true"></i>
+              <span>New Project</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <div class="card vm-section bg-base-100">
+      <div class="card-body p-4">
+        <div class="flex flex-wrap gap-2 filter-buttons">
+          <a href="?status=all" class="btn btn-sm {% if status_filter == 'all' %}btn-primary{% else %}btn-ghost{% endif %}">
+            All Projects
+          </a>
+          <a href="?status=active" class="btn btn-sm {% if status_filter == 'active' %}btn-primary{% else %}btn-ghost{% endif %}">
+            Active
+          </a>
+          <a href="?status=completed" class="btn btn-sm {% if status_filter == 'completed' %}btn-primary{% else %}btn-ghost{% endif %}">
+            Completed
+          </a>
+          <a href="?status=on_hold" class="btn btn-sm {% if status_filter == 'on_hold' %}btn-primary{% else %}btn-ghost{% endif %}">
+            Paused
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Projects Grid -->
+    {% if projects %}
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for project in projects %}
+          <a href="{% url 'project_detail' project.pk %}" class="vm-project card vm-section bg-base-100 status-{{ project.status }} hover:shadow-xl transition-all duration-300">
+            <div class="card-body p-5">
+              <div class="flex items-start justify-between mb-3">
+                <h3 class="card-title text-lg font-bold text-base-content truncate flex-1">
+                  {{ project.name }}
+                </h3>
+                <div class="badge badge-sm ml-2 {% if project.priority == 'high' %}badge-priority-high{% elif project.priority == 'medium' %}badge-priority-medium{% else %}badge-priority-low{% endif %}">
+                  {{ project.get_priority_display }}
+                </div>
+              </div>
+
+              {% if project.description %}
+                <p class="text-sm vm-muted mb-4 line-clamp-2">
+                  {{ project.description }}
+                </p>
+              {% endif %}
+
+              <!-- Progress -->
+              <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                  <span class="text-sm font-medium">Progress</span>
+                  <span class="text-sm vm-muted">{{ project.progress_percentage|floatformat:0 }}%</span>
+                </div>
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width: {{ project.progress_percentage }}%"></div>
+                </div>
+              </div>
+
+              <!-- Stats -->
+              <div class="flex justify-between text-xs vm-muted mb-3">
+                <span>{{ project.tasks_count }} tasks</span>
+                <span>{{ project.plans_count }} plans</span>
+                <span>{{ project.resources_count }} resources</span>
+              </div>
+
+              <!-- Status and Dates -->
+              <div class="flex justify-between items-center text-xs">
+                <div class="badge badge-sm badge-ghost">
+                  {{ project.get_status_display }}
+                </div>
+                {% if project.due_date %}
+                  <span class="vm-muted">
+                    Due: {{ project.due_date|date:"M j" }}
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </a>
+        {% endfor %}
+      </div>
+    {% else %}
+      <!-- Empty State -->
+      <div class="card vm-section bg-base-100">
+        <div class="card-body text-center py-12">
+          <div class="text-6xl mb-4 opacity-20">
+            <i class="bi bi-kanban"></i>
+          </div>
+          <h3 class="text-xl font-bold text-base-content mb-2">No projects yet</h3>
+          <p class="text-sm vm-muted mb-6">
+            Create your first project to start organizing your work and tracking progress.
+          </p>
+          <a href="{% url 'project_create' %}" class="btn btn-primary">
+            <i class="bi bi-plus-square mr-2"></i>
+            Create Your First Project
+          </a>
+        </div>
+      </div>
+    {% endif %}
+
+  </div>
+</main>
+
+{% endblock %}

@@ -1,0 +1,102 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Add Progress Update - {{ project.name }} - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-base-content mb-2">
+        <i class="bi bi-graph-up text-success mr-2"></i>Add Progress Update
+      </h1>
+      <p class="text-base vm-muted">
+        Update progress for <strong>{{ project.name }}</strong>
+      </p>
+    </div>
+
+    <!-- Current Progress -->
+    <div class="card vm-section bg-base-100 mb-6">
+      <div class="card-body p-6">
+        <h3 class="font-bold mb-4">Current Progress</h3>
+        <div class="flex items-center gap-4">
+          <div class="flex-1">
+            <div class="progress progress-primary h-4">
+              <div class="progress-bar" style="width: {{ project.progress_percentage }}%"></div>
+            </div>
+          </div>
+          <div class="text-2xl font-bold text-primary">{{ project.progress_percentage }}%</div>
+        </div>
+        {% if project.progress_entries.exists %}
+          <p class="text-sm vm-muted mt-2">
+            Last updated: {{ project.progress_entries.first.created_at|date:"M j, Y g:i A" }}
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Progress Form -->
+    <div class="card vm-section bg-base-100">
+      <div class="card-body p-6">
+        <form method="post" class="space-y-6">
+          {% csrf_token %}
+
+          <!-- Progress Percentage -->
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Progress Percentage</span>
+            </label>
+            <div class="flex items-center gap-4">
+              <input type="range" min="0" max="100" value="{{ form.progress_percentage.value|default:project.progress_percentage }}"
+                     class="range range-primary flex-1" id="progress-slider" name="progress_percentage">
+              <div class="text-xl font-bold text-primary w-12 text-center" id="progress-value">
+                {{ form.progress_percentage.value|default:project.progress_percentage }}%
+              </div>
+            </div>
+            {% if form.progress_percentage.errors %}
+              <div class="label">
+                <span class="label-text-alt text-error">{{ form.progress_percentage.errors.0 }}</span>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Notes -->
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Notes (Optional)</span>
+            </label>
+            <textarea class="textarea textarea-bordered h-24" name="notes" placeholder="What progress have you made? Any challenges or next steps?">{{ form.notes.value }}</textarea>
+            {% if form.notes.errors %}
+              <div class="label">
+                <span class="label-text-alt text-error">{{ form.notes.errors.0 }}</span>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Submit -->
+          <div class="flex gap-3 pt-4">
+            <button type="submit" class="btn btn-primary flex-1">
+              <i class="bi bi-check-circle mr-2"></i>
+              Update Progress
+            </button>
+            <a href="{% url 'project_detail' project.pk %}" class="btn btn-ghost">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// Update progress value display when slider changes
+document.getElementById('progress-slider').addEventListener('input', function() {
+  document.getElementById('progress-value').textContent = this.value + '%';
+});
+</script>
+
+{% endblock %}

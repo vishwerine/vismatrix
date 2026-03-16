@@ -1052,6 +1052,7 @@
         </div>
         
         <button class="btn btn-success btn-sm" onclick="newEvent(null, event)" title="Create new event (Alt+N)">➕ New Event</button>
+        <button class="btn btn-secondary btn-sm" onclick="repeatDay(event)" title="Repeat today's events to tomorrow">🔁 Repeat</button>
         <button class="btn btn-primary btn-sm" onclick="autoSchedule(event)" title="Automatically schedule unscheduled tasks (Alt+A)">🤖 Auto Schedule</button>
       </div>
     </div>
@@ -1396,16 +1397,28 @@ async function loadEvents() {
   }
 }
 
+async function saveDayScheduleForDate(date, eventsList) {
+  return fetch('/api/day-schedule/save/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+    body: JSON.stringify({ date, events: eventsList })
+  });
+}
+
 async function saveToServer() {
   try {
-    await fetch('/api/day-schedule/save/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-      body: JSON.stringify({ date: currentDate, events: events.filter(e => !e.isCalendarEvent && !e.isHabit) })
-    });
+    await saveDayScheduleForDate(currentDate, events.filter(e => !e.isCalendarEvent && !e.isHabit));
   } catch (e) {
     console.error('Save failed:', e);
   }
+}
+
+function toggleComplete(id) {
+  const ev = events.find(e => e.id === id);
+  if (!ev) return;
+  ev.complete = !ev.complete;
+  render();
+  saveToServer();
 }
 
 function render() {
@@ -1483,8 +1496,9 @@ function render() {
         <button class="event-btn" onclick="completeHabit('${ev.habitId}', '${ev.id}'); event.stopPropagation();" title="Mark as complete">✅</button>
       `;
     } else if (!ev.isCalendarEvent && !ev.isHabit) {
-      // Show edit/delete for custom events
+      // Show complete + edit/delete for custom events
       actions.innerHTML = `
+        <button class="event-btn" onclick="toggleComplete('${ev.id}'); event.stopPropagation();" title="${ev.complete ? 'Mark as incomplete' : 'Mark complete'}">${ev.complete ? '↩️' : '✅'}</button>
         <button class="event-btn" onclick="editEvent('${ev.id}'); event.stopPropagation();" title="Edit">✏️</button>
         <button class="event-btn" onclick="quickDelete('${ev.id}'); event.stopPropagation();" title="Delete">🗑️</button>
       `;
@@ -1702,7 +1716,8 @@ function saveEvent() {
       startMin,
       endMin,
       description: document.getElementById('eventDescription').value,
-      logged: false
+      logged: false,
+      complete: false
     });
   }
   
@@ -1770,6 +1785,53 @@ async function autoSchedule(evt = null) {
   }
   
   document.getElementById('autoScheduleModal').classList.add('active');
+}
+
+async function repeatDay(evt = null) {
+  // Add pulse animation to button that was clicked
+  if (evt?.currentTarget) {
+    evt.currentTarget.classList.add('btn-animate');
+    setTimeout(() => evt.currentTarget.classList.remove('btn-animate'), 600);
+  }
+
+  const current = new Date(currentDate);
+  const next = new Date(current);
+  next.setDate(current.getDate() + 1);
+  const nextDate = next.toISOString().split('T')[0];
+
+  const eventsToRepeat = events
+    .filter(e => !e.isCalendarEvent && !e.isHabit)
+    .map(e => ({
+      ...e,
+      id: 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2),
+      complete: false,
+      logged: false
+    }));
+
+  if (eventsToRepeat.length === 0) {
+    showResult('Info', 'No custom events to repeat.', true);
+    return;
+  }
+
+  try {
+    // Fetch existing schedule for the next day so we can merge without overwriting existing events
+    const existingRes = await fetch(`/api/day-schedule/${nextDate}/`, {
+      headers: { 'X-CSRFToken': CSRF_TOKEN }
+    });
+    const existingData = await existingRes.json();
+
+    const existingEvents = (existingData.success && Array.isArray(existingData.events))
+      ? existingData.events.filter(e => !e.isCalendarEvent && !e.isHabit)
+      : [];
+
+    const mergedEvents = [...existingEvents, ...eventsToRepeat];
+
+    await saveDayScheduleForDate(nextDate, mergedEvents);
+    showResult('✅ Repeated', `Copied ${eventsToRepeat.length} event${eventsToRepeat.length !== 1 ? 's' : ''} to ${nextDate}.`, true);
+  } catch (error) {
+    console.error('Repeat day error:', error);
+    showResult('❌ Error', 'Failed to repeat events. Please try again.', false);
+  }
 }
 
 function closeAutoScheduleModal() {

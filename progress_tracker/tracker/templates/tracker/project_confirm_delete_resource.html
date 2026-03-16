@@ -1,0 +1,78 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Delete Resource - {{ project.name }} - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-base-content mb-2">
+        <i class="bi bi-trash text-error mr-2"></i>Delete Resource
+      </h1>
+      <p class="text-base vm-muted">
+        Permanently delete this resource from <strong>{{ project.name }}</strong>
+      </p>
+    </div>
+
+    <!-- Resource Details -->
+    <div class="card vm-section bg-base-100 mb-6">
+      <div class="card-body p-6">
+        <h3 class="font-bold mb-4">Resource Details</h3>
+
+        <div class="space-y-3">
+          <div><span class="vm-muted">Title:</span> <strong>{{ resource.title }}</strong></div>
+          {% if resource.description %}
+            <div><span class="vm-muted">Description:</span> {{ resource.description }}</div>
+          {% endif %}
+          <div><span class="vm-muted">Type:</span>
+            <span class="badge badge-sm ml-2 badge-info">{{ resource.get_resource_type_display }}</span>
+          </div>
+          {% if resource.url %}
+            <div><span class="vm-muted">URL:</span>
+              <a href="{{ resource.url }}" target="_blank" class="link link-primary">{{ resource.url }}</a>
+            </div>
+          {% endif %}
+          {% if resource.tags_list %}
+            <div><span class="vm-muted">Tags:</span>
+              <div class="flex flex-wrap gap-1 mt-1">
+                {% for tag in resource.tags_list %}
+                  <span class="badge badge-outline badge-sm">{{ tag }}</span>
+                {% endfor %}
+              </div>
+            </div>
+          {% endif %}
+          <div><span class="vm-muted">Created:</span> {{ resource.created_at|date:"M j, Y g:i A" }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Warning -->
+    <div class="alert alert-error mb-6">
+      <i class="bi bi-exclamation-triangle"></i>
+      <div>
+        <h4 class="font-bold">Warning</h4>
+        <p>This action cannot be undone. This will permanently delete the resource and remove it from our servers.</p>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3">
+      <form method="post" class="flex-1">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-error w-full">
+          <i class="bi bi-trash mr-2"></i>
+          Delete Resource
+        </button>
+      </form>
+      <a href="{% url 'project_detail' project.pk %}" class="btn btn-ghost">
+        Cancel
+      </a>
+    </div>
+
+  </div>
+</main>
+
+{% endblock %}

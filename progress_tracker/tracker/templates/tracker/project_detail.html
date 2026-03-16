@@ -1,0 +1,421 @@
+{% extends 'tracker/base.html' %}
+{% load math_filters %}
+
+{% block title %}{{ project.name }} - Projects - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<style>
+  /* Page-specific polish */
+  .vm-section { border: 1px solid rgb(226 232 240 / 0.85); }
+  .vm-card {
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .vm-card:hover {
+    box-shadow: 0 8px 16px rgb(15 23 42 / 0.06);
+  }
+  .vm-muted { color: rgb(15 23 42 / 0.65); }
+
+  /* Progress bar styling */
+  .progress-bar {
+    height: 12px;
+    background: rgb(226 232 240 / 0.5);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--accent)));
+    border-radius: 6px;
+    transition: width 0.3s ease;
+  }
+
+  /* Status badges */
+  .badge-status-active {
+    background-color: #dcfce7;
+    color: #166534;
+    border-color: #bbf7d0;
+  }
+  .badge-status-completed {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border-color: #bfdbfe;
+  }
+  .badge-status-paused,
+  .badge-status-on_hold {
+    background-color: #fef3c7;
+    color: #92400e;
+    border-color: #fde68a;
+  }
+  .badge-status-cancelled {
+    background-color: #fef2f2;
+    color: #dc2626;
+    border-color: #fecaca;
+  }
+
+  /* Task/Plan/Resource cards */
+  .item-card {
+    transition: all 0.2s ease;
+    cursor: pointer;
+  }
+  .item-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgb(15 23 42 / 0.08);
+  }
+
+  /* Tab styling */
+  .tab-active {
+    background-color: hsl(var(--primary));
+    color: hsl(var(--primary-content));
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) {
+    .project-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+    .stats-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+</style>
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
+
+    <!-- Project Header -->
+    <header class="card vm-section bg-base-100">
+      <div class="card-body p-6">
+        <div class="flex project-header items-start justify-between">
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 mb-2">
+              <h1 class="text-2xl sm:text-3xl font-extrabold text-base-content truncate">
+                {{ project.name }}
+              </h1>
+              <div class="badge badge-sm badge-ghost badge-status-{{ project.status }}">
+                {{ project.get_status_display }}
+              </div>
+              <div class="badge badge-sm {% if project.priority == 'high' %}badge-error{% elif project.priority == 'medium' %}badge-warning{% else %}badge-info{% endif %}">
+                {{ project.get_priority_display }}
+              </div>
+            </div>
+
+            {% if project.description %}
+              <p class="text-base vm-muted mb-4">
+                {{ project.description }}
+              </p>
+            {% endif %}
+
+            <!-- Progress -->
+            <div class="mb-4">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-sm font-medium">Overall Progress</span>
+                <span class="text-sm vm-muted">{{ project.progress_percentage|floatformat:0 }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: {{ project.progress_percentage }}%"></div>
+              </div>
+            </div>
+
+            <!-- Meta Info -->
+            <div class="flex flex-wrap gap-4 text-sm vm-muted">
+              {% if project.start_date %}
+                <span><i class="bi bi-calendar-event mr-1"></i>Started: {{ project.start_date|date:"M j, Y" }}</span>
+              {% endif %}
+              {% if project.due_date %}
+                <span><i class="bi bi-calendar-x mr-1"></i>Due: {{ project.due_date|date:"M j, Y" }}</span>
+              {% endif %}
+              {% if project.tags %}
+                <span><i class="bi bi-tags mr-1"></i>{{ project.tags }}</span>
+              {% endif %}
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex flex-wrap items-center gap-2">
+            <a href="{% url 'project_add_task' project.pk %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-list-check mr-1"></i>
+              Add Task
+            </a>
+            <a href="{% url 'project_add_plan' project.pk %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-diagram-3 mr-1"></i>
+              Add Plan
+            </a>
+            <a href="{% url 'project_update' project.pk %}" class="btn btn-ghost btn-sm">
+              <i class="bi bi-pencil"></i>
+              Edit
+            </a>
+            <a href="{% url 'project_delete' project.pk %}" class="btn btn-ghost btn-sm text-error">
+              <i class="bi bi-trash"></i>
+              Delete
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 stats-grid">
+      <div class="card vm-section bg-base-100 vm-card">
+        <div class="card-body p-4 text-center">
+          <div class="text-2xl font-bold text-primary mb-1">{{ project.tasks_count }}</div>
+          <div class="text-sm vm-muted">Tasks</div>
+        </div>
+      </div>
+      <div class="card vm-section bg-base-100 vm-card">
+        <div class="card-body p-4 text-center">
+          <div class="text-2xl font-bold text-secondary mb-1">{{ project.plans_count }}</div>
+          <div class="text-sm vm-muted">Plans</div>
+        </div>
+      </div>
+      <div class="card vm-section bg-base-100 vm-card">
+        <div class="card-body p-4 text-center">
+          <div class="text-2xl font-bold text-accent mb-1">{{ project.resources_count }}</div>
+          <div class="text-sm vm-muted">Resources</div>
+        </div>
+      </div>
+      <div class="card vm-section bg-base-100 vm-card">
+        <div class="card-body p-4 text-center">
+          <div class="text-2xl font-bold text-info mb-1">{{ project.progress_entries_count }}</div>
+          <div class="text-sm vm-muted">Progress Updates</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="card vm-section bg-base-100">
+      <div class="card-body p-0">
+        <div class="tabs tabs-bordered">
+          <a href="#tasks" class="tab tab-lg tab-active" onclick="showTab('tasks', this)">
+            <i class="bi bi-list-check mr-2"></i>Tasks ({{ project.tasks_count }})
+          </a>
+          <a href="#plans" class="tab tab-lg" onclick="showTab('plans', this)">
+            <i class="bi bi-diagram-3 mr-2"></i>Plans ({{ project.plans_count }})
+          </a>
+          <a href="#resources" class="tab tab-lg" onclick="showTab('resources', this)">
+            <i class="bi bi-link-45deg mr-2"></i>Resources ({{ project.resources_count }})
+          </a>
+          <a href="#progress" class="tab tab-lg" onclick="showTab('progress', this)">
+            <i class="bi bi-graph-up mr-2"></i>Progress ({{ project.progress_entries_count }})
+          </a>
+        </div>
+
+        <!-- Tasks Tab -->
+        <div id="tasks-tab" class="tab-content p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">Project Tasks</h3>
+            <a href="{% url 'project_add_task' project.pk %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-plus"></i> Add Task
+            </a>
+          </div>
+
+          {% if project.project_tasks.all %}
+            <div class="space-y-3">
+              {% for project_task in project.project_tasks.all %}
+                <div class="card vm-section bg-base-100 item-card">
+                  <div class="card-body p-4">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <input type="checkbox" class="checkbox checkbox-primary"
+                               {% if project_task.task.is_completed %}checked{% endif %} disabled>
+                        <div>
+                          <h4 class="font-medium">{{ project_task.task.name }}</h4>
+                          {% if project_task.task.description %}
+                            <p class="text-sm vm-muted">{{ project_task.task.description }}</p>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <a href="{% url 'project_remove_task' project.pk project_task.task.pk %}"
+                         class="btn btn-ghost btn-xs text-error"
+                         onclick="return confirm('Remove this task from the project?')">
+                        <i class="bi bi-x"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-8">
+              <i class="bi bi-list-check text-4xl opacity-20 mb-4"></i>
+              <p class="vm-muted">No tasks added to this project yet.</p>
+              <a href="{% url 'project_add_task' project.pk %}" class="btn btn-primary btn-sm mt-2">
+                Add Your First Task
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Plans Tab -->
+        <div id="plans-tab" class="tab-content p-6 hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">Project Plans</h3>
+            <a href="{% url 'project_add_plan' project.pk %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-plus"></i> Add Plan
+            </a>
+          </div>
+
+          {% if project.project_plans.all %}
+            <div class="space-y-3">
+              {% for project_plan in project.project_plans.all %}
+                <div class="card vm-section bg-base-100 item-card">
+                  <div class="card-body p-4">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-3">
+                        <i class="bi bi-diagram-3 text-primary"></i>
+                        <div>
+                          <h4 class="font-medium">{{ project_plan.plan.name }}</h4>
+                          {% if project_plan.plan.description %}
+                            <p class="text-sm vm-muted">{{ project_plan.plan.description }}</p>
+                          {% endif %}
+                        </div>
+                      </div>
+                      <a href="{% url 'project_remove_plan' project.pk project_plan.plan.pk %}"
+                         class="btn btn-ghost btn-xs text-error"
+                         onclick="return confirm('Remove this plan from the project?')">
+                        <i class="bi bi-x"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-8">
+              <i class="bi bi-diagram-3 text-4xl opacity-20 mb-4"></i>
+              <p class="vm-muted">No plans added to this project yet.</p>
+              <a href="{% url 'project_add_plan' project.pk %}" class="btn btn-primary btn-sm mt-2">
+                Add Your First Plan
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Resources Tab -->
+        <div id="resources-tab" class="tab-content p-6 hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">Project Resources</h3>
+            <a href="{% url 'project_add_resource' project.pk %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-plus"></i> Add Resource
+            </a>
+          </div>
+
+          {% if project.resources.all %}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {% for resource in project.resources.all %}
+                <div class="card vm-section bg-base-100 item-card">
+                  <div class="card-body p-4">
+                    <div class="flex items-start justify-between">
+                      <div class="flex-1">
+                        <h4 class="font-medium mb-1">{{ resource.title }}</h4>
+                        {% if resource.description %}
+                          <p class="text-sm vm-muted mb-2">{{ resource.description }}</p>
+                        {% endif %}
+                        <a href="{{ resource.url }}" target="_blank" class="text-primary text-sm hover:underline">
+                          {{ resource.url|truncatechars:50 }}
+                        </a>
+                      </div>
+                      <div class="flex gap-1">
+                        <a href="{% url 'project_update_resource' project.pk resource.pk %}" class="btn btn-ghost btn-xs">
+                          <i class="bi bi-pencil"></i>
+                        </a>
+                        <a href="{% url 'project_delete_resource' project.pk resource.pk %}"
+                           class="btn btn-ghost btn-xs text-error"
+                           onclick="return confirm('Delete this resource?')">
+                          <i class="bi bi-trash"></i>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-8">
+              <i class="bi bi-link-45deg text-4xl opacity-20 mb-4"></i>
+              <p class="vm-muted">No resources added to this project yet.</p>
+              <a href="{% url 'project_add_resource' project.pk %}" class="btn btn-primary btn-sm mt-2">
+                Add Your First Resource
+              </a>
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Progress Tab -->
+        <div id="progress-tab" class="tab-content p-6 hidden">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold">Progress History</h3>
+            <a href="{% url 'project_add_progress' project.pk %}" class="btn btn-primary btn-sm">
+              <i class="bi bi-plus"></i> Add Progress
+            </a>
+          </div>
+
+          {% if project.progress_entries.all %}
+            <div class="space-y-4">
+              {% for progress in project.progress_entries.all %}
+                <div class="card vm-section bg-base-100">
+                  <div class="card-body p-4">
+                    <div class="flex justify-between items-start mb-2">
+                      <div class="badge badge-sm badge-primary">{{ progress.percentage }}% Complete</div>
+                      <span class="text-sm vm-muted">{{ progress.created_at|date:"M j, Y g:i A" }}</span>
+                    </div>
+                    {% if progress.notes %}
+                      <p class="text-sm">{{ progress.notes }}</p>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <div class="text-center py-8">
+              <i class="bi bi-graph-up text-4xl opacity-20 mb-4"></i>
+              <p class="vm-muted">No progress updates yet.</p>
+              <a href="{% url 'project_add_progress' project.pk %}" class="btn btn-primary btn-sm mt-2">
+                Add Your First Progress Update
+              </a>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function showTab(tabName, clickedTab) {
+  // Hide all tabs
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    tab.classList.add('hidden');
+  });
+
+  // Remove active class from all tab buttons
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.remove('tab-active');
+  });
+
+  // Show selected tab
+  const activeTab = document.getElementById(tabName + '-tab');
+  if (activeTab) {
+    activeTab.classList.remove('hidden');
+  }
+
+  // Add active class to clicked tab (if provided)
+  if (clickedTab) {
+    clickedTab.classList.add('tab-active');
+  }
+}
+
+// Initialize default tab
+document.addEventListener('DOMContentLoaded', function() {
+  const defaultTab = document.querySelector('.tab.tab-active');
+  if (defaultTab) {
+    const tabName = defaultTab.getAttribute('href').replace('#', '');
+    showTab(tabName, defaultTab);
+  }
+});
+</script>
+
+{% endblock %}

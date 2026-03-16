@@ -1,0 +1,320 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Add {{ item_type|title }} to {{ project.name }} - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<style>
+  /* Form styling */
+  .vm-section { border: 1px solid rgb(226 232 240 / 0.85); }
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  .form-label {
+    display: block;
+    font-weight: 600;
+    color: hsl(var(--text));
+    margin-bottom: 0.5rem;
+  }
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    background-color: hsl(var(--surface));
+    color: hsl(var(--text));
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  }
+  .form-textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  .form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.5rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+  }
+  .form-error {
+    color: hsl(var(--error));
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  .form-help {
+    color: hsl(var(--muted));
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+
+  /* Item cards for selection */
+  .item-card {
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: hsl(var(--surface));
+  }
+  .item-card:hover {
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary) / 0.05);
+    transform: translateY(-1px);
+  }
+  .item-card.selected {
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary) / 0.1);
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  }
+  .item-checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+  }
+
+  /* Progress slider */
+  .progress-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 4px;
+    background: hsl(var(--border));
+    outline: none;
+  }
+  .progress-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    cursor: pointer;
+    border: 2px solid hsl(var(--surface));
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+  .progress-slider::-moz-range-thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: hsl(var(--primary));
+    cursor: pointer;
+    border: 2px solid hsl(var(--surface));
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  }
+</style>
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-base-content mb-2">
+        {% if item_type == 'task' %}
+          <i class="bi bi-list-check text-primary mr-2"></i>Add Task to Project
+        {% elif item_type == 'plan' %}
+          <i class="bi bi-diagram-3 text-primary mr-2"></i>Add Plan to Project
+        {% elif item_type == 'resource' %}
+          <i class="bi bi-link-45deg text-primary mr-2"></i>Add Resource to Project
+        {% else %}
+          <i class="bi bi-graph-up text-primary mr-2"></i>Add Progress Update
+        {% endif %}
+      </h1>
+      <p class="text-base vm-muted">
+        Add a {{ item_type }} to <strong>{{ project.name }}</strong>
+      </p>
+    </div>
+
+    <!-- Form -->
+    <div class="card vm-section bg-base-100">
+      <div class="card-body p-6">
+        <form method="post" class="space-y-6">
+          {% csrf_token %}
+
+          {% if item_type == 'task' %}
+            <!-- Task Selection -->
+            <div class="form-group">
+              <label class="form-label">Select Tasks to Add *</label>
+              <div class="space-y-3 max-h-96 overflow-y-auto">
+                {% for task in available_tasks %}
+                  <div class="item-card" onclick="toggleTaskSelection({{ task.pk }})">
+                    <div class="flex items-center gap-3">
+                      <input type="checkbox" id="task-{{ task.pk }}" name="selected_tasks" value="{{ task.pk }}"
+                             class="item-checkbox checkbox checkbox-primary">
+                      <div class="flex-1">
+                        <div class="font-medium">{{ task.name }}</div>
+                        {% if task.description %}
+                          <div class="text-sm vm-muted">{{ task.description|truncatechars:100 }}</div>
+                        {% endif %}
+                        <div class="flex items-center gap-2 mt-1">
+                          {% if task.category %}
+                            <span class="badge badge-xs badge-ghost">{{ task.category.name }}</span>
+                          {% endif %}
+                          {% if task.is_completed %}
+                            <span class="badge badge-xs badge-success">Completed</span>
+                          {% else %}
+                            <span class="badge badge-xs badge-warning">Active</span>
+                          {% endif %}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              {% if not available_tasks %}
+                <div class="text-center py-8">
+                  <i class="bi bi-info-circle text-4xl opacity-20 mb-4"></i>
+                  <p class="vm-muted">No available tasks to add. <a href="{% url 'task_create' %}" class="text-primary">Create a new task</a> first.</p>
+                </div>
+              {% endif %}
+            </div>
+
+          {% elif item_type == 'plan' %}
+            <!-- Plan Selection -->
+            <div class="form-group">
+              <label class="form-label">Select Plans to Add *</label>
+              <div class="space-y-3 max-h-96 overflow-y-auto">
+                {% for plan in available_plans %}
+                  <div class="item-card" onclick="togglePlanSelection({{ plan.pk }})">
+                    <div class="flex items-center gap-3">
+                      <input type="checkbox" id="plan-{{ plan.pk }}" name="selected_plans" value="{{ plan.pk }}"
+                             class="item-checkbox checkbox checkbox-primary">
+                      <div class="flex-1">
+                        <div class="font-medium">{{ plan.name }}</div>
+                        {% if plan.description %}
+                          <div class="text-sm vm-muted">{{ plan.description|truncatechars:100 }}</div>
+                        {% endif %}
+                        <div class="flex items-center gap-2 mt-1">
+                          {% if plan.category %}
+                            <span class="badge badge-xs badge-ghost">{{ plan.category.name }}</span>
+                          {% endif %}
+                          <span class="badge badge-xs badge-info">{{ plan.get_status_display }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              {% if not available_plans %}
+                <div class="text-center py-8">
+                  <i class="bi bi-info-circle text-4xl opacity-20 mb-4"></i>
+                  <p class="vm-muted">No available plans to add. <a href="{% url 'plan_create' %}" class="text-primary">Create a new plan</a> first.</p>
+                </div>
+              {% endif %}
+            </div>
+
+          {% elif item_type == 'resource' %}
+            <!-- Resource Form -->
+            <div class="form-group">
+              <label for="id_title" class="form-label">Resource Title *</label>
+              <input type="text" name="title" id="id_title" class="form-input" placeholder="e.g., Documentation, Tutorial, Tool" required>
+            </div>
+
+            <div class="form-group">
+              <label for="id_url" class="form-label">URL *</label>
+              <input type="url" name="url" id="id_url" class="form-input" placeholder="https://example.com" required>
+              <div class="form-help">Link to the resource (documentation, tutorial, tool, etc.)</div>
+            </div>
+
+            <div class="form-group">
+              <label for="id_description" class="form-label">Description</label>
+              <textarea name="description" id="id_description" class="form-input form-textarea"
+                        placeholder="Brief description of this resource"></textarea>
+            </div>
+
+          {% else %}
+            <!-- Progress Form -->
+            <div class="form-group">
+              <label for="id_percentage" class="form-label">Progress Percentage *</label>
+              <div class="flex items-center gap-4">
+                <input type="range" name="percentage" id="id_percentage" class="progress-slider" min="0" max="100" value="50">
+                <span class="font-bold text-lg" id="percentageDisplay">50%</span>
+              </div>
+              <div class="form-help">Drag the slider to indicate current project completion</div>
+            </div>
+
+            <div class="form-group">
+              <label for="id_notes" class="form-label">Progress Notes</label>
+              <textarea name="notes" id="id_notes" class="form-input form-textarea"
+                        placeholder="Describe what you've accomplished, current status, next steps, etc."></textarea>
+              <div class="form-help">Optional: Add details about your progress update</div>
+            </div>
+          {% endif %}
+
+          <!-- Actions -->
+          <div class="flex gap-3 pt-4">
+            <button type="submit" class="btn btn-primary flex-1">
+              <i class="bi bi-plus-lg mr-2"></i>
+              {% if item_type == 'task' %}Add Selected Tasks{% elif item_type == 'plan' %}Add Selected Plans{% else %}Add {{ item_type|title }}{% endif %}
+            </button>
+            <a href="{% url 'project_detail' project.pk %}" class="btn btn-ghost">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// Progress slider functionality
+{% if item_type == 'progress' %}
+const slider = document.getElementById('id_percentage');
+const display = document.getElementById('percentageDisplay');
+
+slider.addEventListener('input', function() {
+  display.textContent = this.value + '%';
+});
+{% endif %}
+
+// Task/Plan selection functionality
+function toggleTaskSelection(taskId) {
+  const checkbox = document.getElementById('task-' + taskId);
+  const card = checkbox.closest('.item-card');
+
+  checkbox.checked = !checkbox.checked;
+
+  if (checkbox.checked) {
+    card.classList.add('selected');
+  } else {
+    card.classList.remove('selected');
+  }
+}
+
+function togglePlanSelection(planId) {
+  const checkbox = document.getElementById('plan-' + planId);
+  const card = checkbox.closest('.item-card');
+
+  checkbox.checked = !checkbox.checked;
+
+  if (checkbox.checked) {
+    card.classList.add('selected');
+  } else {
+    card.classList.remove('selected');
+  }
+}
+
+// Make cards clickable for checkboxes
+document.querySelectorAll('.item-card').forEach(card => {
+  card.addEventListener('click', function(e) {
+    // Don't trigger if clicking on checkbox itself
+    if (e.target.type !== 'checkbox') {
+      const checkbox = this.querySelector('input[type="checkbox"]');
+      if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        this.classList.toggle('selected', checkbox.checked);
+      }
+    }
+  });
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,394 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}{% if form.instance.pk %}Edit{% else %}Create{% endif %} Project - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<style>
+  /* Form styling */
+  .vm-section { border: 1px solid rgb(226 232 240 / 0.85); }
+  .form-group {
+    margin-bottom: 1.5rem;
+  }
+  .form-label {
+    display: block;
+    font-weight: 600;
+    color: hsl(var(--text));
+    margin-bottom: 0.5rem;
+  }
+  .form-input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    background-color: hsl(var(--surface));
+    color: hsl(var(--text));
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: hsl(var(--primary));
+    box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1);
+  }
+  .form-textarea {
+    min-height: 100px;
+    resize: vertical;
+  }
+  .form-error {
+    color: hsl(var(--error));
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+  .form-help {
+    color: hsl(var(--muted));
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+  }
+
+  /* Tag input styling */
+  .tag-input-container {
+    position: relative;
+  }
+  .tag-display {
+    min-height: 2.5rem;
+    padding: 0.5rem;
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    background-color: hsl(var(--surface));
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+  }
+  .tag-chip {
+    background-color: hsl(var(--primary) / 0.1);
+    color: hsl(var(--primary));
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .tag-remove {
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+  }
+  .tag-remove:hover {
+    opacity: 1;
+  }
+  .tag-input-field {
+    border: none;
+    outline: none;
+    background: transparent;
+    flex: 1;
+    min-width: 100px;
+    color: hsl(var(--text));
+  }
+
+  /* Priority and status styling */
+  .option-card {
+    border: 2px solid hsl(var(--border));
+    border-radius: 0.5rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+  .option-card:hover {
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary) / 0.05);
+  }
+  .option-card.selected {
+    border-color: hsl(var(--primary));
+    background-color: hsl(var(--primary) / 0.1);
+  }
+  .option-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+  .option-label {
+    font-weight: 600;
+    font-size: 0.875rem;
+  }
+</style>
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-base-content mb-2">
+        {% if form.instance.pk %}
+          <i class="bi bi-pencil-square text-primary mr-2"></i>Edit Project
+        {% else %}
+          <i class="bi bi-plus-square text-primary mr-2"></i>Create New Project
+        {% endif %}
+      </h1>
+      <p class="text-base vm-muted">
+        {% if form.instance.pk %}
+          Update your project details and settings.
+        {% else %}
+          Start organizing your work with a new project.
+        {% endif %}
+      </p>
+    </div>
+
+    <!-- Form -->
+    <div class="card vm-section bg-base-100">
+      <div class="card-body p-6">
+        <form method="post" class="space-y-6">
+          {% csrf_token %}
+
+          {% if form.non_field_errors %}
+            <div class="alert alert-error">
+              <div>
+                <i class="bi bi-exclamation-triangle"></i>
+                <span>{{ form.non_field_errors|join:" " }}</span>
+              </div>
+            </div>
+          {% endif %}
+
+          <!-- Name -->
+          <div class="form-group">
+            <label for="{{ form.title.id_for_label }}" class="form-label">
+              Project Name *
+            </label>
+            <input type="text" name="{{ form.title.name }}" value="{{ form.title.value|default:'' }}"
+                   class="form-input" placeholder="Enter project name" required>
+            {% if form.title.errors %}
+              <div class="form-error">{{ form.title.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Description -->
+          <div class="form-group">
+            <label for="{{ form.description.id_for_label }}" class="form-label">
+              Description
+            </label>
+            <textarea name="{{ form.description.name }}" class="form-input form-textarea"
+                      placeholder="Describe your project goals and scope">{{ form.description.value|default:'' }}</textarea>
+            {% if form.description.errors %}
+              <div class="form-error">{{ form.description.errors.0 }}</div>
+            {% endif %}
+            <div class="form-help">Optional: Provide context about what this project aims to achieve.</div>
+          </div>
+
+          <!-- Priority -->
+          <div class="form-group">
+            <label class="form-label">Priority Level *</label>
+            <div class="grid grid-cols-3 gap-3">
+              <div class="option-card {% if form.priority.value == 'low' %}selected{% endif %}"
+                   onclick="selectOption('priority', 'low')">
+                <div class="option-icon text-info">🔵</div>
+                <div class="option-label">Low</div>
+                <input type="radio" name="{{ form.priority.name }}" value="low"
+                       {% if form.priority.value == 'low' %}checked{% endif %} class="hidden">
+              </div>
+              <div class="option-card {% if form.priority.value == 'medium' %}selected{% endif %}"
+                   onclick="selectOption('priority', 'medium')">
+                <div class="option-icon text-warning">🟡</div>
+                <div class="option-label">Medium</div>
+                <input type="radio" name="{{ form.priority.name }}" value="medium"
+                       {% if form.priority.value == 'medium' %}checked{% endif %} class="hidden">
+              </div>
+              <div class="option-card {% if form.priority.value == 'high' %}selected{% endif %}"
+                   onclick="selectOption('priority', 'high')">
+                <div class="option-icon text-error">🔴</div>
+                <div class="option-label">High</div>
+                <input type="radio" name="{{ form.priority.name }}" value="high"
+                       {% if form.priority.value == 'high' %}checked{% endif %} class="hidden">
+              </div>
+            </div>
+            {% if form.priority.errors %}
+              <div class="form-error">{{ form.priority.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Status -->
+          <div class="form-group">
+            <label class="form-label">Status *</label>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="option-card {% if form.status.value == 'active' %}selected{% endif %}"
+                   onclick="selectOption('status', 'active', this)">
+                <div class="option-icon text-success">▶️</div>
+                <div class="option-label">Active</div>
+                <input type="radio" name="{{ form.status.name }}" value="active"
+                       {% if form.status.value == 'active' %}checked{% endif %} class="hidden">
+              </div>
+              <div class="option-card {% if form.status.value == 'on_hold' %}selected{% endif %}"
+                   onclick="selectOption('status', 'on_hold', this)">
+                <div class="option-icon text-warning">⏸️</div>
+                <div class="option-label">Paused</div>
+                <input type="radio" name="{{ form.status.name }}" value="on_hold"
+                       {% if form.status.value == 'on_hold' %}checked{% endif %} class="hidden">
+              </div>
+            </div>
+            {% if form.status.errors %}
+              <div class="form-error">{{ form.status.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+            <div class="form-group">
+              <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                Start Date
+              </label>
+              <input type="date" name="{{ form.start_date.name }}" value="{% if form.start_date.value %}{{ form.start_date.value|date:'Y-m-d' }}{% endif %}"
+                     class="form-input">
+              {% if form.start_date.errors %}
+                <div class="form-error">{{ form.start_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+            <div class="form-group">
+              <label for="{{ form.due_date.id_for_label }}" class="form-label">
+                Due Date
+              </label>
+              <input type="date" name="{{ form.due_date.name }}" value="{% if form.due_date.value %}{{ form.due_date.value|date:'Y-m-d' }}{% endif %}"
+                     class="form-input">
+              {% if form.due_date.errors %}
+                <div class="form-error">{{ form.due_date.errors.0 }}</div>
+              {% endif %}
+            </div>
+
+          <!-- Tags -->
+          <div class="form-group">
+            <label class="form-label">Tags</label>
+            <div class="tag-input-container">
+              <div class="tag-display" id="tagDisplay">
+                {% for tag in form.instance.tags_list %}
+                  <span class="tag-chip">
+                    {{ tag }}
+                    <span class="tag-remove" onclick="removeTag('{{ tag }}')">×</span>
+                  </span>
+                {% endfor %}
+                <input type="text" class="tag-input-field" id="tagInput"
+                       placeholder="Add tags (press Enter or comma to add)">
+              </div>
+              <input type="hidden" name="{{ form.tags.name }}" value="{{ form.tags.value|default:'' }}" id="tagsField">
+            </div>
+            {% if form.tags.errors %}
+              <div class="form-error">{{ form.tags.errors.0 }}</div>
+            {% endif %}
+            <div class="form-help">Optional: Add tags to categorize your project (e.g., work, personal, urgent).</div>
+          </div>
+
+          <!-- Category -->
+          <div class="form-group">
+            <label for="{{ form.category.id_for_label }}" class="form-label">
+              Category
+            </label>
+            <select name="{{ form.category.name }}" class="form-input">
+              <option value="">Select a category (optional)</option>
+              {% for category in form.fields.category.queryset %}
+                <option value="{{ category.pk }}"
+                        {% if form.category.value == category.pk %}selected{% endif %}>
+                  {{ category.name }}
+                </option>
+              {% endfor %}
+            </select>
+            {% if form.category.errors %}
+              <div class="form-error">{{ form.category.errors.0 }}</div>
+            {% endif %}
+          </div>
+
+          <!-- Actions -->
+          <div class="flex gap-3 pt-4">
+            <button type="submit" class="btn btn-primary flex-1">
+              <i class="bi bi-check-lg mr-2"></i>
+              {% if form.instance.pk %}Update Project{% else %}Create Project{% endif %}
+            </button>
+            <a href="{% url 'project_list' %}" class="btn btn-ghost">
+              Cancel
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+function selectOption(fieldName, value, element) {
+  // Update radio button
+  const radios = document.querySelectorAll(`input[name="${fieldName}"]`);
+  radios.forEach(radio => {
+    radio.checked = radio.value === value;
+  });
+
+  // Update visual selection
+  const cards = document.querySelectorAll(`[onclick*="selectOption('${fieldName}'"]`);
+  cards.forEach(card => {
+    card.classList.remove('selected');
+  });
+  if (element) {
+    element.classList.add('selected');
+  }
+}
+
+// Tag functionality
+let tags = {{ form.instance.tags_list|default:"[]"|safe }};
+
+function updateTagsDisplay() {
+  const display = document.getElementById('tagDisplay');
+  const hiddenField = document.getElementById('tagsField');
+
+  // Clear existing tags except input
+  const input = document.getElementById('tagInput');
+  display.innerHTML = '';
+
+  // Add existing tags
+  tags.forEach(tag => {
+    const tagElement = document.createElement('span');
+    tagElement.className = 'tag-chip';
+    tagElement.innerHTML = `${tag} <span class="tag-remove" onclick="removeTag('${tag}')">×</span>`;
+    display.appendChild(tagElement);
+  });
+
+  // Add input back
+  display.appendChild(input);
+  input.focus();
+
+  // Update hidden field
+  hiddenField.value = tags.join(',');
+}
+
+function addTag(tag) {
+  tag = tag.trim().toLowerCase();
+  if (tag && !tags.includes(tag)) {
+    tags.push(tag);
+    updateTagsDisplay();
+  }
+  document.getElementById('tagInput').value = '';
+}
+
+function removeTag(tag) {
+  tags = tags.filter(t => t !== tag);
+  updateTagsDisplay();
+}
+
+// Tag input event listeners
+document.getElementById('tagInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    const value = this.value.replace(',', '').trim();
+    if (value) {
+      addTag(value);
+    }
+  }
+});
+
+document.getElementById('tagInput').addEventListener('blur', function() {
+  const value = this.value.trim();
+  if (value) {
+    addTag(value);
+  }
+});
+
+// Initialize tags display
+updateTagsDisplay();
+</script>
+
+{% endblock %}

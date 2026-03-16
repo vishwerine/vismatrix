@@ -10,8 +10,8 @@ from django.views.decorators.cache import cache_page
 from django.core.cache import cache
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta, date
-from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule, UserProfile, Habit, HabitCompletion, UserActivity
-from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm, UserProfileForm
+from .models import Task, DailyLog, Category, DailySummary, FriendRequest, Friendship, ActivityReaction, Plan, PlanNode, DaySchedule, UserProfile, Habit, HabitCompletion, UserActivity, Project, ProjectTask, ProjectPlan, ProjectResource, ProjectProgress
+from .forms import TaskForm, DailyLogForm, CategoryForm, DailySummaryForm, PlanForm, PlanNodeForm, UserProfileForm, ProjectForm, ProjectTaskForm, ProjectPlanForm, ProjectResourceForm, ProjectProgressForm
 from django.views.decorators.http import require_http_methods
 import logging
 import markdown
@@ -6102,3 +6102,500 @@ from django.http import HttpResponse
 def ads_txt(request):
     content = "google.com, pub-7653466283203958, DIRECT, f08c47fec0942fa0"
     return HttpResponse(content, content_type="text/plain")
+
+
+# ===== PROJECT VIEWS =====
+
+@login_required
+def project_list(request):
+    """List all projects for the current user"""
+    projects = Project.objects.filter(
+        Q(user=request.user) | Q(collaborators=request.user)
+    ).distinct().order_by('-updated_at')
+
+    # Filter options
+    status_filter = request.GET.get('status')
+    priority_filter = request.GET.get('priority')
+    tag_filter = request.GET.get('tag')
+
+    if status_filter:
+        projects = projects.filter(status=status_filter)
+    if priority_filter:
+        projects = projects.filter(priority=priority_filter)
+    if tag_filter:
+        projects = projects.filter(tags__icontains=tag_filter)
+
+    # Stats
+    total_projects = projects.count()
+    active_projects = projects.filter(status='active').count()
+    completed_projects = projects.filter(status='completed').count()
+    overdue_projects = [p for p in projects if p.is_overdue()]
+
+    context = {
+        'projects': projects,
+        'total_projects': total_projects,
+        'active_projects': active_projects,
+        'completed_projects': completed_projects,
+        'overdue_projects': overdue_projects,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+        'tag_filter': tag_filter,
+    }
+
+    return render(request, 'tracker/project_list.html', context)
+
+
+@login_required
+def project_detail(request, pk):
+    """Detailed view of a specific project"""
+    project = get_object_or_404(
+        Project.objects.filter(
+            Q(user=request.user) | Q(collaborators=request.user)
+        ),
+        pk=pk
+    )
+
+    # Get related data
+    project_tasks = project.project_tasks.select_related('task', 'assigned_to').order_by('order')
+    project_plans = project.project_plans.select_related('plan').order_by('order')
+    resources = project.resources.order_by('-is_important', '-created_at')
+    progress_entries = project.progress_entries.order_by('-created_at')[:10]  # Last 10 updates
+
+    # Calculate some stats
+    total_tasks = project.get_total_tasks()
+    completed_tasks = project.get_completed_tasks()
+    completion_rate = (completed_tasks / total_tasks * 100) if total_tasks > 0 else 0
+
+    # Recent activity (last 30 days)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+    recent_progress = project.progress_entries.filter(created_at__gte=thirty_days_ago).order_by('-created_at')
+
+    context = {
+        'project': project,
+        'project_tasks': project_tasks,
+        'project_plans': project_plans,
+        'resources': resources,
+        'progress_entries': progress_entries,
+        'recent_progress': recent_progress,
+        'total_tasks': total_tasks,
+        'completed_tasks': completed_tasks,
+        'completion_rate': completion_rate,
+        'can_edit': project.user == request.user,
+    }
+
+    return render(request, 'tracker/project_detail.html', context)
+
+
+@login_required
+def project_create(request):
+    """Create a new project"""
+    if request.method == 'POST':
+        form = ProjectForm(request.POST, user=request.user)
+        if form.is_valid():
+            project = form.save(commit=False)
+            project.user = request.user
+            project.save()
+
+            # Create initial progress entry
+            ProjectProgress.objects.create(
+                project=project,
+                title="Project Created",
+                progress_type="update",
+                description=f"Project '{project.title}' was created and is ready to start.",
+                progress_percentage=0,
+                created_by=request.user
+            )
+
+            messages.success(request, f"Project '{project.title}' created successfully!")
+            return redirect('project_detail', pk=project.pk)
+        else:
+            messages.error(request, "Please fix the errors below and resubmit the form.")
+    else:
+        form = ProjectForm(user=request.user)
+
+    context = {
+        'form': form,
+        'title': 'Create New Project',
+    }
+
+    return render(request, 'tracker/project_form.html', context)
+
+
+@login_required
+def project_update(request, pk):
+    """Update an existing project"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        form = ProjectForm(request.POST, instance=project, user=request.user)
+        if form.is_valid():
+            old_status = project.status
+            project = form.save()
+
+            # Create progress entry if status changed
+            if old_status != project.status:
+                ProjectProgress.objects.create(
+                    project=project,
+                    title=f"Status Changed: {old_status} → {project.status}",
+                    progress_type="update",
+                    description=f"Project status was updated from {old_status} to {project.status}.",
+                    old_status=old_status,
+                    new_status=project.status,
+                    created_by=request.user
+                )
+
+            messages.success(request, f"Project '{project.title}' updated successfully!")
+            return redirect('project_detail', pk=project.pk)
+    else:
+        form = ProjectForm(instance=project, user=request.user)
+        # Set tags_input initial value
+        form.initial['tags_input'] = ', '.join(project.tags)
+
+    context = {
+        'form': form,
+        'project': project,
+        'title': f'Edit Project: {project.title}',
+    }
+
+    return render(request, 'tracker/project_form.html', context)
+
+
+@login_required
+def project_delete(request, pk):
+    """Delete a project"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        project_title = project.title
+        project.delete()
+        messages.success(request, f"Project '{project_title}' deleted successfully!")
+        return redirect('project_list')
+
+    context = {
+        'project': project,
+    }
+
+    return render(request, 'tracker/project_confirm_delete.html', context)
+
+
+@login_required
+def project_add_task(request, pk):
+    """Add a task to a project"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        selected_task_ids = request.POST.getlist('selected_tasks')
+        if not selected_task_ids:
+            messages.error(request, "Please select at least one task to add.")
+        else:
+            created_count = 0
+            for task_id in selected_task_ids:
+                try:
+                    task = Task.objects.get(pk=task_id)
+                except Task.DoesNotExist:
+                    continue
+
+                project_task, created = ProjectTask.objects.get_or_create(
+                    project=project,
+                    task=task,
+                    defaults={'assigned_to': None, 'weight': 1, 'notes': '', 'order': 0}
+                )
+                if created:
+                    created_count += 1
+
+            if created_count:
+                project.update_progress()
+                messages.success(request, f"Added {created_count} task(s) to project.")
+                return redirect('project_detail', pk=project.pk)
+            else:
+                messages.info(request, "Selected tasks were already added to this project.")
+
+    # Available tasks are tasks the user owns (or global) that are not already in the project
+    existing_task_ids = project.project_tasks.values_list('task_id', flat=True)
+    available_tasks = Task.objects.filter(
+        Q(user=request.user) | Q(is_global=True)
+    ).exclude(pk__in=existing_task_ids).order_by('-created_at')
+
+    context = {
+        'project': project,
+        'title': f'Add Task to {project.title}',
+        'item_type': 'task',
+        'available_tasks': available_tasks,
+    }
+
+    return render(request, 'tracker/project_add_item.html', context)
+
+
+@login_required
+def project_add_plan(request, pk):
+    """Add a plan to a project"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        selected_plan_ids = request.POST.getlist('selected_plans')
+        if not selected_plan_ids:
+            messages.error(request, "Please select at least one plan to add.")
+        else:
+            created_count = 0
+            for plan_id in selected_plan_ids:
+                try:
+                    plan = Plan.objects.get(pk=plan_id)
+                except Plan.DoesNotExist:
+                    continue
+
+                project_plan, created = ProjectPlan.objects.get_or_create(
+                    project=project,
+                    plan=plan,
+                    defaults={'weight': 1, 'notes': '', 'order': 0}
+                )
+                if created:
+                    created_count += 1
+
+            if created_count:
+                project.update_progress()
+                messages.success(request, f"Added {created_count} plan(s) to project.")
+                return redirect('project_detail', pk=project.pk)
+            else:
+                messages.info(request, "Selected plans were already added to this project.")
+
+    # Available plans are plans the user owns (or global) that are not already in the project
+    existing_plan_ids = project.project_plans.values_list('plan_id', flat=True)
+    available_plans = Plan.objects.filter(
+        Q(user=request.user) | Q(is_active=True)
+    ).exclude(pk__in=existing_plan_ids).order_by('-created_at')
+
+    context = {
+        'project': project,
+        'title': f'Add Plan to {project.title}',
+        'item_type': 'plan',
+        'available_plans': available_plans,
+    }
+
+    return render(request, 'tracker/project_add_item.html', context)
+
+
+@login_required
+def project_remove_task(request, pk, task_pk):
+    """Remove a task from a project"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+    project_task = get_object_or_404(ProjectTask, pk=task_pk, project=project)
+
+    if request.method == 'POST':
+        task_title = project_task.task.title
+        project_task.delete()
+
+        # Update project progress
+        project.update_progress()
+
+        messages.success(request, f"Task '{task_title}' removed from project!")
+        return redirect('project_detail', pk=project.pk)
+
+    context = {
+        'project': project,
+        'item': project_task,
+        'item_type': 'task',
+        'title': f'Remove Task: {project_task.task.title}',
+    }
+
+    return render(request, 'tracker/project_remove_item.html', context)
+
+
+@login_required
+def project_remove_plan(request, pk, plan_pk):
+    """Remove a plan from a project"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+    project_plan = get_object_or_404(ProjectPlan, pk=plan_pk, project=project)
+
+    if request.method == 'POST':
+        plan_title = project_plan.plan.title
+        project_plan.delete()
+
+        # Update project progress
+        project.update_progress()
+
+        messages.success(request, f"Plan '{plan_title}' removed from project!")
+        return redirect('project_detail', pk=project.pk)
+
+    context = {
+        'project': project,
+        'item': project_plan,
+        'item_type': 'plan',
+        'title': f'Remove Plan: {project_plan.plan.title}',
+    }
+
+    return render(request, 'tracker/project_remove_item.html', context)
+
+
+@login_required
+def project_add_resource(request, pk):
+    """Add a resource to a project"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        form = ProjectResourceForm(request.POST)
+        if form.is_valid():
+            resource = form.save(commit=False)
+            resource.project = project
+            resource.added_by = request.user
+            resource.save()
+
+            messages.success(request, f"Resource '{resource.title}' added to project!")
+            return redirect('project_detail', pk=project.pk)
+    else:
+        form = ProjectResourceForm()
+
+    context = {
+        'form': form,
+        'project': project,
+        'title': f'Add Resource to {project.title}',
+        'item_type': 'resource',
+    }
+
+    return render(request, 'tracker/project_add_resource.html', context)
+
+
+@login_required
+def project_update_resource(request, pk, resource_pk):
+    """Update a project resource"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+    resource = get_object_or_404(ProjectResource, pk=resource_pk, project=project)
+
+    if request.method == 'POST':
+        form = ProjectResourceForm(request.POST, instance=resource)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"Resource '{resource.title}' updated!")
+            return redirect('project_detail', pk=project.pk)
+    else:
+        form = ProjectResourceForm(instance=resource)
+        form.initial['tags_input'] = ', '.join(resource.tags)
+
+    context = {
+        'form': form,
+        'project': project,
+        'resource': resource,
+        'title': f'Edit Resource: {resource.title}',
+    }
+
+    return render(request, 'tracker/project_add_resource.html', context)
+
+
+@login_required
+def project_delete_resource(request, pk, resource_pk):
+    """Delete a project resource"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+    resource = get_object_or_404(ProjectResource, pk=resource_pk, project=project)
+
+    if request.method == 'POST':
+        resource_title = resource.title
+        resource.delete()
+        messages.success(request, f"Resource '{resource_title}' deleted!")
+        return redirect('project_detail', pk=project.pk)
+
+    context = {
+        'project': project,
+        'resource': resource,
+    }
+
+    return render(request, 'tracker/project_confirm_delete_resource.html', context)
+
+
+@login_required
+def project_add_progress(request, pk):
+    """Add a progress update to a project"""
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        form = ProjectProgressForm(request.POST, project=project)
+        if form.is_valid():
+            progress = form.save(commit=False)
+            progress.project = project
+            progress.created_by = request.user
+            progress.save()
+
+            # Update project progress
+            project.update_progress()
+
+            messages.success(request, f"Progress update added to '{project.title}'!")
+            return redirect('project_detail', pk=project.pk)
+    else:
+        form = ProjectProgressForm(project=project)
+
+    context = {
+        'form': form,
+        'project': project,
+        'title': f'Add Progress Update to {project.title}',
+    }
+
+    return render(request, 'tracker/project_add_progress.html', context)
+
+
+@login_required
+def project_progress_history(request, pk):
+    """View full progress history for a project"""
+    project = get_object_or_404(
+        Project.objects.filter(
+            Q(user=request.user) | Q(collaborators=request.user)
+        ),
+        pk=pk
+    )
+
+    progress_entries = project.progress_entries.select_related('created_by').order_by('-created_at')
+
+    # Pagination
+    paginator = Paginator(progress_entries, 20)
+    page = request.GET.get('page')
+    try:
+        progress_page = paginator.page(page)
+    except PageNotAnInteger:
+        progress_page = paginator.page(1)
+    except EmptyPage:
+        progress_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'project': project,
+        'progress_entries': progress_page,
+        'can_edit': project.user == request.user,
+    }
+
+    return render(request, 'tracker/project_progress_history.html', context)
+
+
+@login_required
+def project_dashboard(request):
+    """Project management dashboard"""
+    projects = Project.objects.filter(
+        Q(user=request.user) | Q(collaborators=request.user)
+    ).distinct()
+
+    # Stats
+    total_projects = projects.count()
+    active_projects = projects.filter(status='active').count()
+    completed_projects = projects.filter(status='completed').count()
+    overdue_projects = projects.filter(status__in=['active', 'planning'], due_date__lt=timezone.now().date())
+
+    # Recent progress (last 7 days)
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    recent_progress = ProjectProgress.objects.filter(
+        project__in=projects,
+        created_at__gte=seven_days_ago
+    ).select_related('project', 'created_by').order_by('-created_at')[:10]
+
+    # Upcoming deadlines (next 30 days)
+    thirty_days_from_now = timezone.now().date() + timedelta(days=30)
+    upcoming_deadlines = projects.filter(
+        status__in=['active', 'planning'],
+        due_date__lte=thirty_days_from_now,
+        due_date__gte=timezone.now().date()
+    ).order_by('due_date')[:5]
+
+    context = {
+        'total_projects': total_projects,
+        'active_projects': active_projects,
+        'completed_projects': completed_projects,
+        'overdue_projects': overdue_projects,
+        'recent_progress': recent_progress,
+        'upcoming_deadlines': upcoming_deadlines,
+    }
+
+    return render(request, 'tracker/project_dashboard.html', context)

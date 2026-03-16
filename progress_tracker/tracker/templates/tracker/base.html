@@ -436,6 +436,7 @@
       <ul class="menu menu-horizontal px-1 gap-1">
         <li><a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %} rounded-lg"><i class="bi bi-grid-1x2"></i> Dashboard</a></li>
         <li><a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active{% endif %} rounded-lg"><i class="bi bi-bar-chart"></i> Analytics</a></li>
+        <li><a href="{% url 'project_list' %}" class="{% if 'project' in request.resolver_match.url_name %}active{% endif %} rounded-lg"><i class="bi bi-kanban"></i> Projects</a></li>
         <li><a href="{% url 'plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' %}active{% endif %} rounded-lg"><i class="bi bi-diagram-3"></i> Plans</a></li>
         <li><a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active{% endif %} rounded-lg"><i class="bi bi-calendar-event"></i> Day Planner</a></li>
         <li><a href="{% url 'blog_list' %}" class="{% if 'blog' in request.resolver_match.url_name %}active{% endif %} rounded-lg"><i class="bi bi-journal-text"></i> Blog</a></li>
@@ -531,6 +532,10 @@
       <i class="bi bi-grid-1x2 text-xl"></i>
       <span class="btm-nav-label text-[10px] font-bold">Dashboard</span>
     </a>
+    <a href="{% url 'project_list' %}" class="{% if 'project' in request.resolver_match.url_name %}active text-primary{% endif %}">
+      <i class="bi bi-kanban text-xl"></i>
+      <span class="btm-nav-label text-[10px] font-bold">Projects</span>
+    </a>
     <a href="{% url 'analytics' %}" class="{% if request.resolver_match.url_name == 'analytics' %}active text-primary{% endif %}">
       <i class="bi bi-bar-chart text-xl"></i>
       <span class="btm-nav-label text-[10px] font-bold">Analytics</span>
@@ -538,10 +543,6 @@
     <a href="{% url 'day_planner' %}" class="{% if request.resolver_match.url_name == 'day_planner' %}active text-primary{% endif %}">
       <i class="bi bi-calendar3 text-xl"></i>
       <span class="btm-nav-label text-[10px] font-bold">Planner</span>
-    </a>
-    <a href="{% url 'plan_list' %}" class="{% if request.resolver_match.url_name == 'plan_list' %}active text-primary{% endif %}">
-      <i class="bi bi-diagram-3 text-xl"></i>
-      <span class="btm-nav-label text-[10px] font-bold">Plans</span>
     </a>
     <a href="{% url 'friends_list' %}" class="{% if request.resolver_match.url_name == 'friends_list' %}active text-primary{% endif %}">
       <i class="bi bi-people text-xl"></i>

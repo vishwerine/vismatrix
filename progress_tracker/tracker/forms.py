@@ -1,7 +1,7 @@
 from django import forms
 from django.db import models
 from django.contrib.auth.models import User
-from .models import Task, DailyLog, Category, DailySummary, Plan, PlanNode, Habit, BlogPost
+from .models import Task, DailyLog, Category, DailySummary, Plan, PlanNode, Habit, BlogPost, Project, ProjectTask, ProjectPlan, ProjectResource, ProjectProgress
 
 class TaskForm(forms.ModelForm):
     class Meta:
@@ -387,3 +387,348 @@ class BlogPostForm(forms.ModelForm):
         if not content:
             raise forms.ValidationError("Content is required.")
         return content
+
+
+# ===== PROJECT FORMS =====
+
+class ProjectForm(forms.ModelForm):
+    tags_input = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'Enter tags separated by commas (e.g., web, design, urgent)',
+        }),
+        label="Tags"
+    )
+
+    class Meta:
+        model = Project
+        fields = [
+            'title', 'description', 'status', 'priority', 'start_date', 'due_date',
+            'estimated_hours', 'budget', 'category', 'is_public'
+        ]
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'Enter project title',
+                'maxlength': '255'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'textarea textarea-bordered w-full',
+                'rows': 4,
+                'placeholder': 'Describe your project goals and scope',
+            }),
+            'status': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'priority': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'start_date': forms.DateInput(attrs={
+                'class': 'input input-bordered w-full',
+                'type': 'date'
+            }),
+            'due_date': forms.DateInput(attrs={
+                'class': 'input input-bordered w-full',
+                'type': 'date'
+            }),
+            'estimated_hours': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '1',
+                'placeholder': 'Estimated total hours'
+            }),
+            'budget': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '0',
+                'step': '0.01',
+                'placeholder': 'Budget amount (optional)'
+            }),
+            'category': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'is_public': forms.CheckboxInput(attrs={
+                'class': 'checkbox checkbox-primary'
+            }),
+        }
+        help_texts = {
+            'title': 'Give your project a clear, descriptive name',
+            'description': 'Explain what this project is about and what you hope to achieve',
+            'status': 'Current state of the project',
+            'priority': 'How important is this project?',
+            'start_date': 'When do you plan to start working on this project?',
+            'due_date': 'When should this project be completed?',
+            'estimated_hours': 'Rough estimate of total hours needed',
+            'budget': 'Optional: Budget allocated for this project',
+            'category': 'Choose a category to organize your projects',
+            'is_public': 'Allow others to view this project (read-only)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if user:
+            from django.db.models import Q
+            self.fields['category'].queryset = Category.objects.filter(
+                Q(is_global=True) | Q(user=user)
+            )
+            self.fields['category'].required = False
+            self.fields['category'].empty_label = "🤖 Auto-detect (recommended)"
+
+        # Set default dates for new projects
+        if not self.instance.pk:
+            from django.utils import timezone
+            today = timezone.localdate()
+            self.initial['start_date'] = today
+            self.initial['due_date'] = today + timezone.timedelta(days=30)  # 30 days default
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        due_date = cleaned_data.get('due_date')
+
+        if start_date and due_date and due_date < start_date:
+            raise forms.ValidationError("Due date cannot be before start date.")
+
+        return cleaned_data
+
+    def clean_tags_input(self):
+        tags_input = self.cleaned_data.get('tags_input', '')
+        if tags_input:
+            # Split by comma, strip whitespace, remove empty tags
+            tags = [tag.strip() for tag in tags_input.split(',') if tag.strip()]
+            return tags
+        return []
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.tags = self.cleaned_data.get('tags_input', [])
+        if commit:
+            instance.save()
+        return instance
+
+
+class ProjectTaskForm(forms.ModelForm):
+    class Meta:
+        model = ProjectTask
+        fields = ['task', 'weight', 'notes', 'assigned_to', 'order']
+        widgets = {
+            'task': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'weight': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '1',
+                'max': '10',
+                'value': '1'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'textarea textarea-bordered w-full',
+                'rows': 2,
+                'placeholder': 'Project-specific notes for this task'
+            }),
+            'assigned_to': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '0',
+                'value': '0'
+            }),
+        }
+        help_texts = {
+            'task': 'Select an existing task to add to this project',
+            'weight': 'Relative importance for progress calculation (1-10)',
+            'notes': 'Any project-specific context or requirements',
+            'assigned_to': 'Assign this task to a team member',
+            'order': 'Order within the project (lower numbers appear first)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        project = kwargs.pop('project', None)
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if user:
+            # Show user's tasks that aren't already in this project
+            existing_task_ids = []
+            if project:
+                existing_task_ids = list(project.project_tasks.values_list('task_id', flat=True))
+
+            self.fields['task'].queryset = Task.objects.filter(
+                user=user
+            ).exclude(id__in=existing_task_ids)
+
+            # Collaborators for assignment
+            collaborators = [user]
+            if project:
+                collaborators.extend(list(project.collaborators.all()))
+            self.fields['assigned_to'].queryset = User.objects.filter(id__in=[u.id for u in collaborators])
+
+
+class ProjectPlanForm(forms.ModelForm):
+    class Meta:
+        model = ProjectPlan
+        fields = ['plan', 'weight', 'notes', 'order']
+        widgets = {
+            'plan': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'weight': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '1',
+                'max': '10',
+                'value': '1'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'textarea textarea-bordered w-full',
+                'rows': 2,
+                'placeholder': 'Project-specific notes for this plan'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '0',
+                'value': '0'
+            }),
+        }
+        help_texts = {
+            'plan': 'Select an existing plan to add to this project',
+            'weight': 'Relative importance for progress calculation (1-10)',
+            'notes': 'Any project-specific context or requirements',
+            'order': 'Order within the project (lower numbers appear first)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        project = kwargs.pop('project', None)
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+
+        if user:
+            # Show user's plans that aren't already in this project
+            existing_plan_ids = []
+            if project:
+                existing_plan_ids = list(project.project_plans.values_list('plan_id', flat=True))
+
+            self.fields['plan'].queryset = Plan.objects.filter(
+                user=user
+            ).exclude(id__in=existing_plan_ids)
+
+
+class ProjectResourceForm(forms.ModelForm):
+    tags_input = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'input input-bordered w-full',
+            'placeholder': 'Enter tags separated by commas',
+        }),
+        label="Tags"
+    )
+
+    class Meta:
+        model = ProjectResource
+        fields = ['title', 'resource_type', 'url', 'content', 'is_important']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'Resource title or name',
+                'maxlength': '255'
+            }),
+            'resource_type': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'url': forms.URLInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'https://example.com (for links)'
+            }),
+            'content': forms.Textarea(attrs={
+                'class': 'textarea textarea-bordered w-full',
+                'rows': 4,
+                'placeholder': 'Notes, content, or description'
+            }),
+            'is_important': forms.CheckboxInput(attrs={
+                'class': 'checkbox checkbox-primary'
+            }),
+        }
+        help_texts = {
+            'title': 'Give this resource a descriptive name',
+            'resource_type': 'What type of resource is this?',
+            'url': 'Web link (required for link type)',
+            'content': 'Additional notes or content',
+            'is_important': 'Mark as important to highlight this resource',
+        }
+
+    def clean_tags_input(self):
+        tags_input = self.cleaned_data.get('tags_input', '')
+        if tags_input:
+            tags = [tag.strip() for tag in tags_input.split(',') if tag.strip()]
+            return tags
+        return []
+
+    def clean(self):
+        cleaned_data = super().clean()
+        resource_type = cleaned_data.get('resource_type')
+        url = cleaned_data.get('url')
+
+        if resource_type == 'link' and not url:
+            raise forms.ValidationError("URL is required for link resources.")
+
+        return cleaned_data
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.tags = self.cleaned_data.get('tags_input', [])
+        if commit:
+            instance.save()
+        return instance
+
+
+class ProjectProgressForm(forms.ModelForm):
+    class Meta:
+        model = ProjectProgress
+        fields = ['title', 'progress_type', 'description', 'progress_percentage', 'hours_spent', 'new_status']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'input input-bordered w-full',
+                'placeholder': 'Progress update title',
+                'maxlength': '255'
+            }),
+            'progress_type': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'textarea textarea-bordered w-full',
+                'rows': 4,
+                'placeholder': 'Describe what was accomplished or what changed'
+            }),
+            'progress_percentage': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '0',
+                'max': '100',
+                'placeholder': 'Current progress (0-100%)'
+            }),
+            'hours_spent': forms.NumberInput(attrs={
+                'class': 'input input-bordered w-full',
+                'min': '0',
+                'placeholder': 'Hours spent on this update'
+            }),
+            'new_status': forms.Select(attrs={
+                'class': 'select select-bordered w-full'
+            }),
+        }
+        help_texts = {
+            'title': 'Brief title for this progress update',
+            'progress_type': 'Type of progress update',
+            'description': 'Detailed description of what happened',
+            'progress_percentage': 'Current overall project progress',
+            'hours_spent': 'Time spent on this specific update',
+            'new_status': 'Update project status (optional)',
+        }
+
+    def __init__(self, *args, **kwargs):
+        project = kwargs.pop('project', None)
+        super().__init__(*args, **kwargs)
+
+        # Set current status as old_status for tracking
+        if project and not self.instance.pk:
+            self.instance.old_status = project.status
+            self.initial['progress_percentage'] = project.progress_percentage

@@ -193,6 +193,23 @@ urlpatterns = [
     path("pro/api/bulk-operations/", pro_views.bulk_operations, name="bulk_operations"),
     path("pro/api/ai-categorize/", pro_views.ai_categorize_task, name="ai_categorize_task"),
 
+    # Projects
+    path("projects/", views.project_list, name="project_list"),
+    path("projects/dashboard/", views.project_dashboard, name="project_dashboard"),
+    path("projects/create/", views.project_create, name="project_create"),
+    path("projects/<int:pk>/", views.project_detail, name="project_detail"),
+    path("projects/<int:pk>/edit/", views.project_update, name="project_update"),
+    path("projects/<int:pk>/delete/", views.project_delete, name="project_delete"),
+    path("projects/<int:pk>/add-task/", views.project_add_task, name="project_add_task"),
+    path("projects/<int:pk>/add-plan/", views.project_add_plan, name="project_add_plan"),
+    path("projects/<int:pk>/remove-task/<int:task_pk>/", views.project_remove_task, name="project_remove_task"),
+    path("projects/<int:pk>/remove-plan/<int:plan_pk>/", views.project_remove_plan, name="project_remove_plan"),
+    path("projects/<int:pk>/add-resource/", views.project_add_resource, name="project_add_resource"),
+    path("projects/<int:pk>/resources/<int:resource_pk>/edit/", views.project_update_resource, name="project_update_resource"),
+    path("projects/<int:pk>/resources/<int:resource_pk>/delete/", views.project_delete_resource, name="project_delete_resource"),
+    path("projects/<int:pk>/add-progress/", views.project_add_progress, name="project_add_progress"),
+    path("projects/<int:pk>/progress/", views.project_progress_history, name="project_progress_history"),
+
     path("ads.txt", views.ads_txt),
 
 ]

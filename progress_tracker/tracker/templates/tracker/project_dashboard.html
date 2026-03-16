@@ -1,0 +1,159 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Project Dashboard - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-base-content mb-2">
+        <i class="bi bi-kanban text-primary mr-2"></i>Project Dashboard
+      </h1>
+      <p class="text-base vm-muted">
+        Overview of all your projects and their progress
+      </p>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="flex flex-wrap gap-3 mb-8 justify-center">
+      <a href="{% url 'project_create' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle mr-2"></i>
+        New Project
+      </a>
+      <a href="{% url 'project_list' %}" class="btn btn-outline">
+        <i class="bi bi-list mr-2"></i>
+        All Projects
+      </a>
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+      <div class="card vm-section bg-base-100">
+        <div class="card-body p-6 text-center">
+          <i class="bi bi-folder text-3xl text-primary mb-2"></i>
+          <div class="text-2xl font-bold">{{ total_projects }}</div>
+          <div class="vm-muted">Total Projects</div>
+        </div>
+      </div>
+
+      <div class="card vm-section bg-base-100">
+        <div class="card-body p-6 text-center">
+          <i class="bi bi-check-circle text-3xl text-success mb-2"></i>
+          <div class="text-2xl font-bold">{{ completed_projects }}</div>
+          <div class="vm-muted">Completed</div>
+        </div>
+      </div>
+
+      <div class="card vm-section bg-base-100">
+        <div class="card-body p-6 text-center">
+          <i class="bi bi-play-circle text-3xl text-warning mb-2"></i>
+          <div class="text-2xl font-bold">{{ active_projects }}</div>
+          <div class="vm-muted">In Progress</div>
+        </div>
+      </div>
+
+      <div class="card vm-section bg-base-100">
+        <div class="card-body p-6 text-center">
+          <i class="bi bi-graph-up text-3xl text-info mb-2"></i>
+          <div class="text-2xl font-bold">{{ avg_progress|floatformat:0 }}%</div>
+          <div class="vm-muted">Avg Progress</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Projects -->
+    {% if recent_projects %}
+      <div class="card vm-section bg-base-100 mb-8">
+        <div class="card-body p-6">
+          <h3 class="font-bold mb-6 flex items-center">
+            <i class="bi bi-clock-history mr-2"></i>
+            Recent Projects
+          </h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for project in recent_projects %}
+              <div class="card bg-base-200 hover:shadow-lg transition-shadow">
+                <div class="card-body p-4">
+                  <h4 class="font-bold mb-2">
+                    <a href="{% url 'project_detail' project.pk %}" class="link link-primary">
+                      {{ project.name }}
+                    </a>
+                  </h4>
+
+                  {% if project.description %}
+                    <p class="text-sm vm-muted mb-3 line-clamp-2">{{ project.description }}</p>
+                  {% endif %}
+
+                  <!-- Progress -->
+                  <div class="mb-3">
+                    <div class="flex justify-between text-sm mb-1">
+                      <span>Progress</span>
+                      <span class="font-medium">{{ project.progress_percentage }}%</span>
+                    </div>
+                    <div class="progress progress-primary h-2">
+                      <div class="progress-bar" style="width: {{ project.progress_percentage }}%"></div>
+                    </div>
+                  </div>
+
+                  <!-- Status -->
+                  <div class="flex items-center justify-between">
+                    <span class="badge badge-sm {% if project.status == 'completed' %}badge-success{% elif project.status == 'in_progress' %}badge-warning{% else %}badge-ghost{% endif %}">
+                      {{ project.get_status_display }}
+                    </span>
+                    <span class="text-xs vm-muted">{{ project.updated_at|date:"M j" }}</span>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Progress Overview -->
+    {% if projects_with_progress %}
+      <div class="card vm-section bg-base-100 mb-8">
+        <div class="card-body p-6">
+          <h3 class="font-bold mb-6 flex items-center">
+            <i class="bi bi-bar-chart mr-2"></i>
+            Progress Overview
+          </h3>
+
+          <div class="space-y-4">
+            {% for project in projects_with_progress %}
+              <div class="flex items-center gap-4">
+                <div class="w-32 text-sm font-medium truncate">{{ project.name }}</div>
+                <div class="flex-1">
+                  <div class="progress progress-primary h-3">
+                    <div class="progress-bar" style="width: {{ project.progress_percentage }}%"></div>
+                  </div>
+                </div>
+                <div class="w-12 text-right text-sm font-medium">{{ project.progress_percentage }}%</div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <!-- Quick Links -->
+    <div class="text-center">
+      <div class="btn-group">
+        <a href="{% url 'project_list' %}" class="btn btn-outline">
+          <i class="bi bi-list mr-2"></i>
+          View All Projects
+        </a>
+        <a href="{% url 'project_create' %}" class="btn btn-primary">
+          <i class="bi bi-plus-circle mr-2"></i>
+          Create New Project
+        </a>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+{% endblock %}

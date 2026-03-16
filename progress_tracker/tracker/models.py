@@ -1267,3 +1267,273 @@ class UserActivity(models.Model):
         elif self.blog_post:
             return f"Published: {self.blog_post.title}"
         return self.get_activity_type_display()
+
+
+# ===== PROJECT MANAGEMENT MODELS =====
+
+class Project(models.Model):
+    """Main project entity for organizing tasks, plans, and resources"""
+    STATUS_CHOICES = [
+        ('planning', 'Planning'),
+        ('active', 'Active'),
+        ('on_hold', 'On Hold'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
+
+    PRIORITY_CHOICES = [
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+        ('high', 'High'),
+        ('critical', 'Critical'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planning')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='medium')
+
+    # Dates
+    start_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    # Progress tracking
+    progress_percentage = models.IntegerField(default=0, help_text="Overall project progress (0-100)")
+    estimated_hours = models.IntegerField(null=True, blank=True, help_text="Estimated total hours")
+    actual_hours = models.IntegerField(default=0, help_text="Actual hours spent")
+
+    # Budget and cost tracking (optional)
+    budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    actual_cost = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
+    # Tags and categorization
+    tags = models.JSONField(default=list, help_text="List of tags for the project")
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Collaboration
+    is_public = models.BooleanField(default=False, help_text="Whether others can view this project")
+    collaborators = models.ManyToManyField(User, related_name='collaborated_projects', blank=True)
+
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['user', 'status', '-updated_at']),
+            models.Index(fields=['user', 'priority']),
+            models.Index(fields=['due_date']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} - {self.title}"
+
+    def update_progress(self):
+        """Calculate and update overall project progress based on tasks and plans"""
+        tasks = self.project_tasks.all()
+        plans = self.project_plans.all()
+
+        if not tasks.exists() and not plans.exists():
+            self.progress_percentage = 0
+            self.save()
+            return
+
+        total_weight = 0
+        weighted_progress = 0
+
+        # Calculate progress from tasks
+        for project_task in tasks:
+            task = project_task.task
+            if task.status == 'completed':
+                progress = 100
+            elif task.status == 'in_progress':
+                progress = 50  # Assume 50% progress for in-progress tasks
+            else:
+                progress = 0
+
+            weight = project_task.weight
+            total_weight += weight
+            weighted_progress += progress * weight
+
+        # Calculate progress from plans
+        for project_plan in plans:
+            plan = project_plan.plan
+            plan_nodes = plan.nodes.all()
+            if plan_nodes.exists():
+                completed_nodes = sum(1 for node in plan_nodes if node.task.status == 'completed')
+                plan_progress = (completed_nodes / plan_nodes.count()) * 100
+            else:
+                plan_progress = 0
+
+            weight = project_plan.weight
+            total_weight += weight
+            weighted_progress += plan_progress * weight
+
+        if total_weight > 0:
+            self.progress_percentage = min(100, int(weighted_progress / total_weight))
+        else:
+            self.progress_percentage = 0
+
+        self.save()
+
+    def get_total_tasks(self):
+        """Get total number of tasks across all plans and direct tasks"""
+        return self.project_tasks.count() + sum(plan.plan.nodes.count() for plan in self.project_plans.all())
+
+    def get_completed_tasks(self):
+        """Get number of completed tasks"""
+        completed_direct = self.project_tasks.filter(task__status='completed').count()
+        completed_plan = sum(
+            plan.plan.nodes.filter(task__status='completed').count()
+            for plan in self.project_plans.all()
+        )
+        return completed_direct + completed_plan
+
+    def is_overdue(self):
+        """Check if project is overdue"""
+        if self.due_date and self.status in ['planning', 'active']:
+            return timezone.now().date() > self.due_date
+        return False
+
+    @property
+    def tags_list(self):
+        """Return tags as a list for template use"""
+        return self.tags if self.tags else []
+
+
+class ProjectTask(models.Model):
+    """Link tasks to projects with additional project-specific metadata"""
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project_tasks')
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name='project_assignments')
+
+    # Project-specific properties
+    weight = models.IntegerField(default=1, help_text="Relative weight for progress calculation (1-10)")
+    notes = models.TextField(blank=True, help_text="Project-specific notes for this task")
+    order = models.IntegerField(default=0, help_text="Order within the project")
+
+    # Assignment
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                   related_name='assigned_project_tasks')
+    assigned_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        unique_together = ['project', 'task']
+        ordering = ['order', 'task__created_at']
+
+    def __str__(self):
+        return f"{self.project.title} - {self.task.title}"
+
+
+class ProjectPlan(models.Model):
+    """Link plans to projects with additional project-specific metadata"""
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='project_plans')
+    plan = models.ForeignKey(Plan, on_delete=models.CASCADE, related_name='project_assignments')
+
+    # Project-specific properties
+    weight = models.IntegerField(default=1, help_text="Relative weight for progress calculation (1-10)")
+    notes = models.TextField(blank=True, help_text="Project-specific notes for this plan")
+    order = models.IntegerField(default=0, help_text="Order within the project")
+
+    class Meta:
+        unique_together = ['project', 'plan']
+        ordering = ['order', 'plan__created_at']
+
+    def __str__(self):
+        return f"{self.project.title} - {self.plan.title}"
+
+
+class ProjectResource(models.Model):
+    """Resources (links, documents, files) associated with a project"""
+    RESOURCE_TYPES = [
+        ('link', 'Web Link'),
+        ('document', 'Document'),
+        ('file', 'File'),
+        ('note', 'Note'),
+        ('contact', 'Contact'),
+        ('other', 'Other'),
+    ]
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='resources')
+    title = models.CharField(max_length=255)
+    resource_type = models.CharField(max_length=20, choices=RESOURCE_TYPES, default='link')
+
+    # Content
+    url = models.URLField(blank=True, help_text="URL for links")
+    content = models.TextField(blank=True, help_text="Content/notes for the resource")
+    file_path = models.CharField(max_length=500, blank=True, help_text="File path if stored locally")
+
+    # Metadata
+    tags = models.JSONField(default=list, help_text="Tags for organization")
+    is_important = models.BooleanField(default=False, help_text="Mark as important resource")
+
+    # Tracking
+    added_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                related_name='added_project_resources')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-is_important', '-created_at']
+
+    def __str__(self):
+        return f"{self.project.title} - {self.title}"
+
+    @property
+    def tags_list(self):
+        """Return tags as a list for template use"""
+        return self.tags if self.tags else []
+
+
+class ProjectProgress(models.Model):
+    """Track progress updates and milestones for projects"""
+    PROGRESS_TYPES = [
+        ('milestone', 'Milestone'),
+        ('update', 'Progress Update'),
+        ('issue', 'Issue/Blocker'),
+        ('completion', 'Completion'),
+    ]
+
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='progress_entries')
+    title = models.CharField(max_length=255)
+    progress_type = models.CharField(max_length=20, choices=PROGRESS_TYPES, default='update')
+
+    # Progress details
+    description = models.TextField()
+    progress_percentage = models.IntegerField(null=True, blank=True, help_text="Progress at this point (0-100)")
+    hours_spent = models.IntegerField(default=0, help_text="Hours spent on this update")
+
+    # Status changes
+    old_status = models.CharField(max_length=20, choices=Project.STATUS_CHOICES, blank=True)
+    new_status = models.CharField(max_length=20, choices=Project.STATUS_CHOICES, blank=True)
+
+    # Metadata
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='project_progress_entries')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    # Optional attachments
+    attachments = models.JSONField(default=list, help_text="List of attachment URLs or file paths")
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.project.title} - {self.title}"
+
+    def save(self, *args, **kwargs):
+        # Update project's progress percentage if provided
+        if self.progress_percentage is not None:
+            self.project.progress_percentage = self.progress_percentage
+            self.project.save(update_fields=['progress_percentage'])
+
+        # Update project status if changed
+        if self.new_status and self.new_status != self.old_status:
+            self.project.status = self.new_status
+            if self.new_status == 'completed':
+                self.project.completed_at = timezone.now()
+            self.project.save()
+
+        super().save(*args, **kwargs)

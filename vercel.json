@@ -1,0 +1,14 @@
+{
+  "builds": [
+    {
+      "src": "progress_tracker/wsgi.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "progress_tracker/wsgi.py"
+    }
+  ]
+}

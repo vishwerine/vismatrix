@@ -1,0 +1,96 @@
+{% extends 'tracker/base.html' %}
+
+{% block title %}Delete Project: {{ project.name }} - VisMatrix.Space{% endblock %}
+
+{% block content %}
+
+<main class="py-8 sm:py-10">
+  <div class="max-w-2xl mx-auto px-4 sm:px-6">
+
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-extrabold text-base-content mb-2">
+        <i class="bi bi-exclamation-triangle text-error mr-2"></i>Delete Project
+      </h1>
+      <p class="text-base vm-muted">
+        Are you sure you want to delete <strong>{{ project.name }}</strong>?
+      </p>
+    </div>
+
+    <!-- Warning Card -->
+    <div class="card bg-error/10 border border-error/20 mb-6">
+      <div class="card-body p-6">
+        <div class="flex items-start gap-3">
+          <i class="bi bi-exclamation-triangle text-error text-xl mt-0.5"></i>
+          <div>
+            <h3 class="font-bold text-error mb-2">This action cannot be undone</h3>
+            <p class="text-sm">
+              Deleting this project will permanently remove:
+            </p>
+            <ul class="text-sm mt-2 space-y-1">
+              <li>• All project tasks and their associations</li>
+              <li>• All project plans and their associations</li>
+              <li>• All project resources and links</li>
+              <li>• All progress history and updates</li>
+              <li>• Project settings and configuration</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Project Summary -->
+    <div class="card vm-section bg-base-100 mb-6">
+      <div class="card-body p-6">
+        <h3 class="font-bold mb-4">Project Summary</h3>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <span class="vm-muted">Status:</span>
+            <span class="badge badge-sm ml-2 {% if project.status == 'completed' %}badge-success{% elif project.status == 'active' %}badge-primary{% else %}badge-warning{% endif %}">
+              {{ project.get_status_display }}
+            </span>
+          </div>
+          <div>
+            <span class="vm-muted">Priority:</span>
+            <span class="badge badge-sm ml-2 {% if project.priority == 'high' %}badge-error{% elif project.priority == 'medium' %}badge-warning{% else %}badge-info{% endif %}">
+              {{ project.get_priority_display }}
+            </span>
+          </div>
+          <div>
+            <span class="vm-muted">Tasks:</span>
+            <span class="ml-2">{{ project.tasks_count }}</span>
+          </div>
+          <div>
+            <span class="vm-muted">Plans:</span>
+            <span class="ml-2">{{ project.plans_count }}</span>
+          </div>
+          <div>
+            <span class="vm-muted">Resources:</span>
+            <span class="ml-2">{{ project.resources_count }}</span>
+          </div>
+          <div>
+            <span class="vm-muted">Progress:</span>
+            <span class="ml-2">{{ project.progress_percentage }}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="flex gap-3">
+      <form method="post" class="flex-1">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-error w-full">
+          <i class="bi bi-trash mr-2"></i>
+          Yes, Delete Project
+        </button>
+      </form>
+      <a href="{% url 'project_detail' project.pk %}" class="btn btn-ghost">
+        Cancel
+      </a>
+    </div>
+
+  </div>
+</main>
+
+{% endblock %}
