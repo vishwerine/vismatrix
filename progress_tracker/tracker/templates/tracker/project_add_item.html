@@ -138,41 +138,13 @@
           {% csrf_token %}
 
           {% if item_type == 'task' %}
-            <!-- Task Selection -->
+            <!-- Create New Task -->
             <div class="form-group">
-              <label class="form-label">Select Tasks to Add *</label>
-              <div class="space-y-3 max-h-96 overflow-y-auto">
-                {% for task in available_tasks %}
-                  <div class="item-card" onclick="toggleTaskSelection({{ task.pk }})">
-                    <div class="flex items-center gap-3">
-                      <input type="checkbox" id="task-{{ task.pk }}" name="selected_tasks" value="{{ task.pk }}"
-                             class="item-checkbox checkbox checkbox-primary">
-                      <div class="flex-1">
-                        <div class="font-medium">{{ task.name }}</div>
-                        {% if task.description %}
-                          <div class="text-sm vm-muted">{{ task.description|truncatechars:100 }}</div>
-                        {% endif %}
-                        <div class="flex items-center gap-2 mt-1">
-                          {% if task.category %}
-                            <span class="badge badge-xs badge-ghost">{{ task.category.name }}</span>
-                          {% endif %}
-                          {% if task.is_completed %}
-                            <span class="badge badge-xs badge-success">Completed</span>
-                          {% else %}
-                            <span class="badge badge-xs badge-warning">Active</span>
-                          {% endif %}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                {% endfor %}
+              <p class="vm-muted mb-4">Create a new task and automatically add it to this project.</p>
+              {{ task_form.non_field_errors }}
+              <div class="space-y-4">
+                {{ task_form.as_p }}
               </div>
-              {% if not available_tasks %}
-                <div class="text-center py-8">
-                  <i class="bi bi-info-circle text-4xl opacity-20 mb-4"></i>
-                  <p class="vm-muted">No available tasks to add. <a href="{% url 'task_create' %}" class="text-primary">Create a new task</a> first.</p>
-                </div>
-              {% endif %}
             </div>
 
           {% elif item_type == 'plan' %}
@@ -181,20 +153,22 @@
               <label class="form-label">Select Plans to Add *</label>
               <div class="space-y-3 max-h-96 overflow-y-auto">
                 {% for plan in available_plans %}
-                  <div class="item-card" onclick="togglePlanSelection({{ plan.pk }})">
+                  <div class="item-card">
                     <div class="flex items-center gap-3">
                       <input type="checkbox" id="plan-{{ plan.pk }}" name="selected_plans" value="{{ plan.pk }}"
                              class="item-checkbox checkbox checkbox-primary">
                       <div class="flex-1">
-                        <div class="font-medium">{{ plan.name }}</div>
+                        <div class="font-medium">{{ plan.title }}</div>
                         {% if plan.description %}
                           <div class="text-sm vm-muted">{{ plan.description|truncatechars:100 }}</div>
                         {% endif %}
                         <div class="flex items-center gap-2 mt-1">
-                          {% if plan.category %}
-                            <span class="badge badge-xs badge-ghost">{{ plan.category.name }}</span>
+                          <span class="badge badge-xs {% if plan.is_active %}badge-success{% else %}badge-warning{% endif %}">
+                            {% if plan.is_active %}Active{% else %}Inactive{% endif %}
+                          </span>
+                          {% if plan.is_public %}
+                            <span class="badge badge-xs badge-info">Public</span>
                           {% endif %}
-                          <span class="badge badge-xs badge-info">{{ plan.get_status_display }}</span>
                         </div>
                       </div>
                     </div>
@@ -251,7 +225,7 @@
           <div class="flex gap-3 pt-4">
             <button type="submit" class="btn btn-primary flex-1">
               <i class="bi bi-plus-lg mr-2"></i>
-              {% if item_type == 'task' %}Add Selected Tasks{% elif item_type == 'plan' %}Add Selected Plans{% else %}Add {{ item_type|title }}{% endif %}
+              {% if item_type == 'task' %}Add Task{% elif item_type == 'plan' %}Add Selected Plans{% else %}Add {{ item_type|title }}{% endif %}
             </button>
             <a href="{% url 'project_detail' project.pk %}" class="btn btn-ghost">
               Cancel
@@ -275,20 +249,7 @@ slider.addEventListener('input', function() {
 });
 {% endif %}
 
-// Task/Plan selection functionality
-function toggleTaskSelection(taskId) {
-  const checkbox = document.getElementById('task-' + taskId);
-  const card = checkbox.closest('.item-card');
-
-  checkbox.checked = !checkbox.checked;
-
-  if (checkbox.checked) {
-    card.classList.add('selected');
-  } else {
-    card.classList.remove('selected');
-  }
-}
-
+// Plan selection helper (used by the card click handler)
 function togglePlanSelection(planId) {
   const checkbox = document.getElementById('plan-' + planId);
   const card = checkbox.closest('.item-card');

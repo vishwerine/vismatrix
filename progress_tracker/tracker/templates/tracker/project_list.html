@@ -177,6 +177,36 @@
                 <span>{{ project.resources_count }} resources</span>
               </div>
 
+              <!-- Tasks List -->
+              {% if project.project_tasks.all %}
+                <div class="mb-3 p-2 bg-base-200 rounded text-xs">
+                  <div class="font-semibold text-base-content mb-1">Tasks:</div>
+                  <ul class="space-y-0.5">
+                    {% for project_task in project.project_tasks.all|slice:":3" %}
+                      <li class="text-sm vm-muted truncate">• {{ project_task.task.title }}</li>
+                    {% endfor %}
+                    {% if project.project_tasks.count > 3 %}
+                      <li class="text-sm text-primary italic">+{{ project.project_tasks.count|add:"-3" }} more</li>
+                    {% endif %}
+                  </ul>
+                </div>
+              {% endif %}
+
+              <!-- Plans List -->
+              {% if project.project_plans.all %}
+                <div class="mb-3 p-2 bg-base-200 rounded text-xs">
+                  <div class="font-semibold text-base-content mb-1">Plans:</div>
+                  <ul class="space-y-0.5">
+                    {% for project_plan in project.project_plans.all|slice:":3" %}
+                      <li class="text-sm vm-muted truncate">• {{ project_plan.plan.title }}</li>
+                    {% endfor %}
+                    {% if project.project_plans.count > 3 %}
+                      <li class="text-sm text-primary italic">+{{ project.project_plans.count|add:"-3" }} more</li>
+                    {% endif %}
+                  </ul>
+                </div>
+              {% endif %}
+
               <!-- Status and Dates -->
               <div class="flex justify-between items-center text-xs">
                 <div class="badge badge-sm badge-ghost">

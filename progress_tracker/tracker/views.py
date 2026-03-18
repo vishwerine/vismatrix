@@ -6280,47 +6280,39 @@ def project_delete(request, pk):
 
 @login_required
 def project_add_task(request, pk):
-    """Add a task to a project"""
+    """Add a new task to a project"""
     project = get_object_or_404(Project, pk=pk, user=request.user)
 
+    from .forms import TaskForm
+
     if request.method == 'POST':
-        selected_task_ids = request.POST.getlist('selected_tasks')
-        if not selected_task_ids:
-            messages.error(request, "Please select at least one task to add.")
-        else:
-            created_count = 0
-            for task_id in selected_task_ids:
-                try:
-                    task = Task.objects.get(pk=task_id)
-                except Task.DoesNotExist:
-                    continue
+        form = TaskForm(request.POST, user=request.user)
+        if form.is_valid():
+            task = form.save(commit=False)
+            task.user = request.user
+            task.save()
 
-                project_task, created = ProjectTask.objects.get_or_create(
-                    project=project,
-                    task=task,
-                    defaults={'assigned_to': None, 'weight': 1, 'notes': '', 'order': 0}
-                )
-                if created:
-                    created_count += 1
+            # Link the new task to the project
+            ProjectTask.objects.create(
+                project=project,
+                task=task,
+                assigned_to=None,
+                weight=1,
+                notes='',
+                order=0
+            )
 
-            if created_count:
-                project.update_progress()
-                messages.success(request, f"Added {created_count} task(s) to project.")
-                return redirect('project_detail', pk=project.pk)
-            else:
-                messages.info(request, "Selected tasks were already added to this project.")
-
-    # Available tasks are tasks the user owns (or global) that are not already in the project
-    existing_task_ids = project.project_tasks.values_list('task_id', flat=True)
-    available_tasks = Task.objects.filter(
-        Q(user=request.user) | Q(is_global=True)
-    ).exclude(pk__in=existing_task_ids).order_by('-created_at')
+            project.update_progress()
+            messages.success(request, f"Task '{task.title}' added to project.")
+            return redirect('project_detail', pk=project.pk)
+    else:
+        form = TaskForm(user=request.user)
 
     context = {
         'project': project,
         'title': f'Add Task to {project.title}',
         'item_type': 'task',
-        'available_tasks': available_tasks,
+        'task_form': form,
     }
 
     return render(request, 'tracker/project_add_item.html', context)
@@ -6358,10 +6350,10 @@ def project_add_plan(request, pk):
             else:
                 messages.info(request, "Selected plans were already added to this project.")
 
-    # Available plans are plans the user owns (or global) that are not already in the project
+    # Available plans are only plans the user owns and not already in the project
     existing_plan_ids = project.project_plans.values_list('plan_id', flat=True)
     available_plans = Plan.objects.filter(
-        Q(user=request.user) | Q(is_active=True)
+        user=request.user
     ).exclude(pk__in=existing_plan_ids).order_by('-created_at')
 
     context = {

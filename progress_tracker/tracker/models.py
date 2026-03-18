@@ -1403,6 +1403,26 @@ class Project(models.Model):
         """Return tags as a list for template use"""
         return self.tags if self.tags else []
 
+    @property
+    def tasks_count(self):
+        """Return count of tasks in this project"""
+        return self.project_tasks.count()
+
+    @property
+    def plans_count(self):
+        """Return count of plans in this project"""
+        return self.project_plans.count()
+
+    @property
+    def resources_count(self):
+        """Return count of resources in this project"""
+        return self.resources.count()
+
+    @property
+    def progress_entries_count(self):
+        """Return count of progress entries in this project"""
+        return self.progress_entries.count()
+
 
 class ProjectTask(models.Model):
     """Link tasks to projects with additional project-specific metadata"""

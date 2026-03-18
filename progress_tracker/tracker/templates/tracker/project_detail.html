@@ -184,6 +184,77 @@
       </div>
     </div>
 
+    <!-- Quick Overview of Tasks and Plans -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- Tasks Overview -->
+      <div class="card vm-section bg-base-100">
+        <div class="card-body p-6">
+          <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <i class="bi bi-list-check text-primary"></i>
+            Tasks ({{ project.tasks_count }})
+          </h2>
+          {% if project.project_tasks.all %}
+            <ul class="space-y-2">
+              {% for project_task in project.project_tasks.all %}
+                <li class="flex items-start gap-3 p-2 hover:bg-base-200 rounded transition-colors">
+                  <input type="checkbox" class="checkbox checkbox-sm checkbox-primary mt-1"
+                         {% if project_task.task.status == 'completed' %}checked{% endif %} disabled>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-sm {% if project_task.task.status == 'completed' %}line-through opacity-60{% endif %}">
+                      {{ project_task.task.title }}
+                    </div>
+                    {% if project_task.task.description %}
+                      <div class="text-xs vm-muted truncate">{{ project_task.task.description }}</div>
+                    {% endif %}
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-center py-6 opacity-50">
+              <i class="bi bi-inbox text-3xl mb-2"></i>
+              <p class="text-sm vm-muted">No tasks added yet</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Plans Overview -->
+      <div class="card vm-section bg-base-100">
+        <div class="card-body p-6">
+          <h2 class="text-lg font-bold mb-4 flex items-center gap-2">
+            <i class="bi bi-diagram-3 text-secondary"></i>
+            Plans ({{ project.plans_count }})
+          </h2>
+          {% if project.project_plans.all %}
+            <ul class="space-y-2">
+              {% for project_plan in project.project_plans.all %}
+                <li class="flex items-start gap-3 p-2 hover:bg-base-200 rounded transition-colors">
+                  <i class="bi bi-diagram-3 text-secondary mt-1"></i>
+                  <div class="flex-1 min-w-0">
+                    <div class="font-medium text-sm">
+                      {{ project_plan.plan.title }}
+                    </div>
+                    {% if project_plan.plan.description %}
+                      <div class="text-xs vm-muted truncate">{{ project_plan.plan.description }}</div>
+                    {% endif %}
+                    <div class="text-xs vm-muted mt-1">
+                      {{ project_plan.plan.nodes.count }} tasks
+                    </div>
+                  </div>
+                </li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <div class="text-center py-6 opacity-50">
+              <i class="bi bi-inbox text-3xl mb-2"></i>
+              <p class="text-sm vm-muted">No plans added yet</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
     <!-- Tabs -->
     <div class="card vm-section bg-base-100">
       <div class="card-body p-0">
@@ -219,9 +290,9 @@
                     <div class="flex items-center justify-between">
                       <div class="flex items-center gap-3">
                         <input type="checkbox" class="checkbox checkbox-primary"
-                               {% if project_task.task.is_completed %}checked{% endif %} disabled>
+                               {% if project_task.task.status == 'completed' %}checked{% endif %} disabled>
                         <div>
-                          <h4 class="font-medium">{{ project_task.task.name }}</h4>
+                          <h4 class="font-medium">{{ project_task.task.title }}</h4>
                           {% if project_task.task.description %}
                             <p class="text-sm vm-muted">{{ project_task.task.description }}</p>
                           {% endif %}
@@ -266,7 +337,7 @@
                       <div class="flex items-center gap-3">
                         <i class="bi bi-diagram-3 text-primary"></i>
                         <div>
-                          <h4 class="font-medium">{{ project_plan.plan.name }}</h4>
+                          <h4 class="font-medium">{{ project_plan.plan.title }}</h4>
                           {% if project_plan.plan.description %}
                             <p class="text-sm vm-muted">{{ project_plan.plan.description }}</p>
                           {% endif %}
